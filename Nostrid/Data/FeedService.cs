@@ -33,7 +33,7 @@ public class FeedService
 		foreach (var index in Enumerable.Range(0, MaxQueues))
 		{
 			eventListQueues[index] = new BlockingCollection<Event>();
-			new Thread(() => HandleEvents(eventListQueues[index], queuesCancellationTokenSource.Token)).Start();
+			Task.Run(() => HandleEvents(eventListQueues[index], queuesCancellationTokenSource.Token));
 		}
 		EnqueueEvent(eventDatabase.ListUnprocessedEvents());
 	}

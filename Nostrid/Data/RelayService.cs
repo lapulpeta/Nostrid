@@ -21,6 +21,7 @@ public class RelayService
     private CancellationTokenSource clientThreadsCancellationTokenSource;
 
     private int connectedClients;
+    private List<Task> runningTasks = new();
 
     public int ConnectedRelays => connectedClients;
     public int PendingRelays => pendingRelaysByPriority.Values.SelectMany(a => a).Count();
@@ -47,7 +48,7 @@ public class RelayService
         clientThreadsCancellationTokenSource = new CancellationTokenSource();
 		for (int i = 0; i < MaxRelays; i++)
 		{
-			new Thread(() => RunAnyNostrClient(clientThreadsCancellationTokenSource.Token)).Start();
+            runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
 		}
 	}
 
@@ -58,15 +59,13 @@ public class RelayService
 
     public void RestartNostrClients()
     {
-		new Thread(() =>
-		{
-			StopNostrClients();
-			while (connectedClients > 0)
-			{
-				Thread.Sleep(1000);
-			}
-			StartNostrClients();
-		}).Start();
+        _ = Task.Run(async () =>
+        {
+            StopNostrClients();
+            await Task.WhenAll(runningTasks);
+            runningTasks.Clear();
+            StartNostrClients();
+        });
     }
 
     private void InitRelays()
@@ -203,7 +202,7 @@ public class RelayService
         pendingRelaysByPriority.GetOrAdd(relay.Priority, _ => new()).Add(relay);
     }
 
-    private void EventDispatcher(Relay relay)
+    private async Task EventDispatcher(Relay relay)
     {
         if (!clientByRelay.TryGetValue(relay, out var client))
             return;
@@ -211,13 +210,13 @@ public class RelayService
         foreach (var ev in eventDatabase.ListOwnEvents(relay.Id))
         {
             ev.Event.Content ??= string.Empty; // TODO: LiteDb stores string.Empty as null
-            Task.Run(async () => await client.PublishEvent(ev.Event)).Wait();
+            await client.PublishEvent(ev.Event);
             eventDatabase.AddSeenBy(ev.Id, relay.Id);
         }
     }
 
-    private static object atomicSorting = new();
-    private void RunAnyNostrClient(CancellationToken cancellationToken)
+    private static readonly object atomicSorting = new();
+    private async Task RunAnyNostrClient(CancellationToken cancellationToken)
     {
         Relay relay = null;
         while (!cancellationToken.IsCancellationRequested)
@@ -242,7 +241,7 @@ public class RelayService
                     break;
                 }
 
-                RunNostrClient(relay, cancellationToken);
+                await RunNostrClient(relay, cancellationToken);
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -253,7 +252,7 @@ public class RelayService
                 pendingRelaysByPriority.GetOrAdd(relay.Priority, _ => new()).Add(relay); // Put back in queue
                 relay = null;
 
-                cancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -267,7 +266,7 @@ public class RelayService
     }
 
     // This method starts a client and it is expected to run in a separate thread
-    private void RunNostrClient(Relay relay, CancellationToken cancellationToken)
+    private async Task RunNostrClient(Relay relay, CancellationToken cancellationToken)
     {
         NostrClient client;
         lock (clientByRelay)
@@ -281,13 +280,13 @@ public class RelayService
 
         try
         {
-            Task.Run(async () => await client.ConnectAndWaitUntilConnected(cancellationToken)).Wait();
+            await client.ConnectAndWaitUntilConnected(cancellationToken);
             try
             {
                 Interlocked.Increment(ref connectedClients);
                 UpdateSubscriptions(relay);
-                new Thread(() => EventDispatcher(relay)).Start();
-                Task.Run(async () => await client.ListenForMessages()).Wait();
+                _ = EventDispatcher(relay);
+                await client.ListenForMessages();
             }
             finally
             {
@@ -396,7 +395,7 @@ public class RelayService
             {
                 try
                 {
-                    new Thread(async () => await client.PublishEvent(nostrEvent)).Start();
+                    _ = client.PublishEvent(nostrEvent);
                     eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
                 }
                 catch
