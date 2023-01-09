@@ -1,0 +1,50 @@
+﻿@using Nostrid.Model;
+
+@foreach (var tree in NewestOnTop ? Trees.OrderByDescending(t => t.Note.CreatedAtCurated) : Trees.OrderBy(t => t.Note.CreatedAtCurated))
+{
+    <NoteViewer Tree="@tree" ShowReplied="@ShowReplied" MainEventId="@MainEventId" NestingLevel="@NestingLevel"
+            OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" />
+}
+
+@code {
+    [Parameter]
+    public List<NoteTree> Trees { get; set; }
+
+    [Parameter]
+    public bool NewestOnTop { get; set; }
+
+    [Parameter]
+    public bool ShowReplied { get; set; }
+
+    [Parameter]
+    public string MainEventId { get; set; }
+
+    [Parameter]
+    public int NestingLevel { get; set; }
+
+    private List<NoteViewer> NoteViewerRefs = new List<NoteViewer>();
+
+    private void AddNoteViewerComponent(NoteViewer noteViewer)
+    {
+        NoteViewerRefs.Add(noteViewer);
+    }
+
+    private void RemoveNoteViewerComponent(NoteViewer noteViewer)
+    {
+        NoteViewerRefs.Remove(noteViewer);
+    }
+
+    public IEnumerable<NoteViewer> GetNoteViewers()
+    {
+        return NoteViewerRefs.SelectMany(n => n.GetNoteViewers());
+    }
+
+    public async Task<NoteViewer> GetFirstVisibleAsync()
+    {
+        return (await Task.WhenAll(GetNoteViewers().Select(async n => new
+        {
+            IsVisible = await n.IsVisibleAsync(),
+            NoteViewer = n
+        }))).FirstOrDefault(n => n.IsVisible)?.NoteViewer;
+    }
+}

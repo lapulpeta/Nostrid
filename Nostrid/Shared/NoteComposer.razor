@@ -1,0 +1,90 @@
+﻿@implements IDisposable
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@inject AccountService accountService
+@inject FeedService feedService
+
+@if (accountService.MainAccount != null)
+{
+    <div class="d-flex flex-row flex-grow-1">
+        <div>
+            <div class="border rounded-2 overflow-hidden">
+                @if (accountService.MainAccount?.Details != null)
+                {
+                    <img style="width:48px; height:48px" src="@accountService.MainAccount?.Details.PictureUrl" />
+                }
+                else
+                {
+                    @((MarkupString)Utils.ToSvgIdenticon(accountService.MainAccount?.Id))
+                }
+            </div>
+            <a style="font-size: 8px;" href="/account/@accountService.MainAccount.Id">@accountService.GetAccountName(accountService.MainAccount.Id)</a>
+        </div>
+        <div class="flex-grow-1 ms-3">
+            <EditForm Model="@textInput" OnValidSubmit="@Send">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-floating">
+                    <InputTextArea @bind-Value="textInput.Text" style="height: 80px;"
+                               class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
+                    <label for="floatingTextarea">Comments</label>
+                </div>
+                <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary mt-2">
+                    @(ReplyTo != null ? "Reply" : "Send note")
+                </button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Event ReplyTo { get; set; }
+
+    private TextInput textInput = new();
+
+    private void Send()
+    {
+        if (!string.IsNullOrEmpty(textInput.Text))
+        {
+            feedService.SendNote(textInput.Text, ReplyTo, accountService.MainAccount);
+            textInput.Text = string.Empty;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        accountService.MainAccountChanged += MainAccountChanged;
+    }
+
+    private void MainAccountChanged(object sender, EventArgs args)
+    {
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                accountService.MainAccountChanged -= MainAccountChanged;
+            }
+
+            _disposed = true;
+        }
+    }
+    #endregion
+}

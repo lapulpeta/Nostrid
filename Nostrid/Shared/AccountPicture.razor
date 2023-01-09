@@ -1,0 +1,29 @@
+﻿
+@code{
+    [Parameter]
+    public Account Account { get; set; }
+
+    [Parameter]
+    public int? Size { get; set; }
+}
+
+@using Nostrid.Model;
+@using Nostrid.Misc;
+
+@if (Account != null)
+{
+    @if (!string.IsNullOrEmpty(Account.Details?.PictureUrl))
+    {
+        <img style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" src="@Account.Details?.PictureUrl" class="card-img-top rounded-999" alt="">
+    }
+    else
+    {
+        <div style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" class="rounded-999 overflow-hidden">
+            @((MarkupString)Utils.ToSvgIdenticon(Account.Id, Size ?? DEFAULT_SIZE))
+        </div>
+    }
+}
+
+@code {
+    const int DEFAULT_SIZE = 48;
+}

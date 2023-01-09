@@ -1,0 +1,32 @@
+﻿@inherits LayoutComponentBase
+
+<div class="d-flex flex-row flex-grow-1">
+	<NavMenu />
+
+	<main class="flex-grow-1 main-margin">
+		<article class="p-3">
+			@Body
+		</article>
+	</main>
+
+	<nav class="navbar navbar-light bg-body-tertiary fixed-bottom d-md-none p-0 m-0 border-top">
+		<ul class="nav flex-grow-1 d-flex text-center">
+			<li class="nav-item flex-grow-1">
+				<NavLink class="nav-link fs-4 text-body" href="/" Match="NavLinkMatch.All">
+					<span class="bi bi-house-fill" aria-hidden="true"></span>
+				</NavLink>
+			</li>
+			<li class="nav-item flex-grow-1">
+				<NavLink class="nav-link fs-4 text-body" href="compose">
+					<div class="bi bi-chat-dots-fill" aria-hidden="true"></div>
+				</NavLink>
+			</li>
+			<li class="nav-item flex-grow-1">
+				<NavLink class="nav-link fs-4 text-body" href="explore">
+					<div class="bi bi-search" aria-hidden="true"></div>
+				</NavLink>
+			</li>
+		</ul>
+	</nav>
+
+</div>

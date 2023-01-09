@@ -1,0 +1,39 @@
+﻿@code {
+    [Parameter]
+    public Account Account { get; set; }
+}
+
+@using Nostrid.Data;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@inject AccountService accountService
+@inject NavigationManager navigationManager
+
+<NavLink href="javascript:void(0);" @onclick="@(() => navigationManager.NavigateTo($"account/{Account.Id}"))" class="d-flex flex-row align-items-start p-3 bg-body-secondary-hover text-decoration-none">
+    <div class="d-flex flex-shrink-0">
+        <AccountPicture Account="Account" Size="48" />
+    </div>
+    <div class="d-flex flex-column flex-grow-1 ms-3">
+        <div class="d-flex flex-row align-items-center">
+            <div class="fs-5 fw-bolder lh-1 flex-grow-1">
+                @(Account?.Details?.Name ?? ByteTools.PubkeyToNpub(Account.Id, true))
+            </div>
+            @if (IsMainAccountLoaded && accountService.MainAccount.Id != Account.Id)
+            {
+                <button class="btn btn-sm @(!accountService.IsFollowing(Account.Id) ? "btn-primary" : "btn-danger")" @onclick="@(() => FollowUnfollow(Account.Id))" @onclick:stopPropagation="true">
+                    @(!accountService.IsFollowing(Account.Id) ? "Follow" : "Unfollow")
+                </button>
+            }
+        </div>
+        <div class="fs-7 mt-1 lh-1 text-body-tertiary text-break">@ByteTools.PubkeyToNpub(Account.Id)</div>
+    </div>
+</NavLink>
+
+@code {
+    private bool IsMainAccountLoaded => accountService.MainAccount != null;
+
+    private void FollowUnfollow(string pubKey)
+    {
+        accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
+    }
+}

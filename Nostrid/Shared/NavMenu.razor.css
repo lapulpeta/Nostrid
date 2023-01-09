@@ -1,0 +1,29 @@
+@media (min-width: 768px) {
+    .offcanvas {
+        position: inherit;
+        visibility: visible;
+        transform: translate(0px);
+        width: auto;
+        transition: none;
+    }
+
+        .offcanvas > .offcanvas-body {
+            overflow: initial;
+        }
+
+            .offcanvas > .offcanvas-body > div.top {
+                position: sticky;
+                top: 15px;
+            }
+
+            .offcanvas > .offcanvas-body > div.bottom {
+                position: sticky;
+                top: calc(100% - 110px);
+            }
+}
+
+@media (max-width: 767.98px) {
+    .offcanvas > .offcanvas-body > div.top {
+        flex-grow: 1;
+    }
+}

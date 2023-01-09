@@ -1,0 +1,191 @@
+﻿@using Nostrid.Data
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@using System.Collections.Concurrent;
+@inject FeedService feedService
+@inject RelayService relayService
+@inject AccountService accountService
+@implements IDisposable
+
+@code {
+    [Parameter]
+    public SubscriptionFilter BaseFilter { get; set; }
+}
+
+@if (newN.Count > 0)
+{
+    <button class="btn btn-primary btn-sm" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
+}
+
+@if (renderedN.Count == 0)
+{
+    <p><em>Waiting for feed...</em></p>
+}
+else
+{
+    <div>
+        <NoteTreeViewer @ref="noteTreeViewer" Trees="@feedService.GetTreesFromNotes(renderedN.Values)" NewestOnTop="true" ShowReplied="true" NestingLevel="1" />
+    </div>
+    <button class="btn btn-primary btn-sm" type="button" @onclick="@LoadMore">Load more</button>
+}
+
+<div class="position-fixed main-margin p-3" style="right: 0; bottom: 0;">
+    <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4" style="height: 3rem; width: 3rem;">
+        <i class="bi bi-arrow-repeat"></i>
+    </button>
+</div>
+
+@code {
+    private ConcurrentDictionary<string, Event> renderedN, newN, oldN;
+    private int dbLimit;
+    private SubscriptionFilter newFilter, oldFilter;
+    private SubscriptionFilter[] detailsFilters = { };
+    private Timer refreshPageTimer, refreshIdsTimer;
+    private string[] renderedIds;
+    private NoteTreeViewer noteTreeViewer;
+    private bool requestDisabled = false;
+
+    private const int RelayQueryLimit = 13;
+
+    private void ShowNewPosts()
+    {
+        Event.MergeAndClear(renderedN, newN);
+    }
+
+    private void LoadMore()
+    {
+        dbLimit += RelayQueryLimit;
+        Event.Merge(renderedN, feedService.GetNotesFeed(BaseFilter.GetFilters(), dbLimit));
+    }
+
+    private async Task LoadMoreFromNoteAsync()
+    {
+        var noteViewer = await noteTreeViewer.GetFirstVisibleAsync();
+        if (noteViewer == null)
+        {
+            return;
+        }
+
+        oldFilter.limitFilterData.Until = noteViewer.Tree.Note.CreatedAtCurated;
+        relayService.RefreshFilters(oldFilter);
+
+        requestDisabled = true;
+
+        Timer enableTimer = null;
+        enableTimer = new Timer(new TimerCallback(_ =>
+        {
+            requestDisabled = false;
+            InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+            enableTimer.Dispose();
+        }), null, 5000, 5000);
+    }
+
+    private void ReceivedNotes(object sender, (string filterId, IEnumerable<Event> notes) data)
+    {
+        if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
+            return;
+
+        if (data.filterId == oldFilter.Id)
+        {
+            Event.Merge(renderedN, data.notes);
+        }
+        else
+        {
+            Event.Merge(newN, data.notes, newEv => !renderedN.TryGetValue(newEv.Id, out var oldEv) ? true : (!oldEv.Processed && newEv.Processed));
+        }
+    }
+
+    private static object atomicSwap = new object();
+    private void UpdateSubscriptionForDetails()
+    {
+        if (_disposed || renderedN == null || renderedIds == null)
+            return;
+
+        SubscriptionFilter[] addedFilters = { }, oldFilters;
+        var accountIds = renderedN.Values.Select(n => n.PublicKey).Distinct().ToArray();
+        if (!accountIds.Except(renderedIds).Any())
+        {
+            return;
+        }
+        if (accountIds.Length != 0)
+        {
+            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds).ToArray());
+        }
+        lock (atomicSwap)
+        {
+            renderedIds = accountIds;
+            (detailsFilters, oldFilters) = (addedFilters, detailsFilters);
+        }
+        relayService.DeleteFilters(oldFilters);
+    }
+
+    protected override void OnParametersSet()
+    {
+        Cleanup();
+
+        renderedN = new();
+        newN = new();
+        oldN = new();
+        renderedIds = new string[0];
+
+        newFilter = BaseFilter.Clone();
+        oldFilter = BaseFilter.Clone();
+        oldFilter.limitFilterData.Limit = RelayQueryLimit;
+        oldFilter.limitFilterData.Until = DateTimeOffset.UtcNow;
+        newFilter.limitFilterData.Limit = 1;
+        dbLimit = 0;
+
+        relayService.AddFilters(newFilter, oldFilter);
+
+        LoadMore();
+
+        feedService.ReceivedNotes += ReceivedNotes;
+
+        refreshPageTimer = new Timer(new TimerCallback(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        }), null, 0, 5000);
+
+        refreshIdsTimer = new Timer(new TimerCallback(_ =>
+        {
+            UpdateSubscriptionForDetails();
+        }), null, 5000, 10000);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        feedService.ReceivedNotes -= ReceivedNotes;
+        renderedN = newN = oldN = null;
+        relayService.DeleteFilters(newFilter, oldFilter);
+        relayService.DeleteFilters(detailsFilters);
+        refreshPageTimer?.Dispose();
+        refreshIdsTimer?.Dispose();
+    }
+    #endregion
+
+}

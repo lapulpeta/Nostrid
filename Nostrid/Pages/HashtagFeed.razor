@@ -1,0 +1,50 @@
+﻿@page "/tag/{hashtags}"
+
+@code {
+    [Parameter]
+    public string Hashtags { get; set; }
+}
+
+@using Nostrid.Data;
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+@inject AccountService accountService
+@inject FeedService feedService
+@inject NavigationManager navigationManager
+
+<div style="display:flex">
+    <h2>Hashtag(s) @Hashtags</h2>
+    @if (accountService.MainAccount != null)
+    {
+        <button class="btn text-secondary bi-pin-fill" type="button" onclick="@Save"></button>
+    }
+</div>
+
+<FeedViewer BaseFilter="@filter" />
+
+@code {
+    private SubscriptionFilter filter;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Hashtags))
+        {
+            var hashtags = Hashtags.Split(",");
+            filter = new TagSubscriptionFilter(hashtags);
+        }
+    }
+
+    private void Save()
+    {
+        if (!string.IsNullOrEmpty(Hashtags))
+        {
+            var feedSource = new FeedSource()
+            {
+                Hashtags = Hashtags.Split(",").ToList(),
+                OwnerId = accountService.MainAccount.Id,
+            };
+            feedService.SaveFeedSource(feedSource);
+            navigationManager.NavigateTo($"/feed/{feedSource.Id}");
+        }
+    }
+}

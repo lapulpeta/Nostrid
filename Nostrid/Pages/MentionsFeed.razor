@@ -1,0 +1,26 @@
+﻿@page "/feed/mention"
+
+@using Nostrid.Data
+@using Nostrid.Data.Relays;
+@inject AccountService accountService
+@inject FeedService feedService
+
+<h2>Mentions Feed</h2>
+
+<div class="d-none d-md-flex px-3 pb-3" style="margin: 0 -1rem;">
+    <NoteComposer />
+</div>
+
+<FeedViewer BaseFilter="@filter" />
+
+@code {
+    private SubscriptionFilter filter;
+
+    protected override void OnInitialized()
+    {
+        filter = new MentionSubscriptionFilter(accountService.MainAccount.Id);
+
+        var newestNoteDate = feedService.GetNotesFeed(filter.GetFilters(), 1).Max(n => n.CreatedAtCurated);
+        accountService.SetLastRead(newestNoteDate);
+    }
+}

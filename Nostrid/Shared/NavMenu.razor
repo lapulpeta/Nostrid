@@ -1,0 +1,223 @@
+﻿@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Misc;
+
+@inject RelayService relayService
+@inject FeedService feedService
+@inject EventDatabase eventDatabase
+@inject AccountService accountService
+@inject IJSRuntime jsRuntime
+@implements IAsyncDisposable
+
+<nav class="navbar navbar-light bg-body-tertiary fixed-top d-md-none m-0 p-0 border-bottom bg-opacity-95">
+	<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center px-1">
+		<NavLink class="nav-link py-1" href="#">
+			<AccountPicture Account="accountService.MainAccount" Size="40"></AccountPicture>
+		</NavLink>
+		<div class="flex-grow-1 text-center">
+			<a class="navbar-brand m-0" href="/">Nostrid</a>
+		</div>
+		<button title="Navigation menu" class="navbar-toggler p-1 my-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+	</div>
+</nav>
+
+<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
+	<div class="offcanvas-header d-md-none">
+		<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+	</div>
+	<div class="offcanvas-body d-flex flex-column flex-grow-1">
+		<div class="top">
+			<a class="d-block pb-3 text-center text-decoration-none" href="/">Nostrid</a>
+			<nav class="p-0">
+				<ul class="nav nav-pills flex-column">
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap" href="/" Match="NavLinkMatch.All" @onclick="HideOffCanvasMenu">
+							<span class="bi bi-house-fill" aria-hidden="true"></span> Global
+						</NavLink>
+					</li>
+					@if (accountService.MainAccount != null)
+					{
+						@foreach (var feedSource in feedService.GetFeedSources(accountService.MainAccount.Id))
+						{
+							<li class="nav-item pb-2">
+								<NavLink class="nav-link text-nowrap" href="@($"feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
+									<span class="bi bi-house-heart-fill" aria-hidden="true"></span> @string.Join(", ", feedSource.Hashtags.ToArray())
+								</NavLink>
+							</li>
+						}
+						<li class="nav-item pb-2">
+							<NavLink class="nav-link text-nowrap" href="feed/follow" @onclick="HideOffCanvasMenu">
+								<span class="bi bi-house-check-fill" aria-hidden="true"></span> Following
+							</NavLink>
+						</li>
+						<li class="nav-item pb-2">
+							<NavLink class="nav-link text-nowrap" href="feed/mention" @onclick="HideOffCanvasMenu">
+								<span class="bi bi-house-exclamation-fill" aria-hidden="true"></span> Mentions
+								@if (mentionsCount > 0)
+								{
+									<span class="badge rounded-pill bg-danger">
+										@(Math.Min(MaxMentions, mentionsCount))
+										@(mentionsCount > MaxMentions ? "+" : "")
+									</span>
+								}
+							</NavLink>
+						</li>
+					}
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap" href="explore" @onclick="HideOffCanvasMenu">
+							<span class="bi bi-search" aria-hidden="true"></span> Explore
+						</NavLink>
+					</li>
+					@if (accountService.MainAccount != null)
+					{
+						<li class="nav-item pb-2">
+							<NavLink class="nav-link text-nowrap" href="@($"account/{accountService.MainAccount.Id}")" @onclick="HideOffCanvasMenu">
+								<span class="bi bi-person-fill" aria-hidden="true"></span> Me
+							</NavLink>
+						</li>
+					}
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap" href="accounts" @onclick="HideOffCanvasMenu">
+							<span class="bi bi-people-fill" aria-hidden="true"></span> Accounts
+						</NavLink>
+					</li>
+					<li class="nav-item pb-2">
+						<a href="javascript:void(0);" class="nav-link text-nowrap" @onclick="ToggleNightMode">
+							@if (isDarkTheme)
+							{
+								<span class="bi bi-sun-fill" aria-hidden="true"></span>
+								<span>Light mode</span>
+							}
+							else
+							{
+								<span class="bi bi-moon-fill" aria-hidden="true"></span>
+								<span>Dark mode</span>
+							}
+						</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+		<div class="bottom fs-7 text-muted text-left">
+			<div>
+				Relays <br />
+				-Connected: @relayService.ConnectedRelays/@relayService.MaxRelays <button class="btn bi bi-arrow-clockwise p-0 text-secondary border" @onclick="@ChangeRelays"></button> <br />
+				-Available: @relayService.PendingRelays <br />
+				-Rate Limited: @relayService.RateLimitedRelays <br />
+				Filters: @relayService.FiltersCount <br />
+				Version: @Utils.GetCurrentVersion()
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	const string DARK_THEME = "dark";
+
+	private IJSObjectReference jsModule;
+	private Timer refreshTimer;
+	private bool isDarkTheme;
+	private int mentionsCount;
+
+	private const int MaxMentions = 5;
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		refreshTimer = new Timer(new TimerCallback(_ =>
+		{
+			InvokeAsync(() =>
+			{
+				StateHasChanged();
+			});
+		}), null, 0, 2000);
+	}
+
+	private void MentionsUpdated(object sender, EventArgs eventArgs)
+	{
+		if (accountService.MainAccount != null)
+		{
+			var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
+			mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
+			(mentionsCount, var oldCount) = (feedService.GetNotesFeed(mentionsFilter.GetFilters(), MaxMentions + 1).Count(), mentionsCount);
+			if (oldCount != mentionsCount)
+			{
+				InvokeAsync(() =>
+				{
+					StateHasChanged();
+				});
+			}
+		}
+		else
+		{
+			mentionsCount = 0;
+		}
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		await base.OnAfterRenderAsync(firstRender);
+		if (firstRender)
+		{
+			jsModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
+			isDarkTheme = await SetTheme(null) == DARK_THEME;
+			accountService.MentionsUpdated += MentionsUpdated;
+		}
+	}
+
+	private void ChangeRelays()
+	{
+		Task.Run(() => relayService.RestartNostrClients());
+	}
+
+	private async Task ToggleNightMode()
+	{
+		isDarkTheme = await SetTheme(isDarkTheme ? string.Empty : DARK_THEME) == DARK_THEME;
+	}
+
+	private async Task HideOffCanvasMenu()
+	{
+		if (jsModule != null)
+		{
+			await jsModule.InvokeVoidAsync("hideOffcanvasMenu");
+		}
+	}
+
+	private async Task<string> SetTheme(string themeName)
+	{
+		return jsModule != null
+			? await jsModule.InvokeAsync<string>("setTheme", themeName) 
+			: null;
+	}
+
+	#region Dispose
+	private bool _disposed;
+
+	async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose(true);
+
+	protected virtual async Task Dispose(bool disposing)
+	{
+		if (!_disposed)
+		{
+			if (disposing)
+			{
+				await Cleanup();
+			}
+
+			_disposed = true;
+		}
+	}
+
+	private async Task Cleanup()
+	{
+		if (jsModule is not null)
+		{
+			await jsModule.DisposeAsync();
+		}
+		accountService.MentionsUpdated -= MentionsUpdated;
+	}
+	#endregion
+}

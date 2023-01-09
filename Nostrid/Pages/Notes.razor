@@ -1,0 +1,124 @@
+﻿@page "/note/{eventId}"
+@implements IDisposable
+
+@code {
+    [Parameter]
+    public string EventId { get; set; }
+}
+
+@using Nostrid.Data
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@using System.Collections.Concurrent;
+@inject FeedService feedService
+@inject RelayService relayService
+
+@if (!renderedN.Any())
+{
+    <p><em>Waiting @ByteTools.PubkeyToNote(EventId, true)...</em></p>
+}
+else
+{
+    @if (!noteTrees.Exists(EventId) || 
+        (!maxReached && (noteTrees.Count != 1 || !string.IsNullOrEmpty(noteTrees[0].Note.NoteMetadata.ReplyToId))))
+    {
+        <p style="font-size:14px">⚠️ Thread not fully visible. Wait, or rotate the relays.</p>
+    }
+    else if (maxReached)
+    {
+        <p style="font-size:14px">⚠️ Thread only partially visible due to excessive nesting.</p>
+    }
+    <NoteTreeViewer Trees="@noteTrees" NewestOnTop="true" ShowReplied="true" MainEventId="@EventId" NestingLevel="1" />
+}
+
+@code {
+    private ConcurrentDictionary<string, Event> renderedN = new();
+    private List<NoteTree> noteTrees = new();
+    private Timer refreshTimer;
+    private SubscriptionFilter[] detailsFilters = { };
+    private SubscriptionFilter eventFilter;
+    private bool maxReached;
+
+    protected override void OnParametersSet()
+    {
+        int subscribedCnt = -1;
+
+        Cleanup();
+
+        renderedN = new();
+
+        refreshTimer = new Timer(new TimerCallback(_ =>
+        {
+            if (_disposed)
+                return;
+
+            var mustRefresh = Event.Merge(renderedN, feedService.GetNotesThread(EventId, downLevels: 4, out maxReached));
+
+            if (subscribedCnt != renderedN.Count)
+            {
+                UpdateSubscriptionForEvents();
+                subscribedCnt = renderedN.Count;
+                mustRefresh = true;
+            }
+
+            if (mustRefresh)
+            {
+                noteTrees = feedService.GetTreesFromNotes(renderedN.Values);
+                InvokeAsync(() =>
+                {
+                    StateHasChanged();
+                });
+            }
+        }), null, 0, 3000);
+    }
+
+    private static object atomicSwap = new object();
+    private void UpdateSubscriptionForEvents()
+    {
+        SubscriptionFilter[] addedFilters = { }, oldFilters;
+        SubscriptionFilter addedFilter, oldFilter;
+        var renderedNValues = renderedN.Values;
+        var accountIds = renderedNValues.Select(n => n.PublicKey).Distinct().ToArray();
+        var ids = renderedNValues.SelectMany(t => new[] { t.Id, t.NoteMetadata.ReplyToId, t.NoteMetadata.ReplyToRootId }).Union(new[] { EventId }).Where(t => !string.IsNullOrEmpty(t)).Distinct();
+        relayService.AddFilter(addedFilter = new EventSubscriptionFilter(ids.ToArray()));
+        if (accountIds.Length != 0)
+        {
+            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds).ToArray());
+        }
+        lock (atomicSwap)
+        {
+            (detailsFilters, oldFilters) = (addedFilters, detailsFilters);
+            (eventFilter, oldFilter) = (addedFilter, eventFilter);
+        }
+        relayService.DeleteFilters(oldFilters);
+        relayService.DeleteFilter(oldFilter);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        refreshTimer?.Dispose();
+        relayService.DeleteFilter(eventFilter);
+        relayService.DeleteFilters(detailsFilters);
+    }
+    #endregion
+
+}

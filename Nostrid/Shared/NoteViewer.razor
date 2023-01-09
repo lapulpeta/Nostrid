@@ -1,0 +1,310 @@
+﻿@implements IAsyncDisposable
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+@using Ganss.Xss;
+@using System.Web;
+
+@inject AccountService accountService
+@inject FeedService feedService
+@inject IJSRuntime jsRuntime
+@inject HtmlSanitizer htmlSanitizer
+
+<div @ref="referenceElement" class="d-flex flex-row p-3 border-top note @(highlighted ? "bg-info" : "")" style="margin: 0 -1rem;">
+
+    @foreach (var i in Enumerable.Range(1, NestingLevel - 1))
+    {
+        <div class="ms-3" style="width: 50px;">&nbsp;</div>
+    }
+
+    @if (Tree.Note.Deleted)
+    {
+        <p>Note deleted</p>
+    }
+    else
+    {
+
+    <div>
+        <div class="border rounded-2 overflow-hidden">
+            @if (Tree.PictureUrl != null)
+            {
+                <img style="width:48px; height:48px" src="@Tree.PictureUrl" />
+            }
+            else
+            {
+                @((MarkupString)Utils.ToSvgIdenticon(Tree.Note.PublicKey))
+            }
+        </div>
+        <a style="font-size: 8px;" href="/account/@Tree.Note.PublicKey">@Tree.AccountName</a>
+    </div>
+    
+    <div class="flex-grow-1 ms-3">
+
+        <p>
+            <a style="font-size: 13px; margin: 0px; padding: 0px;" href="/note/@Tree.Note.Id">@ByteTools.PubkeyToNote(Tree.Note.Id, true)</a><span style="font-size: 13px;padding-left:5px">@Utils.FormatDate(Tree.Note.CreatedAtCurated)</span>
+            @if (ShowReplied && Tree.Note.NoteMetadata.ReplyToId != null)
+            {
+                <div style="font-style: italic; font-size: 13px;">Replying to <a href="/note/@Tree.Note.NoteMetadata.ReplyToId">@ByteTools.PubkeyToNote(Tree.Note.NoteMetadata.ReplyToId, true)</a></div>
+            }
+        </p>
+
+        <div class="@(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")">
+            <p class="text-break" style="margin-bottom: .3rem;">@((MarkupString)GetContent())</p>
+        </div>
+
+@*        @if (Tree.Note.NoteMetadata.HashTags.Count > 0)
+        {
+            <p>
+                @foreach (var tag in Tree.Note.NoteMetadata.HashTags)
+                {
+                    <a href="/tag/@tag">#@tag</a>
+                    <span>&nbsp;</span>
+                }
+            </p>
+        }*@
+
+@*        @if (Tree.Note.NoteMetadata.Mentions.Count > 0)
+        {
+            <p>
+                @foreach (var mention in Tree.Note.NoteMetadata.Mentions)
+                {
+                    <a style="font-size: 13px;" href="/account/@mention"><span>@@</span>@Utils.ShortenNostrId(mention)</a>
+                    <span>&nbsp;</span>
+                }
+            </p>
+        }*@
+
+        <div style="display:flex;">
+            @if (Tree.Note.NoteMetadata.Reactions.Count > 0)
+            {
+                @foreach (var reaction in Tree.Note.NoteMetadata.Reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count()))
+                {
+                    <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
+                        @NormalizedReaction(reaction.Key)
+                        <span style="font-weight: bold;">@reaction.Count()</span>
+                    </div>
+                }
+            }
+            @if (accountService.MainAccount != null)
+            {
+                <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
+                    <button style="border: none; background: none; padding: 0; margin: 0" disabled="@likeSent" @onclick="@LikeTweet">❤️</button>
+                </div>
+
+                <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
+                    <button style="border: none; background: none; padding: 0; margin: 0" @onclick="@Reply">Reply</button>
+                </div>
+
+                @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
+                {
+                    <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
+                        <button style="border: none; background: none; padding: 0; margin: 0" @onclick="@Delete">Delete</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    }
+
+</div>
+
+@if (replyOpened)
+{
+    <div class="d-flex flex-row px-3 pb-3" style="margin: 0 -1rem;">
+        @foreach (var i in Enumerable.Range(1, NestingLevel))
+        {
+            <div class="ms-3" style="width: 50px;">&nbsp;</div>
+        }
+        <div class="flex-grow-1">
+            <NoteComposer ReplyTo="@Tree.Note" />
+        </div>
+    </div>
+}
+
+<NoteTreeViewer @ref="NoteTreeViewerRef" Trees="@Tree.Children" NewestOnTop="false" ShowReplied="false" MainEventId="@MainEventId" NestingLevel="@innerNestingLevel" />
+
+@code {
+    private bool likeClicked = false;
+    private bool likeSent => likeClicked || Tree.Note.NoteMetadata.Reactions.Any(r => r.ReactorId == accountService?.MainAccount.Id);
+    private int innerNestingLevel => (Tree.Children?.Count ?? 0) > 1 ? NestingLevel + 1 : NestingLevel;
+    private bool replyOpened = false;
+    private IJSObjectReference jsModule;
+    private ElementReference referenceElement;
+    private NoteTreeViewer NoteTreeViewerRef;
+    private bool highlighted = false;
+
+    [Parameter]
+    public NoteTree Tree { get; set; }
+
+    [Parameter]
+    public bool ShowReplied { get; set; }
+
+    [Parameter]
+    public string MainEventId { get; set; }
+
+    [Parameter]
+    public int NestingLevel { get; set; }
+
+    [Parameter]
+    public Action<NoteViewer> OnComponentLoad { get; set; }
+
+    [Parameter]
+    public Action<NoteViewer> OnComponentUnload { get; set; }
+
+    protected override void OnInitialized()
+    {
+        accountService.AccountDetailsChanged += AccountDetailsChanged;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && OnComponentLoad != null)
+        {
+            OnComponentLoad(this);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firtRender)
+    {
+        if (firtRender)
+        {
+            jsModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../NoteViewer.js");
+        }
+    }
+
+    private void AccountDetailsChanged(object sender, (string accountId, AccountDetails details) data)
+    {
+        if (data.accountId != Tree.Note.PublicKey) return;
+        Tree.AccountName = data.details.Name;
+        Tree.PictureUrl = data.details.PictureUrl;
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+    private void LikeTweet()
+    {
+        feedService.SendReaction("+", Tree.Note, accountService.MainAccount);
+        likeClicked = true;
+    }
+
+    private void Reply()
+    {
+        replyOpened = !replyOpened;    
+    }
+
+    private void Delete()
+    {
+        feedService.DeleteNote(Tree.Note, accountService.MainAccount);
+    }
+
+    private string NormalizedReaction(string reaction)
+    {
+        if (string.IsNullOrEmpty(reaction) || reaction == "+")
+        {
+            return "❤️";
+        }
+        else
+        {
+            return reaction;
+        }
+    }
+
+    public async Task<bool> IsVisibleAsync()
+    {
+        return jsModule != null
+            ? await jsModule.InvokeAsync<bool>("isVisible", referenceElement)
+            : false;
+    }
+
+    public IEnumerable<NoteViewer> GetNoteViewers()
+    {
+        return (new NoteViewer[] { this }).Concat(NoteTreeViewerRef.GetNoteViewers());
+    }
+
+    public void Highlight()
+    {
+        highlighted = true;
+    }
+
+    private string GetContent()
+    {
+        var content = Tree.Note.Content ?? string.Empty;
+        var metadata = Tree.Note.NoteMetadata;
+
+        if (Tree.Note.Kind == NostrKind.Repost && metadata.EventMentions.ContainsKey(0))
+        {
+            return $"<i class='bi bi-repeat p-2'></i><a href='note/{metadata.EventMentions[0]}'>{ByteTools.PubkeyToNote(metadata.EventMentions[0], true)}</a>";
+        }
+
+        // new lines
+        content = content.Replace("\\n", "<br/>");
+
+        // mentions
+        foreach (var index in Enumerable.Range(0, Tree.Note.Tags.Count))
+        {
+            if (content.Contains($"#[{index}]"))
+            {
+                if (metadata.EventMentions.ContainsKey(index))
+                {
+                    content = content.Replace($"#[{index}]", $"<a href='note/{metadata.EventMentions[index]}'>{ByteTools.PubkeyToNote(metadata.EventMentions[index], true)}</a>");
+
+                }
+                else if (metadata.AccountMentions.ContainsKey(index))
+                {
+                    content = content.Replace($"#[{index}]", $"<a href='account/{metadata.AccountMentions[index]}'>{HttpUtility.HtmlEncode(accountService.GetAccountName(metadata.AccountMentions[index]))}</a>");
+                }
+            }
+        }
+
+        // hashtags
+        // TODO: improve this so there is no need for two passes
+        var hashtags = metadata.HashTags.OrderByDescending(t => t.Length);
+        foreach (var tag in hashtags)
+        {
+            content = content.Replace($"#{tag}", $"#!{tag}!", StringComparison.OrdinalIgnoreCase);
+        }
+        foreach (var tag in hashtags)
+        {
+            content = content.Replace($"#!{tag}!", $"<a href='tag/{tag}'>#{tag}</a>", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return htmlSanitizer.Sanitize(content);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose(true);
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                await Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private async Task Cleanup()
+    {
+        if (OnComponentUnload != null)
+        {
+            OnComponentUnload(this);
+        }
+        accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        if (jsModule is not null)
+        {
+            await jsModule.DisposeAsync();
+        }
+    }
+    #endregion
+}

@@ -1,0 +1,75 @@
+﻿@using Nostrid.Misc;
+@using Nostrid.Model;
+@inject NavigationManager NavigationManager
+
+<EditForm Model="@textInput" OnValidSubmit="@GoToEventSubmit">
+    <p>Enter npub, note, event ID, or anything else to be considered a hashtag:</p>
+  
+    <div class="mb-2">
+        <InputText id="destination" @bind-Value="textInput.Text" />
+    </div>
+
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    @if (invalidInput)
+    {
+        <p style="color:red">I don't understand that</p>
+    }
+
+    <button class="btn btn-primary" type="submit">Go</button>
+</EditForm>
+
+
+@code {
+    private TextInput textInput = new();
+    private bool invalidInput;
+
+    private void GoToEventSubmit()
+    {
+        var input = textInput.Text?.Trim() ?? string.Empty;
+
+        // Check bech32
+        var (prefix, pubkey) = ByteTools.DecodeBech32(input);
+        if (prefix != null && Utils.IsValidNostrId(pubkey))
+        {
+            switch (prefix)
+            {
+                case "npub":
+                    NavigationManager.NavigateTo($"/account/{pubkey}");
+                    return;
+                case "note":
+                    NavigationManager.NavigateTo($"/note/{pubkey}");
+                    return;
+                default:
+                    invalidInput = true;
+                    return;
+            }
+        }
+
+        // Check event ID
+        if (Utils.IsValidNostrId(input))
+        {
+            NavigationManager.NavigateTo($"/note/{input}");
+            return;
+        }
+
+        // Check tag
+        var words = input.Split(" ");
+        var hashtags = new List<string>();
+        foreach (var word in words)
+        {
+            if (Utils.IsHashTag(word))
+                hashtags.Add(Utils.GetHashTag(word));
+            else if (Utils.IsHashTag("#" + word))
+                hashtags.Add(Utils.GetHashTag("#" + word));
+        }
+        if (hashtags.Any())
+        {
+            NavigationManager.NavigateTo($"/tag/{string.Join(",", hashtags.ToArray())}");
+            return;
+        }
+
+        invalidInput = true;
+    }
+}

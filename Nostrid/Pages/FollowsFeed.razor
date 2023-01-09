@@ -1,0 +1,73 @@
+﻿@page "/feed/follow"
+@implements IDisposable
+
+@using Nostrid.Data
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@inject AccountService accountService
+
+<h2>Following Feed</h2>
+
+<div class="d-none d-md-flex px-3 pb-3" style="margin: 0 -1rem;">
+    <NoteComposer />
+</div>
+
+@if (accountService.MainAccount.FollowList.Count == 0)
+{
+    <p>No follows yet.<br />If you recently restored your account then your follows may take a few minutes to be discovered.</p>
+}
+else
+{
+    <FeedViewer BaseFilter="@filter" />
+}
+
+@code {
+    private SubscriptionFilter filter;
+
+    protected override void OnInitialized()
+    {
+        accountService.MainAccountChanged += MainAccountChanged;
+        SetFilter();
+    }
+
+    private void MainAccountChanged(object sender, EventArgs args)
+    {
+        SetFilter();
+    }
+
+    private void SetFilter()
+    {
+        if (accountService.MainAccount.FollowList.Count == 0)
+        {
+            filter = null;
+        }
+        else
+        {
+            filter = new AccountSubscriptionFilter(accountService.MainAccount.FollowList.ToArray());
+        }
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                accountService.MainAccountChanged -= MainAccountChanged;
+            }
+
+            _disposed = true;
+        }
+    }
+    #endregion
+}

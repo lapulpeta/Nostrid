@@ -1,0 +1,52 @@
+﻿@page "/feed/{id}"
+
+@code {
+    [Parameter]
+    public string Id { get; set; }
+}
+
+@using Nostrid.Data
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@inject AccountService accountService
+@inject FeedService feedService
+@inject NavigationManager navigationManager
+
+<div style="display:flex">
+    <h5>Saved Feed: 
+        @if (hashtags != null)
+        {
+            <span>Hashtag(s) @string.Join(",", hashtags)</span>
+        }
+    </h5>
+    <button class="btn text-secondary bi-trash-fill" type="button" onclick="@Delete"></button>
+</div>
+
+<FeedViewer BaseFilter="@filter" />
+
+@code {
+    private SubscriptionFilter filter;
+    private string[] hashtags;
+    private long id;
+
+    protected override void OnParametersSet()
+    {
+        id = long.Parse(Id);
+        if (accountService.MainAccount != null)
+        {
+            FeedSource feedSource = feedService.GetFeedSource(id);
+            if (feedSource != null && feedSource.OwnerId == accountService.MainAccount.Id)
+            {
+                hashtags = feedSource.Hashtags.ToArray();
+                filter = new TagSubscriptionFilter(hashtags);
+            }
+        }
+    }
+
+    private void Delete()
+    {
+        feedService.DeleteFeedSource(id);
+        navigationManager.NavigateTo($"/");
+    }
+}
