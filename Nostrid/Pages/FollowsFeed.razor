@@ -9,13 +9,17 @@
 
 <h2>Following Feed</h2>
 
-<div class="d-none d-md-flex px-3 pb-3" style="margin: 0 -1rem;">
+<div class="d-none d-md-flex px-3" style="margin: 0 -1rem;">
     <NoteComposer />
 </div>
 
 @if (accountService.MainAccount.FollowList.Count == 0)
 {
-    <p>No follows yet.<br />If you recently restored your account then your follows may take a few minutes to be discovered.</p>
+    <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center border-top px-2 py-3" style="margin: 0 -1rem;">
+        <i class="fs-1 bi bi-person-x"></i>
+        <p class="fw-bold">No follows yet.</p>
+        <p>If you recently restored your account then your follows may take a few minutes to be discovered.</p>
+    </div>
 }
 else
 {

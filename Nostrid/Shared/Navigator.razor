@@ -5,21 +5,19 @@
 <EditForm Model="@textInput" OnValidSubmit="@GoToEventSubmit">
     <p>Enter npub, note, event ID, or anything else to be considered a hashtag:</p>
   
-    <div class="mb-2">
-        <InputText id="destination" @bind-Value="textInput.Text" />
+    <div class="input-group mb-3">
+        <InputText class="form-control" @bind-Value="textInput.Text" />
+        <button class="btn btn-primary" type="submit">Go</button>
     </div>
 
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     @if (invalidInput)
-    {
+    {   
         <p style="color:red">I don't understand that</p>
     }
-
-    <button class="btn btn-primary" type="submit">Go</button>
 </EditForm>
-
 
 @code {
     private TextInput textInput = new();

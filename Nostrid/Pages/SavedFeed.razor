@@ -13,14 +13,17 @@
 @inject FeedService feedService
 @inject NavigationManager navigationManager
 
-<div style="display:flex">
-    <h5>Saved Feed: 
+<div class="d-flex flex-row">
+    <h2>
+        Saved Feed: 
         @if (hashtags != null)
         {
-            <span>Hashtag(s) @string.Join(",", hashtags)</span>
+            <span>#@string.Join(" #", hashtags)</span>
         }
-    </h5>
-    <button class="btn text-secondary bi-trash-fill" type="button" onclick="@Delete"></button>
+    </h2>
+    <button class="btn btn-sm btn-outline-danger mb-2 ms-4" type="button" @onclick="@Delete">
+        <i class="bi bi-trash3"></i> Remove
+    </button>
 </div>
 
 <FeedViewer BaseFilter="@filter" />

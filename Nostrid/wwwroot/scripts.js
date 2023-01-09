@@ -15,9 +15,16 @@ export function hideOffcanvasMenu() {
     instance.hide();
 }
 
-export function hideModal(modalId) {
+export function showModal(element) {
     if (!bootstrap) return;
-    var modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+    var modal = bootstrap.Modal.getOrCreateInstance(element.firstChild);
+    if (!modal) return;
+    modal.show();
+}
+
+export function hideModal(element) {
+    if (!bootstrap) return;
+    var modal = bootstrap.Modal.getOrCreateInstance(element.firstChild);
     if (!modal) return;
     modal.hide();
 }

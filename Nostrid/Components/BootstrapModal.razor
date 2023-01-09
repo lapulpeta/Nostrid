@@ -1,0 +1,47 @@
+﻿@implements IDisposable
+
+@code {
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+}
+
+<div @ref="container">
+	@ChildContent
+</div>
+
+<ScriptsComponent @ref="scripts" />
+
+@code {
+
+    private ScriptsComponent scripts;
+    private ElementReference container;
+
+    public void Show()
+    {
+        scripts.InvokeVoid("showModal", container);
+    }
+
+    public void Hide()
+    {
+        scripts.InvokeVoid("hideModal", container);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Hide();
+            }
+
+            _disposed = true;
+        }
+    }
+    #endregion
+}

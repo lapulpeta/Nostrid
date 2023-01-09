@@ -8,32 +8,35 @@
 @inject AccountService accountService
 @inject FeedService feedService
 
+@code{
+    [Parameter]
+    public NoteTree ReplyTo { get; set; }
+
+    [Parameter]
+    public Action OnSend { get; set; }
+}
+
 @if (accountService.MainAccount != null)
 {
-    <div class="d-flex flex-row flex-grow-1">
-        <div>
-            <div class="border rounded-2 overflow-hidden">
-                @if (accountService.MainAccount?.Details != null)
-                {
-                    <img style="width:48px; height:48px" src="@accountService.MainAccount?.Details.PictureUrl" />
-                }
-                else
-                {
-                    @((MarkupString)Utils.ToSvgIdenticon(accountService.MainAccount?.Id))
-                }
-            </div>
-            <a style="font-size: 8px;" href="/account/@accountService.MainAccount.Id">@accountService.GetAccountName(accountService.MainAccount.Id)</a>
-        </div>
-        <div class="flex-grow-1 ms-3">
+    @if (ReplyTo != null)
+    {
+        <NoteTreeViewer Trees="@(new List<NoteTree>() { ReplyTo })" ReplyingTo="true" />
+    }
+    <div class="d-flex flex-row flex-grow-1 align-items-start px-3 py-2" style="margin: 0 -1rem;">
+        <a class="flex-shrink-0" href="/account/@accountService.MainAccount.Id">
+            <AccountPicture Account="accountService.MainAccount"></AccountPicture>
+        </a>
+        <div class="flex-grow-1 ms-2">
+            <p class="mb-1">
+                <a href="/account/@accountService.MainAccount.Id" class="fw-bold text-decoration-none mb-1">
+                    @accountService.GetAccountName(accountService.MainAccount.Id)
+                </a>
+            </p>
             <EditForm Model="@textInput" OnValidSubmit="@Send">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
-                <div class="form-floating">
-                    <InputTextArea @bind-Value="textInput.Text" style="height: 80px;"
-                               class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
-                    <label for="floatingTextarea">Comments</label>
-                </div>
-                <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary mt-2">
+                <InputTextArea @bind-Value="textInput.Text" rows="3" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
+                <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary my-2">
                     @(ReplyTo != null ? "Reply" : "Send note")
                 </button>
             </EditForm>
@@ -42,8 +45,6 @@
 }
 
 @code {
-    [Parameter]
-    public Event ReplyTo { get; set; }
 
     private TextInput textInput = new();
 
@@ -51,8 +52,12 @@
     {
         if (!string.IsNullOrEmpty(textInput.Text))
         {
-            feedService.SendNote(textInput.Text, ReplyTo, accountService.MainAccount);
+            feedService.SendNote(textInput.Text, ReplyTo?.Note, accountService.MainAccount);
             textInput.Text = string.Empty;
+            if (OnSend != null)
+            {
+                OnSend();
+            }
         }
     }
 

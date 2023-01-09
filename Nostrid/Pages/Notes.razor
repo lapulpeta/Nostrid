@@ -6,6 +6,7 @@
     public string EventId { get; set; }
 }
 
+@using Nostrid.Components
 @using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
@@ -14,22 +15,55 @@
 @inject FeedService feedService
 @inject RelayService relayService
 
+<h2>
+    Note 
+    <span class="fs-5 me-2">@ByteTools.PubkeyToNote(EventId, true)</span>
+    <span class="fs-6 d-inline-block text-secondary pt-2">
+        @if (renderedN.Any())
+        {
+            @if (!noteTrees.Exists(EventId) || 
+                (!maxReached && (noteTrees.Count != 1 ||!string.IsNullOrEmpty(noteTrees[0].Note.NoteMetadata.ReplyToId))))
+            {
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>Thread not fully visible. Wait, or rotate the relays.</span>
+            }
+            else if (maxReached)
+            {
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>Thread only partially visible due to excessive nesting.</span>
+            }
+        }
+    </span>
+</h2>
+
 @if (!renderedN.Any())
 {
-    <p><em>Waiting @ByteTools.PubkeyToNote(EventId, true)...</em></p>
+    <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
+        <div class="spinner-border mx-3 my-2" role="status">
+            <span class="visually-hidden">Waiting for feed...</span>
+        </div>
+    </div>
 }
 else
 {
-    @if (!noteTrees.Exists(EventId) || 
-        (!maxReached && (noteTrees.Count != 1 || !string.IsNullOrEmpty(noteTrees[0].Note.NoteMetadata.ReplyToId))))
-    {
-        <p style="font-size:14px">⚠️ Thread not fully visible. Wait, or rotate the relays.</p>
-    }
-    else if (maxReached)
-    {
-        <p style="font-size:14px">⚠️ Thread only partially visible due to excessive nesting.</p>
-    }
-    <NoteTreeViewer Trees="@noteTrees" NewestOnTop="true" ShowReplied="true" MainEventId="@EventId" NestingLevel="1" />
+    <div style="margin-bottom: -1rem;">
+        <NoteTreeViewer Trees="@noteTrees" NewestOnTop="true" MainEventId="@EventId" OnReply="OnReply" />
+    </div>
+    <BootstrapModal @ref="composeModal">
+        <div class="modal fade" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="staticBackdropLabel">Reply</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <NoteComposer ReplyTo="@replyingTo" OnSend="@(() => composeModal.Hide())"></NoteComposer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </BootstrapModal>
 }
 
 @code {
@@ -39,6 +73,8 @@ else
     private SubscriptionFilter[] detailsFilters = { };
     private SubscriptionFilter eventFilter;
     private bool maxReached;
+    private BootstrapModal composeModal;
+    private NoteTree replyingTo = null;
 
     protected override void OnParametersSet()
     {
@@ -93,6 +129,13 @@ else
         }
         relayService.DeleteFilters(oldFilters);
         relayService.DeleteFilter(oldFilter);
+    }
+
+    private void OnReply(NoteTree noteTree)
+    {
+        replyingTo = noteTree;
+        StateHasChanged();
+        composeModal.Show();
     }
 
     #region Dispose

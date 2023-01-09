@@ -7,152 +7,202 @@
 @using Ganss.Xss;
 @using System.Web;
 
+@inject NavigationManager navigationManager
 @inject AccountService accountService
 @inject FeedService feedService
 @inject IJSRuntime jsRuntime
 @inject HtmlSanitizer htmlSanitizer
 
-<div @ref="referenceElement" class="d-flex flex-row p-3 border-top note @(highlighted ? "bg-info" : "")" style="margin: 0 -1rem;">
+<div role="button" @ref="referenceElement" class="d-flex flex-row px-3 py-2 @(!ReplyingTo ? "bg-tertiary-hover border-top" : "" ) @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
+     @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem; font-size: .95rem;">
 
-    @foreach (var i in Enumerable.Range(1, NestingLevel - 1))
+    @for (var i = 1; i < TreeLayout.Length; i++)
     {
-        <div class="ms-3" style="width: 50px;">&nbsp;</div>
+        var last = i == TreeLayout.Length - 1;
+        <div class="flex-shrink-0 d-flex flex-row justify-content-center align-items-top" style="width: 48px;">
+            <div class="flex-grow-1"></div>
+            @if (TreeLayout[i] > 1)
+            {
+                <div class="bg-secondary opacity-75" style="width: 2px; margin-bottom: -1.07rem;"></div>
+            }
+            else if (!OnlyChild && TreeLayout[i] == 1 && last)
+            {
+                <div class="bg-secondary opacity-75" style="width: 2px; height: 25px;"></div>
+            }
+            <div class="flex-grow-1 d-flex flex-column justify-content-center" style="height: 48px;">
+                @if (!OnlyChild && last)
+                {
+                    <div class="bg-secondary opacity-75" style="height: 2px;"></div>
+                }
+            </div>
+        </div>
     }
 
     @if (Tree.Note.Deleted)
     {
-        <p>Note deleted</p>
+        <div class="d-flex flex-grow-1 align-items-center justify-content-center text-secondary">Note deleted</div>
     }
     else
     {
-
-    <div>
-        <div class="border rounded-2 overflow-hidden">
-            @if (Tree.PictureUrl != null)
+        <div class="d-flex flex-column align-items-center">
+            <a class="flex-shrink-0" href="/account/@Tree.Note.PublicKey" @onclick:stopPropagation="true">
+                <AccountPicture NoteTree="Tree"></AccountPicture>
+            </a>
+            @if (Tree.Children.Count > 0 || ReplyingTo)
             {
-                <img style="width:48px; height:48px" src="@Tree.PictureUrl" />
-            }
-            else
-            {
-                @((MarkupString)Utils.ToSvgIdenticon(Tree.Note.PublicKey))
+                <div class="flex-grow-1 bg-secondary opacity-75" style="width: 2px; margin-bottom: -1.07rem;"></div>
             }
         </div>
-        <a style="font-size: 8px;" href="/account/@Tree.Note.PublicKey">@Tree.AccountName</a>
-    </div>
-    
-    <div class="flex-grow-1 ms-3">
-
-        <p>
-            <a style="font-size: 13px; margin: 0px; padding: 0px;" href="/note/@Tree.Note.Id">@ByteTools.PubkeyToNote(Tree.Note.Id, true)</a><span style="font-size: 13px;padding-left:5px">@Utils.FormatDate(Tree.Note.CreatedAtCurated)</span>
-            @if (ShowReplied && Tree.Note.NoteMetadata.ReplyToId != null)
-            {
-                <div style="font-style: italic; font-size: 13px;">Replying to <a href="/note/@Tree.Note.NoteMetadata.ReplyToId">@ByteTools.PubkeyToNote(Tree.Note.NoteMetadata.ReplyToId, true)</a></div>
-            }
-        </p>
-
-        <div class="@(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")">
+        <div class="flex-grow-1 ms-2">
+            @*<a style="font-size: 13px; margin: 0px; padding: 0px;" href="/note/@Tree.Note.Id">@ByteTools.PubkeyToNote(Tree.Note.Id, true)</a>*@
+            <p class="mb-1">
+                <a href="/account/@Tree.Note.PublicKey" @onclick:stopPropagation="true" class="fw-bold text-decoration-none mb-1">@Tree.AccountName</a>
+                <span class="text-secondary">
+                    <span>·</span>
+                    <span>@Utils.FormatDate(Tree.Note.CreatedAtCurated)</span>
+                    @if (!ReplyingTo
+                        && Tree.Note.NoteMetadata.ReplyToId != null
+                        && TreeLayout.Length == 1
+                        && !OnlyChild)
+                    {
+                        <span>&nbsp;·</span>
+                        <span>Replying to
+                            <a href="/note/@Tree.Note.NoteMetadata.ReplyToId" @onclick:stopPropagation="true">
+                                @ByteTools.PubkeyToNote(Tree.Note.NoteMetadata.ReplyToId, true)
+                            </a>
+                        </span>
+                    }
+                </span>
+            </p>
             <p class="text-break" style="margin-bottom: .3rem;">@((MarkupString)GetContent())</p>
-        </div>
-
-@*        @if (Tree.Note.NoteMetadata.HashTags.Count > 0)
-        {
-            <p>
-                @foreach (var tag in Tree.Note.NoteMetadata.HashTags)
-                {
-                    <a href="/tag/@tag">#@tag</a>
-                    <span>&nbsp;</span>
-                }
-            </p>
-        }*@
-
-@*        @if (Tree.Note.NoteMetadata.Mentions.Count > 0)
-        {
-            <p>
-                @foreach (var mention in Tree.Note.NoteMetadata.Mentions)
-                {
-                    <a style="font-size: 13px;" href="/account/@mention"><span>@@</span>@Utils.ShortenNostrId(mention)</a>
-                    <span>&nbsp;</span>
-                }
-            </p>
-        }*@
-
-        <div style="display:flex;">
-            @if (Tree.Note.NoteMetadata.Reactions.Count > 0)
+            @*@if (Tree.Note.NoteMetadata.HashTags.Count > 0)
             {
-                @foreach (var reaction in Tree.Note.NoteMetadata.Reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count()))
-                {
-                    <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
-                        @NormalizedReaction(reaction.Key)
-                        <span style="font-weight: bold;">@reaction.Count()</span>
-                    </div>
-                }
-            }
-            @if (accountService.MainAccount != null)
+                <p class="mb-1">
+                    @foreach (var tag in Tree.Note.NoteMetadata.HashTags)
+                    {
+                        <a href="/tag/@tag" @onclick:stopPropagation="true">#@tag</a>
+                        <span>&nbsp;</span>
+                    }
+                </p>
+            }*@
+            @*@if (Tree.Note.NoteMetadata.EventMentions.Count > 0)
             {
-                <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
-                    <button style="border: none; background: none; padding: 0; margin: 0" disabled="@likeSent" @onclick="@LikeTweet">❤️</button>
+                <p class="mb-1">
+                    @foreach (var _event in Tree.Note.NoteMetadata.EventMentions)
+                    {
+                        <a href="/note/@_event.Value" @onclick:stopPropagation="true">
+                            @ByteTools.PubkeyToNote(_event.Value, true)
+                        </a>
+                        <span>&nbsp;</span>
+                    }
+                </p>
+            }*@
+            @*@if (Tree.Note.NoteMetadata.AccountMentions.Count > 0)
+            {
+                <p class="mb-1">
+                    @foreach (var mention in Tree.Note.NoteMetadata.AccountMentions)
+                    {
+                        <a href="/account/@mention.Value" @onclick:stopPropagation="true"><span>@@</span>@Utils.ShortenNostrId(mention.Value)</a>
+                        <span>&nbsp;</span>
+                    }
+                </p>
+            }*@
+            @if (!ReplyingTo)
+            {
+                <div class="lh-lg w-100" style="margin-right:-1.5rem;">
+                    @if (Tree.Note.NoteMetadata.Reactions.Count > 0)
+                    {
+                        var groupedReactions = Tree.Note.NoteMetadata.Reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count());
+                        @foreach (var reaction in groupedReactions.Take(3))
+                        {
+                            <span class="py-2 me-4">
+                                <span class="d-inline-block">
+                                    <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
+                                        @NormalizedReaction(reaction.Key)
+                                    </a>
+                                </span><span class="fs-7 fw-bold">@reaction.Count()</span>
+                            </span>
+                        }
+                        var remainingReactionCount = groupedReactions.Skip(3).Sum(reaction => reaction.Count());
+                        if (remainingReactionCount > 0)
+                        {
+                            <span class="py-2 me-4">
+                                <span class="d-inline-block">
+                                    <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
+                                        <i class="bi bi-three-dots"></i>
+                                    </a>
+                                </span><span class="fs-7 fw-bold">@remainingReactionCount</span>
+                            </span>
+                        }
+                    }
+                    @if (accountService.MainAccount != null)
+                    {
+                        <div class="d-inline-block">
+                            <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <i class="bi bi-chat"></i>
+                            </a>
+                            @*<a role="button"  @onclick="@(() => { })" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <i class="bi bi-repeat"></i>
+                            </a>*@
+                            <a role="button" @onclick="@LikeNote" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 @(!likeSent ? "bg-primary-opacity-10-hover" : "")">
+                                <i class="bi @(!likeSent ? "bi-heart" : "bi-heart-fill")"></i>
+                            </a>
+                            @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
+                            {
+                                <a role="button" @onclick="@Delete" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                    <i class="bi bi-trash3"></i>
+                                </a>
+                            }
+                        </div>
+                    }
+                    @*<a role="button" @onclick="@(() => { })" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                        <i class="bi bi-clipboard"></i>
+                    </a>*@
                 </div>
-
-                <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
-                    <button style="border: none; background: none; padding: 0; margin: 0" @onclick="@Reply">Reply</button>
-                </div>
-
-                @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
-                {
-                    <div style="font-size: 10px; padding: 5px; background-color:white; border: solid 1px rgb(239, 243, 244); border-radius: 5px; margin-right: 10px;">
-                        <button style="border: none; background: none; padding: 0; margin: 0" @onclick="@Delete">Delete</button>
-                    </div>
-                }
             }
         </div>
-    </div>
-
     }
-
 </div>
 
-@if (replyOpened)
+@if (!ReplyingTo && Tree.Children.Count > 0)
 {
-    <div class="d-flex flex-row px-3 pb-3" style="margin: 0 -1rem;">
-        @foreach (var i in Enumerable.Range(1, NestingLevel))
-        {
-            <div class="ms-3" style="width: 50px;">&nbsp;</div>
-        }
-        <div class="flex-grow-1">
-            <NoteComposer ReplyTo="@Tree.Note" />
-        </div>
-    </div>
+    <NoteTreeViewer @ref="NoteTreeViewerRef" 
+        Trees="@Tree.Children" NewestOnTop="false" MainEventId="@MainEventId"
+        TreeLayout="@TreeLayout"
+        OnlyChild="@(Tree.Children.Count == 1)"
+        OnReply="@OnReply" />
 }
-
-<NoteTreeViewer @ref="NoteTreeViewerRef" Trees="@Tree.Children" NewestOnTop="false" ShowReplied="false" MainEventId="@MainEventId" NestingLevel="@innerNestingLevel" />
 
 @code {
     private bool likeClicked = false;
     private bool likeSent => likeClicked || Tree.Note.NoteMetadata.Reactions.Any(r => r.ReactorId == accountService?.MainAccount.Id);
-    private int innerNestingLevel => (Tree.Children?.Count ?? 0) > 1 ? NestingLevel + 1 : NestingLevel;
-    private bool replyOpened = false;
     private IJSObjectReference jsModule;
     private ElementReference referenceElement;
     private NoteTreeViewer NoteTreeViewerRef;
-    private bool highlighted = false;
 
     [Parameter]
     public NoteTree Tree { get; set; }
 
     [Parameter]
-    public bool ShowReplied { get; set; }
-
-    [Parameter]
     public string MainEventId { get; set; }
 
     [Parameter]
-    public int NestingLevel { get; set; }
+    public bool ReplyingTo { get; set; }
+
+    [Parameter]
+    public int[] TreeLayout { get; set; }
+
+    [Parameter]
+    public bool OnlyChild { get; set; }
 
     [Parameter]
     public Action<NoteViewer> OnComponentLoad { get; set; }
 
     [Parameter]
     public Action<NoteViewer> OnComponentUnload { get; set; }
+
+    [Parameter]
+    public Action<NoteTree> OnReply { get; set; }
 
     protected override void OnInitialized()
     {
@@ -186,15 +236,22 @@
         });
     }
 
-    private void LikeTweet()
+    private void LikeNote()
     {
+        if (likeSent)
+        {
+            return;
+        }
         feedService.SendReaction("+", Tree.Note, accountService.MainAccount);
         likeClicked = true;
     }
 
     private void Reply()
     {
-        replyOpened = !replyOpened;    
+        if (OnReply != null)
+        {
+            OnReply(Tree);
+        }
     }
 
     private void Delete()
@@ -223,12 +280,7 @@
 
     public IEnumerable<NoteViewer> GetNoteViewers()
     {
-        return (new NoteViewer[] { this }).Concat(NoteTreeViewerRef.GetNoteViewers());
-    }
-
-    public void Highlight()
-    {
-        highlighted = true;
+        return (new NoteViewer[] { this }).Concat(NoteTreeViewerRef?.GetNoteViewers() ?? Enumerable.Empty<NoteViewer>());
     }
 
     private string GetContent()
@@ -238,8 +290,11 @@
 
         if (Tree.Note.Kind == NostrKind.Repost && metadata.EventMentions.ContainsKey(0))
         {
-            return $"<i class='bi bi-repeat p-2'></i><a href='note/{metadata.EventMentions[0]}'>{ByteTools.PubkeyToNote(metadata.EventMentions[0], true)}</a>";
+            return $"<i class='bi bi-repeat p-2'></i><a href='note/{metadata.EventMentions[0]}' onclick='(e=>e.stopPropagation())(event)'>{ByteTools.PubkeyToNote(metadata.EventMentions[0], true)}</a>";
         }
+
+        // sanitize original content
+        content = htmlSanitizer.Sanitize(content);
 
         // new lines
         content = content.Replace("\\n", "<br/>");
@@ -251,12 +306,12 @@
             {
                 if (metadata.EventMentions.ContainsKey(index))
                 {
-                    content = content.Replace($"#[{index}]", $"<a href='note/{metadata.EventMentions[index]}'>{ByteTools.PubkeyToNote(metadata.EventMentions[index], true)}</a>");
+                    content = content.Replace($"#[{index}]", $"<a href='note/{metadata.EventMentions[index]}' onclick='(e=>e.stopPropagation())(event)'>{ByteTools.PubkeyToNote(metadata.EventMentions[index], true)}</a>");
 
                 }
                 else if (metadata.AccountMentions.ContainsKey(index))
                 {
-                    content = content.Replace($"#[{index}]", $"<a href='account/{metadata.AccountMentions[index]}'>{HttpUtility.HtmlEncode(accountService.GetAccountName(metadata.AccountMentions[index]))}</a>");
+                    content = content.Replace($"#[{index}]", $"<a href='account/{metadata.AccountMentions[index]}' onclick='(e=>e.stopPropagation())(event)'>{HttpUtility.HtmlEncode(accountService.GetAccountName(metadata.AccountMentions[index]))}</a>");
                 }
             }
         }
@@ -270,10 +325,10 @@
         }
         foreach (var tag in hashtags)
         {
-            content = content.Replace($"#!{tag}!", $"<a href='tag/{tag}'>#{tag}</a>", StringComparison.OrdinalIgnoreCase);
+            content = content.Replace($"#!{tag}!", $"<a href='tag/{tag}' onclick='(e=>e.stopPropagation())(event)'>#{tag}</a>", StringComparison.OrdinalIgnoreCase);
         }
 
-        return htmlSanitizer.Sanitize(content);
+        return content;
     }
 
     #region Dispose

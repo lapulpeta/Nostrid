@@ -1,9 +1,23 @@
 ﻿@using Nostrid.Model;
 
-@foreach (var tree in NewestOnTop ? Trees.OrderByDescending(t => t.Note.CreatedAtCurated) : Trees.OrderBy(t => t.Note.CreatedAtCurated))
-{
-    <NoteViewer Tree="@tree" ShowReplied="@ShowReplied" MainEventId="@MainEventId" NestingLevel="@NestingLevel"
-            OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" />
+@{
+    var i = 0;
+    var trees = NewestOnTop
+        ? Trees.OrderByDescending(t => t.Note.CreatedAtCurated) 
+        : Trees.OrderBy(t => t.Note.CreatedAtCurated);
+    foreach (var tree in trees)
+    {
+        var treeLayout = (TreeLayout ?? new int[0]);
+        if (!OnlyChild)
+        {
+            treeLayout = treeLayout.Append(trees.Count() - (i++)).ToArray();
+        }
+        <NoteViewer Tree="@tree"
+                MainEventId="@MainEventId"
+                ReplyingTo="@ReplyingTo"
+                TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
+                OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" OnReply="OnReply" />
+    }
 }
 
 @code {
@@ -11,16 +25,22 @@
     public List<NoteTree> Trees { get; set; }
 
     [Parameter]
-    public bool NewestOnTop { get; set; }
-
-    [Parameter]
-    public bool ShowReplied { get; set; }
-
-    [Parameter]
     public string MainEventId { get; set; }
 
     [Parameter]
-    public int NestingLevel { get; set; }
+    public bool NewestOnTop { get; set; }
+
+    [Parameter]
+    public bool ReplyingTo { get; set; }
+
+    [Parameter]
+    public int[] TreeLayout { get; set; }
+
+    [Parameter]
+    public bool OnlyChild { get; set; }
+
+    [Parameter]
+    public Action<NoteTree> OnReply { get; set; }
 
     private List<NoteViewer> NoteViewerRefs = new List<NoteViewer>();
 

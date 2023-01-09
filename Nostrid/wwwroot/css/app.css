@@ -89,8 +89,18 @@ a, .btn-link {
     font-size: .7rem;
 }
 
-.bg-body-secondary-hover:hover {
-    background-color: rgba(var(--bs-secondary-bg-rgb),var(--bs-bg-opacity)) !important;
+.bg-primary-opacity-10-hover {
+    transition: background-color ease-in-out .1s;
+}
+.bg-primary-opacity-10-hover:hover {
+    background-color: rgba(var(--bs-primary-rgb), .1) !important;
+}
+
+.bg-tertiary-hover {
+    transition: background-color ease-in-out .1s;
+}
+.bg-tertiary-hover:hover {
+    background-color: rgba(var(--bs-tertiary-bg-rgb),var(--bs-bg-opacity));
 }
 
 .rounded-999{
