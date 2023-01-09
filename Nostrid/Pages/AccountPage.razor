@@ -1,19 +1,19 @@
 ﻿@page "/account/{pubKey}"
-@implements IAsyncDisposable
+@implements IDisposable
 
 @code {
     [Parameter]
     public string PubKey { get; set; }
 }
 
-@using Nostrid.Data
+@using Nostrid.Data;
 @using Nostrid.Data.Relays;
+@using Nostrid.Components;
 @using Nostrid.Model;
 @using Nostrid.Misc;
 @using System.Collections.Concurrent;
 @inject AccountService accountService
 @inject RelayService relayService
-@inject IJSRuntime jsRuntime
 
 <div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
     
@@ -43,86 +43,92 @@
     </div>
 </div>
 
-<div class="modal fade" id="followingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h1 class="modal-title fs-5" id="exampleModalLabel">Following</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                @if (account.FollowList.Count == 0)
-                {
-                    <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
-                        <i class="fs-1 bi bi-person-x"></i>
-                        @if (IsMainAccount)
-                        {
-                            <p class="fw-bold">No follows yet.</p>
-                            <p>If you recently restored your account then your follows may take a few minutes to be discovered.</p>
-                        }
-                        else
-                        {
-                            <p class="fw-bold">No follows to show.</p>
-                        }
-                    </div>
-                }
-                @foreach (var following in account.FollowList)
-                {
-                    <FollowAccount Account="@(GetAccount(following))"></FollowAccount>
-                }
-            </div>
-        </div>
-    </div>
-</div>
-<div class="modal fade" id="followerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h1 class="modal-title fs-5" id="exampleModalLabel">Followers</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                @if (account.FollowerList.Count == 0)
-                {
-                    <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
-                        <i class="fs-1 bi bi-person-x"></i>
-                        @if (IsMainAccount)
-                        {
-                            <p class="fw-bold">No followers yet.</p>
-                            <p>If you recently restored your account then your followers may take a few minutes to be discovered.</p>
-                        }
-                        else
-                        {
-                            <p class="fw-bold">No followers to show.</p>
-                        }
-                    </div>
-                }
-                @foreach (var follower in account.FollowerList)
-                {
-                    <FollowAccount Account="@(GetAccount(follower))"></FollowAccount>
-                }
+<BootstrapModal @ref="followingModal">
+    <div class="modal fade" id="followingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Following</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @if (account.FollowList.Count == 0)
+                    {
+                        <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                            <i class="fs-1 bi bi-person-x"></i>
+                            @if (IsMainAccount)
+                            {
+                                <p class="fw-bold">No follows yet.</p>
+                                <p>If you recently restored your account then your follows may take a few minutes to be discovered.</p>
+                            }
+                            else
+                            {
+                                <p class="fw-bold">No follows to show.</p>
+                            }
+                        </div>
+                    }
+                    @foreach (var following in account.FollowList)
+                    {
+                        <FollowAccount Account="@(GetAccount(following))"></FollowAccount>
+                    }
+                </div>
             </div>
         </div>
     </div>
-</div>
+</BootstrapModal>
+
+<BootstrapModal @ref="followerModal">
+    <div class="modal fade" id="followerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Followers</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @if (account.FollowerList.Count == 0)
+                    {
+                        <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                            <i class="fs-1 bi bi-person-x"></i>
+                            @if (IsMainAccount)
+                            {
+                                <p class="fw-bold">No followers yet.</p>
+                                <p>If you recently restored your account then your followers may take a few minutes to be discovered.</p>
+                            }
+                            else
+                            {
+                                <p class="fw-bold">No followers to show.</p>
+                            }
+                        </div>
+                    }
+                    @foreach (var follower in account.FollowerList)
+                    {
+                        <FollowAccount Account="@(GetAccount(follower))"></FollowAccount>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</BootstrapModal>
 
 <FeedViewer BaseFilter="@feedFilter" />
 
 @code {
-    private IJSObjectReference jsModule;
     private Account account;
     private SubscriptionFilter feedFilter, followsFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
     private ConcurrentDictionary<string, Account> accounts;
+    private BootstrapModal followingModal;
+    private BootstrapModal followerModal;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount.Id;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
         Cleanup();
-        await HideModal("followingModal");
-        await HideModal("followerModal");
+        followingModal?.Hide();
+        followerModal?.Hide();
 
         accounts = new();
         account = accountService.GetAccount(PubKey);
@@ -130,15 +136,6 @@
         relayService.AddFilter(followsFilter = new FollowsSubscriptionFilter(PubKey));
         accountService.AccountDetailsChanged += AccountDetailsChanged;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-        if (firstRender)
-        {
-            jsModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
-        }
     }
 
     private Account GetAccount(string accountId)
@@ -204,30 +201,18 @@
         accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
     }
 
-    private async Task HideModal(string id)
-    {
-        if (jsModule != null)
-        {
-            await jsModule.InvokeVoidAsync("hideModal", id);
-        }
-    }
-
     #region Dispose
     private bool _disposed;
 
-    async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose(true);
+    public void Dispose() => Dispose(true);
 
-    protected virtual async Task Dispose(bool disposing)
+    protected virtual void Dispose(bool disposing)
     {
         if (!_disposed)
         {
             if (disposing)
             {
                 Cleanup();
-                if (jsModule is not null)
-                {
-                    await jsModule.DisposeAsync();
-                }
             }
 
             _disposed = true;
@@ -242,5 +227,4 @@
         relayService.DeleteFilters(followsDetailsFilter);
     }
     #endregion
-
 }

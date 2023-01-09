@@ -4,26 +4,36 @@
     public Account Account { get; set; }
 
     [Parameter]
+    public NoteTree NoteTree { get; set; }
+
+    [Parameter]
     public int? Size { get; set; }
 }
 
 @using Nostrid.Model;
 @using Nostrid.Misc;
 
-@if (Account != null)
+@if (!string.IsNullOrEmpty(PictureUrl))
 {
-    @if (!string.IsNullOrEmpty(Account.Details?.PictureUrl))
-    {
-        <img style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" src="@Account.Details?.PictureUrl" class="card-img-top rounded-999" alt="">
-    }
-    else
-    {
-        <div style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" class="rounded-999 overflow-hidden">
-            @((MarkupString)Utils.ToSvgIdenticon(Account.Id, Size ?? DEFAULT_SIZE))
-        </div>
-    }
+    <img style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" src="@PictureUrl" class="card-img-top rounded-999" alt="">
+}
+else if (!string.IsNullOrEmpty(AccountId))
+{
+    <div style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" class="rounded-999 overflow-hidden">
+        @((MarkupString)Utils.ToSvgIdenticon(AccountId, Size ?? DEFAULT_SIZE))
+    </div>
 }
 
 @code {
     const int DEFAULT_SIZE = 48;
+
+    private string PictureUrl => IsNullOrEmpty(Account?.Details?.PictureUrl, NoteTree?.PictureUrl);
+    private string AccountId => IsNullOrEmpty(Account?.Id, NoteTree?.Note?.PublicKey);
+
+    private string IsNullOrEmpty(string value, string defaultValue)
+    {
+        return string.IsNullOrEmpty(value)
+            ? defaultValue
+            : value;
+    }
 }

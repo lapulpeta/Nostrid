@@ -1,4 +1,5 @@
-﻿@using Nostrid.Data
+﻿@using Nostrid.Components
+@using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
 @using Nostrid.Misc;
@@ -15,19 +16,25 @@
 
 @if (newN.Count > 0)
 {
-    <button class="btn btn-primary btn-sm" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
+    <div class="text-center border-top px-3" style="margin: 0 -1rem;">
+        <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
+    </div>
 }
 
 @if (renderedN.Count == 0)
 {
-    <p><em>Waiting for feed...</em></p>
+    <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
+        <div class="spinner-border mx-3 my-2" role="status">
+            <span class="visually-hidden">Waiting for feed...</span>
+        </div>
+    </div>
 }
 else
 {
-    <div>
-        <NoteTreeViewer @ref="noteTreeViewer" Trees="@feedService.GetTreesFromNotes(renderedN.Values)" NewestOnTop="true" ShowReplied="true" NestingLevel="1" />
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@feedService.GetTreesFromNotes(renderedN.Values)" NewestOnTop="true" OnReply="OnReply" />
+    <div class="text-center border-top px-3" style="margin: 0 -1rem -1rem -1rem;">
+        <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="@LoadMore">Load more</button>
     </div>
-    <button class="btn btn-primary btn-sm" type="button" @onclick="@LoadMore">Load more</button>
 }
 
 <div class="position-fixed main-margin p-3" style="right: 0; bottom: 0;">
@@ -35,6 +42,22 @@ else
         <i class="bi bi-arrow-repeat"></i>
     </button>
 </div>
+
+<BootstrapModal @ref="composeModal">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Reply</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <NoteComposer ReplyTo="@replyingTo" OnSend="@(() => composeModal.Hide())"></NoteComposer>
+                </div>
+            </div>
+        </div>
+    </div>
+</BootstrapModal>
 
 @code {
     private ConcurrentDictionary<string, Event> renderedN, newN, oldN;
@@ -45,6 +68,8 @@ else
     private string[] renderedIds;
     private NoteTreeViewer noteTreeViewer;
     private bool requestDisabled = false;
+    private BootstrapModal composeModal;
+    private NoteTree replyingTo = null;
 
     private const int RelayQueryLimit = 13;
 
@@ -61,6 +86,10 @@ else
 
     private async Task LoadMoreFromNoteAsync()
     {
+        if (noteTreeViewer == null)
+        {
+            return;
+        }
         var noteViewer = await noteTreeViewer.GetFirstVisibleAsync();
         if (noteViewer == null)
         {
@@ -157,6 +186,13 @@ else
         {
             UpdateSubscriptionForDetails();
         }), null, 5000, 10000);
+    }
+
+    private void OnReply(NoteTree noteTree)
+    {
+        replyingTo = noteTree;
+        StateHasChanged();
+        composeModal.Show();
     }
 
     #region Dispose

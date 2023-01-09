@@ -1,0 +1,54 @@
+﻿@implements IAsyncDisposable
+@inject IJSRuntime jsRuntime
+@code {
+
+    public IJSObjectReference JSModule { get; private set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (firstRender)
+        {
+            JSModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
+        }
+    }
+
+    public async Task InvokeVoidAsync(string identifier, params object[] args)
+    {
+        if (JSModule != null)
+        {
+            await JSModule.InvokeVoidAsync(identifier, args);
+        }
+    }
+
+    public void InvokeVoid(string identifier, params object[] args)
+    {
+        if (JSModule == null)
+        {
+            return;
+        }
+        Task.Run(async () => await JSModule.InvokeVoidAsync(identifier, args));
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose(true);
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                if (JSModule is not null)
+                {
+                    await JSModule.DisposeAsync();
+                }
+            }
+
+            _disposed = true;
+        }
+    }
+    #endregion
+}

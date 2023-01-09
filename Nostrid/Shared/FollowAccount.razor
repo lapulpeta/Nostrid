@@ -9,7 +9,7 @@
 @inject AccountService accountService
 @inject NavigationManager navigationManager
 
-<NavLink href="javascript:void(0);" @onclick="@(() => navigationManager.NavigateTo($"account/{Account.Id}"))" class="d-flex flex-row align-items-start p-3 bg-body-secondary-hover text-decoration-none">
+<div role="button" @onclick="@(() => navigationManager.NavigateTo($"account/{Account.Id}"))" class="d-flex flex-row align-items-start p-3 bg-tertiary-hover text-decoration-none">
     <div class="d-flex flex-shrink-0">
         <AccountPicture Account="Account" Size="48" />
     </div>
@@ -27,7 +27,7 @@
         </div>
         <div class="fs-7 mt-1 lh-1 text-body-tertiary text-break">@ByteTools.PubkeyToNpub(Account.Id)</div>
     </div>
-</NavLink>
+</div>
 
 @code {
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
