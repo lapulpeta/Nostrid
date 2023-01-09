@@ -87,6 +87,11 @@ namespace Nostrid.Data
             return Events.FindById(id) ?? new Event() { Id = id };
         }
 
+        public Event GetEventOrNull(string id)
+        {
+            return Events.FindById(id);
+        }
+
         public bool IsEventDeleted(string id)
         {
             return Events.Exists(e => e.Id == id && e.Deleted);
@@ -107,19 +112,12 @@ namespace Nostrid.Data
                 eventData = Events.FindById(ev.Id);
                 if (eventData != null)
                 {
-                    if (eventData.Deleted && eventData.PublicKey == ev.PublicKey) // If recorded event is deleted and owners match, ignore, otherwise overwrite
+                    if (!eventData.Deleted || eventData.PublicKey == ev.PublicKey)
                     {
                         return true;
                     }
-                    else if (eventData.Processed && (
-                        eventData.Kind == 7 ||
-                        eventData.Kind == 5)) // If we receive a reaction or a delete let's process it again, just in case we missed it the last time
-                    {
-                        eventData.Processed = false;
-                        Events.Update(eventData);
-
-                        return true;
-                    }
+                    // This point can be reached only if event is marked as deleted but the recorded owner is not the real one,
+                    // so we have to processed it again
                 }
 
                 eventData = new Event(ev)

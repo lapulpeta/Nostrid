@@ -164,7 +164,10 @@ public class FeedService
             if (Utils.IsValidNostrId(eventId))
             {
                 var pubKey = eventDatabase.GetEventPubKey(eventId);
-                if (string.IsNullOrEmpty(pubKey) || pubKey == eventToProcess.PublicKey)
+                if (string.IsNullOrEmpty(pubKey))
+                    return; // If event doesn't exist then keep this event unprocessed and retry later
+
+                if (pubKey == eventToProcess.PublicKey)
                 {
                     // A deleted empty event will replace the original event
                     var ev = new Event()
@@ -232,10 +235,13 @@ public class FeedService
                 // According to NIP-25 the content should be either +, - or an emoji, but some clients send an empty content, so let's disable this check
                 //if (!string.IsNullOrEmpty(reaction) && reaction.Length == 1)
                 {
-                    var reactedTweet = eventDatabase.GetEvent(e);
-                    if (reactedTweet != null) // TODO: if not found then we should try again later
+                    var reactedTweet = eventDatabase.GetEventOrNull(e);
+                    if (reactedTweet == null || !reactedTweet.Processed)
+                        return true; // If event doesn't exist/not processed then keep this event unprocessed and retry later
+
+                    // Only save if note is not deleted and reaction has not been recorded already
+                    if (!reactedTweet.Deleted && !reactedTweet.NoteMetadata.Reactions.Any(r => r.ReactorId == eventToProcess.PublicKey))
                     {
-                        reactedTweet.NoteMetadata.Reactions.RemoveAll(r => r.ReactorId == eventToProcess.PublicKey);
                         reactedTweet.NoteMetadata.Reactions.Add(
                             new Reaction()
                             {
