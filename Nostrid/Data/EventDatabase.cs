@@ -245,7 +245,7 @@ namespace Nostrid.Data
         private static readonly object txLock = new();
         public void RunInTransaction(Func<bool> action)
         {
-            lock (txLock)
+            //lock (txLock)
             {
                 try
                 {
@@ -259,7 +259,7 @@ namespace Nostrid.Data
                     {
                         if (!Database.Rollback()) throw new Exception("Rollback failed!");
                     }
-                    Database.Checkpoint();
+                    //Database.Checkpoint();
                 }
                 catch (Exception ex)
                 {
