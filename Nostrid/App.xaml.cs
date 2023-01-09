@@ -23,13 +23,11 @@ public partial class App : Application
         window.Created += (s, e) =>
         {
             relayService.StartNostrClients();
-            feedService.StartQueues();
         };
 
         window.Destroying += (s, e) =>
         {
             relayService.StopNostrClients();
-            feedService.StopQueues();
         };
 
         return window;
