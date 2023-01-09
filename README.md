@@ -1,6 +1,7 @@
 # Nostrid - Nostr Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Contribute: LN](https://img.shields.io/badge/Contribute-LN-green)](https://legend.lnbits.com/tipjar/786)
 
 ---
 
@@ -41,6 +42,12 @@ It is written in .NET and runs in Windows and Android (in theory it should run i
 ### Contributing
 
 Feel free to open issues and send PRs.
+Alternatively you can support the project by donating here:
+
+* [Lightning Network](https://legend.lnbits.com/tipjar/786)
+* [LNURL](https://legend.lnbits.com/lnurlp/link/VaE6ox)
+* BTC: `bc1p3r5yx550jprj5zzg8arlrnaregvxsxuh5jfx95awex6shx0etcxsygks7r`
+* XMR: `84qzqe1EW5fDvaRN9xj5HACTL6xmd1M4wNk1K1W29W5CVXuhpdVYXSU5ZfCpxJJw7MeLJyEybGSqgNwU3Rn9qm2PDKgKFmD`
 
 ## Getting Started
 
