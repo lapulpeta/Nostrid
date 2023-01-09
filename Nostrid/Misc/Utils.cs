@@ -7,11 +7,12 @@ using System.Reflection;
 
 namespace Nostrid.Misc
 {
-    internal class Utils
+    internal partial class Utils
     {
-        private const string HashTag = "#([a-z0-9_]+)";
-        private static readonly Regex HashtagRegex = new(HashTag, RegexOptions.Compiled);
-        private static readonly Regex OnlyHashtagRegex = new($"^{HashTag}$", RegexOptions.Compiled);
+        private static readonly Regex hashtagRegex = HashtagRegex();
+        private static readonly Regex accountMentionPubKeyRegex = AccountMentionPubKeyRegex();
+        private static readonly Regex accountMentionBech32Regex = AccountMentionBech32Regex();
+        private static readonly Regex onlyHashtagRegex = OnlyHashtagRegex();
 
         public static string ToSvgIdenticon(string hex, int size = 48)
         {
@@ -27,17 +28,27 @@ namespace Nostrid.Misc
 
         public static bool IsHashTag(string str)
         {
-            return OnlyHashtagRegex.IsMatch(str.ToLower());
+            return onlyHashtagRegex.IsMatch(str.ToLower());
         }
 
         public static string GetHashTag(string str)
         {
-            return OnlyHashtagRegex.Match(str.ToLower()).Groups[1].Value;
+            return onlyHashtagRegex.Match(str.ToLower()).Groups[1].Value;
         }
 
         public static IEnumerable<string> GetHashTags(string content)
         {
-            return HashtagRegex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
+            return hashtagRegex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
+        }
+
+        public static IEnumerable<string> GetAccountPubKeyMentions(string content)
+        {
+            return accountMentionPubKeyRegex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
+        }
+
+        public static IEnumerable<string> GetAccountNpubMentions(string content)
+        {
+            return accountMentionBech32Regex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
         }
 
         public static bool IsValidNostrId(string id)
@@ -131,39 +142,39 @@ namespace Nostrid.Misc
                             case 'u':
                                 if (value[i + 2] == '{')
                                 {
-                                    if (value[i + 4] == '}' && Int32.TryParse(value.Substring(i + 3, 1), style, cult, out u))
+                                    if (value[i + 4] == '}' && int.TryParse(value.Substring(i + 3, 1), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 5;
                                         break;
                                     }
-                                    else if (value[i + 5] == '}' && Int32.TryParse(value.Substring(i + 3, 2), style, cult, out u))
+                                    else if (value[i + 5] == '}' && int.TryParse(value.Substring(i + 3, 2), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 6;
                                         break;
                                     }
-                                    else if (value[i + 6] == '}' && Int32.TryParse(value.Substring(i + 3, 3), style, cult, out u))
+                                    else if (value[i + 6] == '}' && int.TryParse(value.Substring(i + 3, 3), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 7;
                                         break;
                                     }
-                                    else if (value[i + 7] == '}' && Int32.TryParse(value.Substring(i + 3, 4), style, cult, out u))
+                                    else if (value[i + 7] == '}' && int.TryParse(value.Substring(i + 3, 4), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 8;
                                         break;
                                     }
-                                    else if (value[i + 8] == '}' && Int32.TryParse(value.Substring(i + 3, 5), style, cult, out u))
+                                    else if (value[i + 8] == '}' && int.TryParse(value.Substring(i + 3, 5), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 9;
                                         break;
                                     }
-                                    else if (value[i + 9] == '}' && Int32.TryParse(value.Substring(i + 3, 6), style, cult, out u))
+                                    else if (value[i + 9] == '}' && int.TryParse(value.Substring(i + 3, 6), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 10;
                                         break;
                                     }
@@ -177,9 +188,9 @@ namespace Nostrid.Misc
                                 {
                                     if (i < value.Length - 5)
                                     {
-                                        if (Int32.TryParse(value.Substring(i + 2, 4), style, cult, out u))
+                                        if (int.TryParse(value.Substring(i + 2, 4), style, cult, out u))
                                         {
-                                            charToAppend = ((char)u);
+                                            charToAppend = (char)u;
                                             i += 4;
                                             break;
                                         }
@@ -191,9 +202,9 @@ namespace Nostrid.Misc
                             case 'x':
                                 if (i < value.Length - 3)
                                 {
-                                    if (Int32.TryParse(value.Substring(i + 2, 2), style, cult, out u))
+                                    if (int.TryParse(value.Substring(i + 2, 2), style, cult, out u))
                                     {
-                                        charToAppend = ((char)u);
+                                        charToAppend = (char)u;
                                         i += 2;
                                         break;
                                     }
@@ -251,5 +262,17 @@ namespace Nostrid.Misc
 			AssemblyInformationalVersionAttribute versionAttribute = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             return versionAttribute.InformationalVersion;
         }
+
+        [GeneratedRegex("#([a-z0-9_]+)", RegexOptions.Compiled)]
+        private static partial Regex HashtagRegex();
+
+        [GeneratedRegex("@([a-f0-9]{64})", RegexOptions.Compiled)]
+        private static partial Regex AccountMentionPubKeyRegex();
+
+        [GeneratedRegex("@(npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{6,})", RegexOptions.Compiled)]
+        private static partial Regex AccountMentionBech32Regex();
+
+        [GeneratedRegex("^#([a-z0-9_]+)$", RegexOptions.Compiled)]
+        private static partial Regex OnlyHashtagRegex();
     }
 }

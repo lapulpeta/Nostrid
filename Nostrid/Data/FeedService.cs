@@ -305,6 +305,35 @@ public class FeedService
     {
         var unescapedContent = content.Trim();
 
+        var ps = new List<string>();
+        var ers = new List<(string, string)>();
+
+        // Process account mentions
+        foreach (var pubKey in Utils.GetAccountPubKeyMentions(unescapedContent))
+        {
+            var index = ps.IndexOf(pubKey);
+            if (index == -1)
+            {
+                index = ps.Count;
+                ps.Add(pubKey);
+            }
+            unescapedContent = unescapedContent.Replace($"@{pubKey}", $"#[{index}]");
+        }
+        foreach (var bech32 in Utils.GetAccountNpubMentions(unescapedContent))
+        {
+            var (prefix, pubKey) = ByteTools.DecodeBech32(bech32);
+            if (prefix == "npub" && Utils.IsValidNostrId(pubKey))
+            {
+                var index = ps.IndexOf(pubKey);
+                if (index == -1)
+                {
+                    index = ps.Count;
+                    ps.Add(pubKey);
+                }
+                unescapedContent = unescapedContent.Replace($"@{bech32}", $"#[{index}]");
+            }
+        }
+
         var nostrEvent = new NostrEvent()
         {
             CreatedAt = DateTimeOffset.UtcNow,
@@ -320,8 +349,6 @@ public class FeedService
 
         if (replyTo != null)
         {
-            var relay = relayService.GetRecommendedRelayUri();
-
             // Use preferred method as per NIP-10 https://github.com/nostr-protocol/nips/blob/master/10.md
             var replyToId = replyTo.Id;
             var rootId = replyTo.NoteMetadata.ReplyToRootId;
@@ -352,24 +379,39 @@ public class FeedService
             if (string.IsNullOrEmpty(rootId))
             {
                 // A direct reply to the root of a thread should have a single marked "e" tag of type "root".
-                nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { replyToId, relay, "root" }.ToList() });
+                ers.Add((replyToId, "root"));
             }
             else
             {
-                nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { rootId, relay, "root" }.ToList() });
-                nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { replyToId, relay, "reply" }.ToList() });
+                ers.Add((rootId, "root"));
+                ers.Add((replyToId, "reply"));
             }
 
             // When replying to a text event E the reply event's "p" tags should contain all of E's "p" tags as well as the "pubkey" of the event being replied to.
-            foreach (var p in replyTo.NoteMetadata.AccountMentions.Values.Union(new[] { replyTo.PublicKey }).Distinct())
+            foreach (var mention in replyTo.NoteMetadata.AccountMentions.Values.Union(new[] { replyTo.PublicKey }))
             {
-                nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { p }.ToList() });
+                if (!ps.Contains(mention))
+                    ps.Add(mention);
             }
         }
 
-        foreach (var hashtag in Utils.GetHashTags(content))
+        // First p's
+        foreach (var p in ps)
         {
-            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "t", Data = new[] { hashtag }.ToList() });
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { p }.ToList() });
+        }
+
+        // Then e's
+        var relay = relayService.GetRecommendedRelayUri();
+        foreach (var er in ers)
+        {
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { er.Item1, relay, er.Item2 }.ToList() });
+        }
+
+        // Then t's
+        foreach (var t in Utils.GetHashTags(content))
+        {
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "t", Data = new[] { t }.ToList() });
         }
 
         sender.ComputeIdAndSign(nostrEvent);
