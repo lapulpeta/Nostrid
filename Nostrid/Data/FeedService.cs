@@ -18,17 +18,17 @@ public class FeedService
         this.relayService = relayService;
         this.accountService = accountService;
         this.relayService.ReceivedEvents += ReceivedEvents;
-        _ = HandleEvents(eventDatabase.ListUnprocessedEvents());
+        Task.Run(() => HandleEventsAsync(eventDatabase.ListUnprocessedEvents()));
     }
 
-    private async Task HandleEvents(IEnumerable<Event> events)
+    private async Task HandleEventsAsync(IEnumerable<Event> events)
     {
         foreach (var ev in events)
-            _ = HandleEvent(ev);
+            _ = Task.Run(() => HandleEvent(ev));
     }
 
 
-    private async Task HandleEvent(Event eventToProcess)
+    private void HandleEvent(Event eventToProcess)
     {
         switch (eventToProcess.Kind)
         {
@@ -64,7 +64,7 @@ public class FeedService
 
     private void ReceivedEvents(object sender, (string filterId, IEnumerable<Event> events) data)
     {
-        _ = HandleEvents(data.events);
+        Task.Run(() => HandleEventsAsync(data.events));
 
         var notes = data.events.Where(ev => (ev.Kind == NostrKind.Text || ev.Kind == NostrKind.Repost) && !eventDatabase.IsEventDeleted(ev.Id));
         if (notes.Any())

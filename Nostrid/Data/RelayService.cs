@@ -45,11 +45,14 @@ public class RelayService
 
     public void StartNostrClients()
     {
-        clientThreadsCancellationTokenSource = new CancellationTokenSource();
-		for (int i = 0; i < MaxRelays; i++)
-		{
-            runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
-		}
+        _ = Task.Run(() =>
+        {
+            clientThreadsCancellationTokenSource = new CancellationTokenSource();
+            for (int i = 0; i < MaxRelays; i++)
+            {
+                runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
+            }
+        });
 	}
 
     public void StopNostrClients()
