@@ -1,4 +1,4 @@
-﻿@implements IDisposable
+﻿@implements IAsyncDisposable
 
 @code {
 	[Parameter]
@@ -29,15 +29,18 @@
     #region Dispose
     private bool _disposed;
 
-    public void Dispose() => Dispose(true);
+    async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose(true);
 
-    protected virtual void Dispose(bool disposing)
+    protected virtual async Task Dispose(bool disposing)
     {
         if (!_disposed)
         {
             if (disposing)
             {
-                Hide();
+                if (scripts is not null)
+                {
+                    await scripts.InvokeVoidAsync("hideModal", container);
+                }
             }
 
             _disposed = true;

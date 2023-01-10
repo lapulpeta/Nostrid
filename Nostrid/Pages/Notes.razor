@@ -15,26 +15,29 @@
 @inject FeedService feedService
 @inject RelayService relayService
 
-<h2>
-    Note 
-    <span class="fs-5 me-2">@ByteTools.PubkeyToNote(EventId, true)</span>
-    <span class="fs-6 d-inline-block text-secondary pt-2">
-        @if (renderedN.Any())
-        {
-            @if (!noteTrees.Exists(EventId) || 
-                (!maxReached && (noteTrees.Count != 1 ||!string.IsNullOrEmpty(noteTrees[0].Note.NoteMetadata.ReplyToId))))
-            {
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <span>Thread not fully visible. Wait, or rotate the relays.</span>
-            }
-            else if (maxReached)
-            {
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <span>Thread only partially visible due to excessive nesting.</span>
-            }
-        }
-    </span>
-</h2>
+<h2>@ByteTools.PubkeyToNote(EventId, true)</h2>
+@*<button class="btn btn-sm btn-outline-secondary mb-2 mx-3" type="button" @onclick="@CopyNotePubkey">
+    <i class="bi bi-clipboard"></i>
+</button>*@
+<div class="fs-7 text-body-tertiary text-break mb-2">@ByteTools.PubkeyToNote(EventId, false)</div>
+@if (renderedN.Any())
+{
+    @if (!noteTrees.Exists(EventId) || 
+        (!maxReached && (noteTrees.Count != 1 ||!string.IsNullOrEmpty(noteTrees[0].Note.NoteMetadata.ReplyToId))))
+    {
+        <div class="text-secondary mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Thread not fully visible. Wait, or rotate the relays.</span>
+        </div>
+    }
+    else if (maxReached)
+    {
+        <div class="text-secondary mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Thread only partially visible due to excessive nesting.</span>
+        </div>
+    }
+}
 
 @if (!renderedN.Any())
 {
@@ -66,6 +69,8 @@ else
     </BootstrapModal>
 }
 
+<ScriptsComponent @ref="scripts" />
+
 @code {
     private ConcurrentDictionary<string, Event> renderedN = new();
     private List<NoteTree> noteTrees = new();
@@ -75,6 +80,7 @@ else
     private bool maxReached;
     private BootstrapModal composeModal;
     private NoteTree replyingTo = null;
+    private ScriptsComponent scripts;
 
     protected override void OnParametersSet()
     {
@@ -136,6 +142,11 @@ else
         replyingTo = noteTree;
         StateHasChanged();
         composeModal.Show();
+    }
+
+    private void CopyNotePubkey()
+    {
+        scripts.InvokeVoid("copyToClipboard", ByteTools.PubkeyToNote(EventId, false));
     }
 
     #region Dispose

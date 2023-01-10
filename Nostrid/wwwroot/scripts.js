@@ -28,3 +28,7 @@ export function hideModal(element) {
     if (!modal) return;
     modal.hide();
 }
+
+export function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+}

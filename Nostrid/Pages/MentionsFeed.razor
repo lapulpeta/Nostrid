@@ -20,7 +20,11 @@
     {
         filter = new MentionSubscriptionFilter(accountService.MainAccount.Id);
 
-        var newestNoteDate = feedService.GetNotesFeed(filter.GetFilters(), 1).Max(n => n.CreatedAtCurated);
-        accountService.SetLastRead(newestNoteDate);
+        var notesFeed = feedService.GetNotesFeed(filter.GetFilters(), 1);
+        if (notesFeed.Any())
+        {
+            var newestNoteDate = notesFeed.Max(n => n.CreatedAtCurated);
+            accountService.SetLastRead(newestNoteDate);
+        }
     }
 }

@@ -1,7 +1,22 @@
 ﻿@page "/compose"
 
+@using Nostrid.Data;
+
+@inject AccountService accountService
+
 <h2>Compose</h2>
-<NoteComposer />
+@if (accountService.MainAccount != null)
+{
+    <NoteComposer />
+}
+else
+{
+    <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center border-top px-2 py-3" style="margin: 0 -1rem;">
+        <i class="fs-1 bi bi-person-x"></i>
+        <p class="fw-bold">No account selected.</p>
+        <p>To send notes select an account first.</p>
+    </div>
+}
 
 @code {
     

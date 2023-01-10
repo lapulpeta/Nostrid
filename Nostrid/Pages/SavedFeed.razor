@@ -15,14 +15,13 @@
 
 <div class="d-flex flex-row">
     <h2>
-        Saved Feed: 
         @if (hashtags != null)
         {
             <span>#@string.Join(" #", hashtags)</span>
         }
     </h2>
-    <button class="btn btn-sm btn-outline-danger mb-2 ms-4" type="button" @onclick="@Delete">
-        <i class="bi bi-trash3"></i> Remove
+    <button class="btn btn-sm btn-outline-danger mb-2 ms-3" type="button" @onclick="@Delete">
+        <i class="bi bi-trash3"></i>
     </button>
 </div>
 
