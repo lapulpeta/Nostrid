@@ -61,6 +61,8 @@ Alternatively you can support the project by donating here:
 
 ### Installation
 
+You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid/releases) section.
+
 * Windows
     * Download ZIP package, unzip and run `Install.ps1` in PowerShell. Follow instructions.
 
