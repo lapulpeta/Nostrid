@@ -1,4 +1,4 @@
-﻿<Router AppAssembly="@typeof(Main).Assembly" AdditionalAssemblies="new[] { typeof(Nostrid.Data.FeedService).Assembly }">
+﻿<Router AppAssembly="@typeof(Main).Assembly" AdditionalAssemblies="new[] { typeof(Nostrid.Shared.NavMenu).Assembly, typeof(Nostrid.Data.AccountService).Assembly }">
 	<Found Context="routeData">
 		<RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
