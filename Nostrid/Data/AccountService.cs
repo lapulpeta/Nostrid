@@ -1,9 +1,8 @@
+using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
-using NNostr.Client;
 using System.Text.Json;
-using System.Web;
 
 namespace Nostrid.Data;
 
@@ -31,7 +30,7 @@ public class AccountService
             if (data.filterId != MainAccountMentionsFilter?.Id)
                 return;
 
-			MentionsUpdated?.Invoke(this, EventArgs.Empty);
+            MentionsUpdated?.Invoke(this, EventArgs.Empty);
         };
     }
 
@@ -50,7 +49,7 @@ public class AccountService
             }
             MainAccountMentionsFilter = new MentionSubscriptionFilter(mainAccount.Id);
             MainAccountMentionsFilter.limitFilterData.Limit = 1;
-			mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
+            mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
             relayService.AddFilters(mainFilters);
         }
     }
@@ -59,8 +58,8 @@ public class AccountService
     {
         mainAccount.LastNotificationRead = lastRead;
         eventDatabase.SaveAccount(mainAccount);
-		MentionsUpdated?.Invoke(this, EventArgs.Empty);
-	}
+        MentionsUpdated?.Invoke(this, EventArgs.Empty);
+    }
 
     public bool IsFollowing(string accountToCheckId)
     {
@@ -134,7 +133,7 @@ public class AccountService
                 {
                     try
                     {
-                        var accountDetails = JsonSerializer.Deserialize<AccountDetails>(Utils.JavaScriptStringDecode(eventToProcess.Content, false));
+                        var accountDetails = JsonSerializer.Deserialize<AccountDetails>(eventToProcess.Content);
                         if (accountDetails != null)
                         {
                             var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
@@ -265,15 +264,9 @@ public class AccountService
             Kind = 0,
             PublicKey = account.Id,
             Tags = new(),
-
-            // NNostr doesn't escape the content when calculating id and signature but serializer escapes it when sending it
-            // to the network. So we escape it here, run the calculations and unescape it back so it is escaped during serialization
-            Content = HttpUtility.JavaScriptStringEncode(unescapedContent),
+            Content = unescapedContent,
         };
-
         account.ComputeIdAndSign(nostrEvent);
-        nostrEvent.Content = unescapedContent;
-
         relayService.SendEvent(nostrEvent);
     }
 }

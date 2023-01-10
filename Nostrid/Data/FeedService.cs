@@ -346,10 +346,7 @@ public class FeedService
             Kind = 1,
             PublicKey = sender.Id,
             Tags = new(),
-
-            // NNostr doesn't escape the content when calculating id and signature but serializer escapes it when sending it
-            // to the network. So we escape it here, run the calculations and unescape it back so it is escaped during serialization
-            Content = HttpUtility.JavaScriptStringEncode(unescapedContent),
+            Content = unescapedContent,
         };
 
 
@@ -421,9 +418,6 @@ public class FeedService
         }
 
         sender.ComputeIdAndSign(nostrEvent);
-
-        nostrEvent.Content = unescapedContent;
-
         relayService.SendEvent(nostrEvent);
     }
 
