@@ -297,7 +297,7 @@
         content = htmlSanitizer.Sanitize(content);
 
         // new lines
-        content = content.Replace("\\n", "<br/>");
+        content = content.Replace("\n", "<br/>");
 
         // mentions
         foreach (var index in Enumerable.Range(0, Tree.Note.Tags.Count))

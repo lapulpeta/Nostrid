@@ -1,7 +1,7 @@
-using Nostrid.Misc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NNostr.Client;
-using System;
-using System.Text.Json;
+using Nostrid.Misc;
 
 namespace Nostrid.Data.Relays;
 
@@ -22,15 +22,15 @@ public class TagSubscriptionFilter : SubscriptionFilter
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { ExtensionData = new Dictionary<string, JsonElement>(){["#t"] = ConvertStringArrayToJsonElement(tags) },
+            new NostrSubscriptionFilter() { ExtensionData = new Dictionary<string, JToken>(){["#t"] = ConvertStringArrayToJsonElement(tags) },
                 Kinds = new[]{ NostrKind.Text }, Limit = limitFilterData?.Limit, Since = limitFilterData?.Since, Until = limitFilterData?.Until }
         };
     }
 
-    private static JsonElement ConvertStringArrayToJsonElement(string[] array)
+    private static JToken ConvertStringArrayToJsonElement(string[] array)
     {
-        string jsonString = JsonSerializer.Serialize(array);
-        return JsonDocument.Parse(jsonString).RootElement;
+        string jsonString = JsonConvert.SerializeObject(array);
+        return JToken.Parse(jsonString).Root;
     }
 
     public override SubscriptionFilter Clone()

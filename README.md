@@ -33,11 +33,13 @@ It is written in .NET and runs in Windows and Android (in theory it should run i
 
 ### Technologies
 
-* .NET 7.0 MAUI Blazor
+* .NET 7.0 MAUI
+* Blazor Hybrid
 * [Bootstrap](https://getbootstrap.com/)
 * [LiteDB](https://github.com/mbdavid/LiteDB)
 * [NNostr](https://github.com/Kukks/NNostr)
 * [HtmlSanitizer](https://github.com/mganss/HtmlSanitizer)
+* [Jdenticon.Net](https://github.com/dmester/jdenticon-net)
 
 ### Contributing
 
