@@ -104,32 +104,25 @@ namespace Nostrid.Data
 
         public Event SaveNostrEvent(NostrEvent ev, Relay relay)
         {
-            var now = DateTimeOffset.UtcNow;
-            Event eventData = null;
-
-            RunInTransaction(() =>
+            var eventData = Events.FindById(ev.Id);
+            if (eventData != null)
             {
-                eventData = Events.FindById(ev.Id);
-                if (eventData != null)
+                if (!eventData.Deleted || eventData.PublicKey == ev.PublicKey)
                 {
-                    if (!eventData.Deleted || eventData.PublicKey == ev.PublicKey)
-                    {
-                        return true;
-                    }
-                    // This point can be reached only if event is marked as deleted but the recorded owner is not the real one,
-                    // so we have to processed it again
+                    return !eventData.Processed ? eventData : null;
                 }
+                // This point can be reached only if event is marked as deleted but the recorded owner is not the real one,
+                // so we have to processed it again
+            }
 
-                eventData = new Event(ev)
-                {
-                    CreatedAtCurated = !ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value
-                };
-                Events.Upsert(eventData);
+            var now = DateTimeOffset.UtcNow;
+            eventData = new Event(ev)
+            {
+                CreatedAtCurated = !ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value
+            };
+            Events.Upsert(eventData);
 
-                return true;
-            });
-
-            return eventData == null ? null : (!eventData.Processed ? eventData : null);
+            return !eventData.Processed ? eventData : null;
         }
 
         public List<Event> ListUnprocessedEvents(int? count = null)
@@ -238,33 +231,6 @@ namespace Nostrid.Data
                 }
             }
             return ret;
-        }
-
-        private static readonly object txLock = new();
-        public void RunInTransaction(Func<bool> action)
-        {
-            //lock (txLock)
-            {
-                try
-                {
-                    if (!Database.BeginTrans()) throw new Exception("BeginTrans failed!");
-
-                    if (action())
-                    {
-                        if (!Database.Commit()) throw new Exception("Commit failed!");
-                    }
-                    else
-                    {
-                        if (!Database.Rollback()) throw new Exception("Rollback failed!");
-                    }
-                    //Database.Checkpoint();
-                }
-                catch (Exception ex)
-                {
-                    if (!Database.Rollback()) throw new Exception("Rollback2 failed!");
-                    throw;
-                }
-            }
         }
 
         public string GetAccountName(string accountId)

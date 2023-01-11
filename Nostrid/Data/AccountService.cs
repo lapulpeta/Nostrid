@@ -74,31 +74,25 @@ public class AccountService
                 (!unfollow && mainAccount.FollowList.Contains(otherAccountId)))
                 return;
 
-            eventDatabase.RunInTransaction(() =>
+            if (unfollow)
+                mainAccount.FollowList.Remove(otherAccountId);
+            else
+                mainAccount.FollowList.Add(otherAccountId);
+            var otherAccount = eventDatabase.GetAccount(otherAccountId);
+            if (unfollow)
             {
-                if (unfollow)
-                    mainAccount.FollowList.Remove(otherAccountId);
-                else
-                    mainAccount.FollowList.Add(otherAccountId);
-                var otherAccount = eventDatabase.GetAccount(otherAccountId);
-                if (unfollow)
-                {
-                    otherAccount.FollowerList.RemoveAll(f => f == mainAccount.Id);
-                }
-                else
-                {
-                    if (!otherAccount.FollowerList.Contains(mainAccount.Id))
-                        otherAccount.FollowerList.Add(mainAccount.Id);
-                }
+                otherAccount.FollowerList.RemoveAll(f => f == mainAccount.Id);
+            }
+            else
+            {
+                if (!otherAccount.FollowerList.Contains(mainAccount.Id))
+                    otherAccount.FollowerList.Add(mainAccount.Id);
+            }
 
-                eventDatabase.SaveAccount(mainAccount);
-                eventDatabase.SaveAccount(otherAccount);
-
-                return true;
-            });
-
-            SendContactList(mainAccount);
+            eventDatabase.SaveAccount(mainAccount);
+            eventDatabase.SaveAccount(otherAccount);
         }
+        SendContactList(mainAccount);
     }
 
     public void SendContactList(Account account)
@@ -127,37 +121,32 @@ public class AccountService
         Account accountChanged = null;
         lock (eventDatabase)
         {
-            eventDatabase.RunInTransaction(() =>
+            if (!string.IsNullOrEmpty(eventToProcess.Content))
             {
-                if (!string.IsNullOrEmpty(eventToProcess.Content))
+                try
                 {
-                    try
+                    var accountDetails = JsonSerializer.Deserialize<AccountDetails>(eventToProcess.Content);
+                    if (accountDetails != null)
                     {
-                        var accountDetails = JsonSerializer.Deserialize<AccountDetails>(eventToProcess.Content);
-                        if (accountDetails != null)
-                        {
-                            var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
+                        var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
-                            if (!eventToProcess.CreatedAt.HasValue || !account.DetailsLastUpdate.HasValue ||
-                                eventToProcess.CreatedAt.Value > account.DetailsLastUpdate.Value)
-                            {
-                                account.Details = accountDetails;
-                                account.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
-                                eventDatabase.SaveAccount(account);
-                                accountChanged = account;
-                            }
+                        if (!eventToProcess.CreatedAt.HasValue || !account.DetailsLastUpdate.HasValue ||
+                            eventToProcess.CreatedAt.Value > account.DetailsLastUpdate.Value)
+                        {
+                            account.Details = accountDetails;
+                            account.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+                            eventDatabase.SaveAccount(account);
+                            accountChanged = account;
                         }
                     }
-                    catch (Exception ex)
-                    {
-                    }
                 }
+                catch (Exception ex)
+                {
+                }
+            }
 
-                eventToProcess.Processed = true;
-                eventDatabase.SaveEvent(eventToProcess);
-
-                return true;
-            });
+            eventToProcess.Processed = true;
+            eventDatabase.SaveEvent(eventToProcess);
         }
         if (accountChanged != null)
             AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
@@ -171,59 +160,53 @@ public class AccountService
         lock (eventDatabase)
         {
             var newFollowList = eventToProcess.Tags.Where(t => t.TagIdentifier == "p" && t.Data?.Count > 0).Select(t => t.Data[0]).Distinct().ToList();
+            var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
-            eventDatabase.RunInTransaction(() =>
+            if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
+                eventToProcess.CreatedAt.Value > account.FollowsLastUpdate.Value)
             {
-                var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
+                var existingFollows = account.FollowList;
 
-                if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
-                    eventToProcess.CreatedAt.Value > account.FollowsLastUpdate.Value)
+                var removedFollows = existingFollows.Where(f => !newFollowList.Contains(f)).ToList();
+                var addedFollows = newFollowList.Where(f => !existingFollows.Contains(f)).ToList();
+
+                // Remove followed by
+                foreach (var removedFollowId in removedFollows)
                 {
-                    var existingFollows = account.FollowList;
-
-                    var removedFollows = existingFollows.Where(f => !newFollowList.Contains(f)).ToList();
-                    var addedFollows = newFollowList.Where(f => !existingFollows.Contains(f)).ToList();
-
-                    // Remove followed by
-                    foreach (var removedFollowId in removedFollows)
-                    {
-                        var removedFollow = eventDatabase.GetAccount(removedFollowId);
-                        removedFollow.FollowerList.RemoveAll(f => f == account.Id);
-                        eventDatabase.SaveAccount(removedFollow);
-                    }
-
-                    // Add followed by
-                    foreach (var addedFollowId in addedFollows)
-                    {
-                        var addedFollow = eventDatabase.GetAccount(addedFollowId);
-                        if (!addedFollow.FollowerList.Contains(account.Id))
-                            addedFollow.FollowerList.Add(account.Id);
-                        eventDatabase.SaveAccount(addedFollow);
-                    }
-
-                    // Save new list
-                    account.FollowList = newFollowList;
-
-                    account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
-
-                    eventDatabase.SaveAccount(account);
-
-                    if (account.Id == mainAccount?.Id)
-                    {
-                        MainAccount = account;
-                    }
-
-                    if (addedFollows.Any() || removedFollows.Any())
-                    {
-                        accountChanged = account;
-                    }
+                    var removedFollow = eventDatabase.GetAccount(removedFollowId);
+                    removedFollow.FollowerList.RemoveAll(f => f == account.Id);
+                    eventDatabase.SaveAccount(removedFollow);
                 }
 
-                eventToProcess.Processed = true;
-                eventDatabase.SaveEvent(eventToProcess);
+                // Add followed by
+                foreach (var addedFollowId in addedFollows)
+                {
+                    var addedFollow = eventDatabase.GetAccount(addedFollowId);
+                    if (!addedFollow.FollowerList.Contains(account.Id))
+                        addedFollow.FollowerList.Add(account.Id);
+                    eventDatabase.SaveAccount(addedFollow);
+                }
 
-                return true;
-            });
+                // Save new list
+                account.FollowList = newFollowList;
+
+                account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+
+                eventDatabase.SaveAccount(account);
+
+                if (account.Id == mainAccount?.Id)
+                {
+                    MainAccount = account;
+                }
+
+                if (addedFollows.Any() || removedFollows.Any())
+                {
+                    accountChanged = account;
+                }
+            }
+
+            eventToProcess.Processed = true;
+            eventDatabase.SaveEvent(eventToProcess);
         }
 
         if (accountChanged != null)

@@ -227,35 +227,31 @@ public class FeedService
         {
             e = etag.Data[0];
         }
-        eventDatabase.RunInTransaction(() =>
+        if (Utils.IsValidNostrId(e))
         {
-            if (Utils.IsValidNostrId(e))
+            var reaction = eventToProcess.Content;
+            // According to NIP-25 the content should be either +, - or an emoji, but some clients send an empty content, so let's disable this check
+            //if (!string.IsNullOrEmpty(reaction) && reaction.Length == 1)
             {
-                var reaction = eventToProcess.Content;
-                // According to NIP-25 the content should be either +, - or an emoji, but some clients send an empty content, so let's disable this check
-                //if (!string.IsNullOrEmpty(reaction) && reaction.Length == 1)
-                {
-                    var reactedTweet = eventDatabase.GetEventOrNull(e);
-                    if (reactedTweet == null || !reactedTweet.Processed)
-                        return true; // If event doesn't exist/not processed then keep this event unprocessed and retry later
+                var reactedTweet = eventDatabase.GetEventOrNull(e);
+                if (reactedTweet == null || !reactedTweet.Processed)
+                    return; // If event doesn't exist/not processed then keep this event unprocessed and retry later
 
-                    // Only save if note is not deleted and reaction has not been recorded already
-                    if (!reactedTweet.Deleted && !reactedTweet.NoteMetadata.Reactions.Any(r => r.ReactorId == eventToProcess.PublicKey))
-                    {
-                        reactedTweet.NoteMetadata.Reactions.Add(
-                            new Reaction()
-                            {
-                                ReactorId = eventToProcess.PublicKey,
-                                Content = reaction,
-                            });
-                        eventDatabase.SaveEvent(reactedTweet);
-                    }
+                // Only save if note is not deleted and reaction has not been recorded already
+                if (!reactedTweet.Deleted && !reactedTweet.NoteMetadata.Reactions.Any(r => r.ReactorId == eventToProcess.PublicKey))
+                {
+                    reactedTweet.NoteMetadata.Reactions.Add(
+                        new Reaction()
+                        {
+                            ReactorId = eventToProcess.PublicKey,
+                            Content = reaction,
+                        });
+                    eventDatabase.SaveEvent(reactedTweet);
                 }
             }
-            eventToProcess.Processed = true;
-            eventDatabase.SaveEvent(eventToProcess);
-            return true;
-        });
+        }
+        eventToProcess.Processed = true;
+        eventDatabase.SaveEvent(eventToProcess);
     }
 
     public List<Event> GetGlobalFeed(int count)
