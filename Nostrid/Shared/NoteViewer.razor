@@ -92,7 +92,7 @@
                             <a href='tag/@part.Content.ToLower()' onclick='(e=>e.stopPropagation())(event)'>#@part.Content</a>
                             break;
                         case PartType.Link:
-                            <a href='@part.Content' onclick='(e=>e.stopPropagation())(event)'>@part.Content</a>
+                            <AsyncLink Url="@part.Content" />
                             break;
                         default:
                             @((MarkupString)htmlSanitizer.Sanitize(part.Content))

@@ -1,0 +1,45 @@
+﻿@code{
+    [Parameter]
+    public string Url { get; set; }
+}
+
+@if (isImage)
+{
+    <img src="@Url" />
+}
+else
+{
+    <a href="@Url">@Url</a>
+}
+
+@code {
+    private bool isImage;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        isImage = false;
+        Task.Run(async () =>
+        {
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    using (var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, Url)))
+                    {
+                        if (response.IsSuccessStatusCode && (response.Content.Headers.ContentType?.MediaType.StartsWith("image") ?? false))
+                        {
+                            isImage = true;
+                            InvokeAsync(() => StateHasChanged());
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+        });
+    }
+
+}
