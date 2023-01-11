@@ -1,17 +1,20 @@
 ﻿@implements IAsyncDisposable
 
+@using Markdig;
 @using Nostrid.Data.Relays;
 @using Nostrid.Data;
 @using Nostrid.Misc;
 @using Nostrid.Model;
 @using Ganss.Xss;
 @using System.Web;
+@using System.Net;
 
 @inject NavigationManager navigationManager
 @inject AccountService accountService
 @inject FeedService feedService
 @inject IJSRuntime jsRuntime
 @inject HtmlSanitizer htmlSanitizer
+@inject NoteProcessor noteProcessor
 
 <div role="button" @ref="referenceElement" class="d-flex flex-row px-3 py-2 @(!ReplyingTo ? "bg-tertiary-hover border-top" : "" ) @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
      @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem; font-size: .95rem;">
@@ -74,7 +77,30 @@
                     }
                 </span>
             </p>
-            <p class="text-break" style="margin-bottom: .3rem;">@((MarkupString)GetContent())</p>
+            <p class="text-break" style="margin-bottom: .3rem;">
+                @foreach (var part in noteProcessor.GetParts(Tree.Note?.Content ?? string.Empty, Tree.Note.NoteMetadata))
+                {
+                    switch (part.Type)
+                    {
+                        case PartType.Event:
+                            <a href='note/@part.Content' onclick='(e=>e.stopPropagation())(event)'>@ByteTools.PubkeyToNote(@part.Content, true)</a>
+                            break;
+                        case PartType.Account:
+                            <a href='account/@part.Content' onclick='(e=>e.stopPropagation())(event)'>@HttpUtility.HtmlEncode(accountService.GetAccountName(@part.Content))</a>
+                            break;
+                        case PartType.Hashtag:
+                            <a href='tag/@part.Content.ToLower()' onclick='(e=>e.stopPropagation())(event)'>#@part.Content</a>
+                            break;
+                        case PartType.Link:
+                            <a href='@part.Content' onclick='(e=>e.stopPropagation())(event)'>@part.Content</a>
+                            break;
+                        default:
+                            @((MarkupString)htmlSanitizer.Sanitize(part.Content))
+                            break;
+                    }
+                }
+            </p>
+
             @*@if (Tree.Note.NoteMetadata.HashTags.Count > 0)
             {
                 <p class="mb-1">
@@ -281,54 +307,6 @@
     public IEnumerable<NoteViewer> GetNoteViewers()
     {
         return (new NoteViewer[] { this }).Concat(NoteTreeViewerRef?.GetNoteViewers() ?? Enumerable.Empty<NoteViewer>());
-    }
-
-    private string GetContent()
-    {
-        var content = Tree.Note.Content ?? string.Empty;
-        var metadata = Tree.Note.NoteMetadata;
-
-        if (Tree.Note.Kind == NostrKind.Repost && metadata.EventMentions.ContainsKey(0))
-        {
-            return $"<i class='bi bi-repeat p-2'></i><a href='note/{metadata.EventMentions[0]}' onclick='(e=>e.stopPropagation())(event)'>{ByteTools.PubkeyToNote(metadata.EventMentions[0], true)}</a>";
-        }
-
-        // sanitize original content
-        content = htmlSanitizer.Sanitize(content);
-
-        // new lines
-        content = content.Replace("\n", "<br/>");
-
-        // mentions
-        foreach (var index in Enumerable.Range(0, Tree.Note.Tags.Count))
-        {
-            if (content.Contains($"#[{index}]"))
-            {
-                if (metadata.EventMentions.ContainsKey(index))
-                {
-                    content = content.Replace($"#[{index}]", $"<a href='note/{metadata.EventMentions[index]}' onclick='(e=>e.stopPropagation())(event)'>{ByteTools.PubkeyToNote(metadata.EventMentions[index], true)}</a>");
-
-                }
-                else if (metadata.AccountMentions.ContainsKey(index))
-                {
-                    content = content.Replace($"#[{index}]", $"<a href='account/{metadata.AccountMentions[index]}' onclick='(e=>e.stopPropagation())(event)'>{HttpUtility.HtmlEncode(accountService.GetAccountName(metadata.AccountMentions[index]))}</a>");
-                }
-            }
-        }
-
-        // hashtags
-        // TODO: improve this so there is no need for two passes
-        var hashtags = metadata.HashTags.OrderByDescending(t => t.Length);
-        foreach (var tag in hashtags)
-        {
-            content = content.Replace($"#{tag}", $"#!{tag}!", StringComparison.OrdinalIgnoreCase);
-        }
-        foreach (var tag in hashtags)
-        {
-            content = content.Replace($"#!{tag}!", $"<a href='tag/{tag}' onclick='(e=>e.stopPropagation())(event)'>#{tag}</a>", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return content;
     }
 
     #region Dispose

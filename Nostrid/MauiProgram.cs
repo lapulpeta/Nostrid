@@ -1,5 +1,5 @@
-﻿using Nostrid.Data;
-using Ganss.Xss;
+﻿using Ganss.Xss;
+using Nostrid.Data;
 
 namespace Nostrid;
 
@@ -25,6 +25,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<RelayService>();
         builder.Services.AddSingleton<AccountService>();
         builder.Services.AddSingleton<HtmlSanitizer>();
+        builder.Services.AddSingleton<NoteProcessor>();
 
         return builder.Build();
     }
