@@ -31,6 +31,15 @@ It is written in .NET and runs in Windows and Android (in theory it should run i
 - [ ] Manual/advanced relay management - SOON
 - [ ] Lightning Network payments - SOON
 
+## Screenshots
+
+![Nostrid Android](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid-mobile1.jpg)
+![Nostrid Android](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid-mobile2.jpg)
+![Nostrid Android](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid-mobile3.jpg)
+![Nostrid Windows](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid1.jpg)
+![Nostrid Windows](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid2.jpg)
+![Nostrid Windows](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid3.jpg)
+
 ### Technologies
 
 * .NET 7.0 MAUI
