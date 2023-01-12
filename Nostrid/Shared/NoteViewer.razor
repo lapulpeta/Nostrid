@@ -83,16 +83,22 @@
                     switch (part.Type)
                     {
                         case PartType.Event:
-                            <a href='note/@part.Content' onclick='(e=>e.stopPropagation())(event)'>@ByteTools.PubkeyToNote(@part.Content, true)</a>
+                            <NavLink href="@($"/note/{part.Content}")" @onclick:stopPropagation="true">
+                                @ByteTools.PubkeyToNote(@part.Content, true)
+                            </NavLink>
                             break;
                         case PartType.Account:
-                            <a href='account/@part.Content' onclick='(e=>e.stopPropagation())(event)'>@HttpUtility.HtmlEncode(accountService.GetAccountName(@part.Content))</a>
+                            <NavLink href="@($"/account/{part.Content}")" @onclick:stopPropagation="true">
+                                @HttpUtility.HtmlEncode(accountService.GetAccountName(@part.Content))
+                            </NavLink>
                             break;
                         case PartType.Hashtag:
-                            <a href='tag/@part.Content.ToLower()' onclick='(e=>e.stopPropagation())(event)'>#@part.Content</a>
+                            <NavLink href="@($"/tag/{part.Content.ToLower()}")" @onclick:stopPropagation="true">
+                                #@part.Content
+                            </NavLink>
                             break;
                         case PartType.Link:
-                            <AsyncLink Url="@part.Content" />
+                            <AsyncLink Url="@part.Content" StopPropagation="true" />
                             break;
                         default:
                             @((MarkupString)htmlSanitizer.Sanitize(part.Content))

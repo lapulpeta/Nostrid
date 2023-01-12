@@ -1,15 +1,18 @@
 ﻿@code{
     [Parameter]
     public string Url { get; set; }
+
+    [Parameter]
+    public bool StopPropagation { get; set; }
 }
 
 @if (isImage)
 {
-    <img src="@Url" />
+    <img class="d-block rounded-2 border border-2 border-secondary-suble" src="@Url" style="max-width: 100%; max-height: 80vh;" />
 }
 else
 {
-    <a href="@Url">@Url</a>
+    <NavLink href="@Url" @onclick:stopPropagation="StopPropagation">@Url</NavLink>
 }
 
 @code {
