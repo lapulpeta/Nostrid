@@ -111,7 +111,7 @@ namespace Nostrid.Data
                     else
                     {
                         match = linkRegex.Match(part);
-                        if (processLinks && match.Success)
+                        if (processLinks && match.Success && Uri.IsWellFormedUriString(match.Groups[1].Value, UriKind.Absolute))
                         {
                             yield return (PartType.Link, match.Groups[1].Value);
                         }
