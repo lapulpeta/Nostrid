@@ -97,7 +97,7 @@ namespace Nostrid.Misc
             return versionAttribute.InformationalVersion;
         }
 
-        [GeneratedRegex("#([a-z0-9_]+)", RegexOptions.Compiled)]
+        [GeneratedRegex("#([a-zA-Z0-9_]+)", RegexOptions.Compiled)]
         private static partial Regex HashtagRegex();
 
         [GeneratedRegex("@([a-f0-9]{64})", RegexOptions.Compiled)]
@@ -106,7 +106,7 @@ namespace Nostrid.Misc
         [GeneratedRegex("@(npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{6,})", RegexOptions.Compiled)]
         private static partial Regex AccountMentionBech32Regex();
 
-        [GeneratedRegex("^#([a-z0-9_]+)$", RegexOptions.Compiled)]
+        [GeneratedRegex("^#([a-zA-Z0-9_]+)$", RegexOptions.Compiled)]
         private static partial Regex OnlyHashtagRegex();
     }
 }

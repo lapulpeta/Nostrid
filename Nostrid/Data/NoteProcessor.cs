@@ -13,7 +13,7 @@ namespace Nostrid.Data
     {
         private const string LinkRegexText = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)";
         private const string NumberRegexText = "\\d+";
-        private const string LabelRegexText = "[a-z0-9_]+";
+        private const string LabelRegexText = "[a-zA-Z0-9_]+";
         private static readonly Regex hashtagRegex = HashtagRegex();
         private static readonly Regex partsRegex = PartsRegex();
         private static readonly Regex partsWithLinksRegex = PartsWithLinksRegex();
