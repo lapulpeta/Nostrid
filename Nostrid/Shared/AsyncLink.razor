@@ -1,0 +1,48 @@
+﻿@code{
+    [Parameter]
+    public string Url { get; set; }
+
+    [Parameter]
+    public bool StopPropagation { get; set; }
+}
+
+@if (isImage)
+{
+    <img class="d-block rounded-2 border border-2 border-secondary-suble" src="@Url" style="max-width: 100%; max-height: 80vh;" />
+}
+else
+{
+    <NavLink href="@Url" @onclick:stopPropagation="StopPropagation">@Url</NavLink>
+}
+
+@code {
+    private bool isImage;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        isImage = false;
+        Task.Run(async () =>
+        {
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    using (var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, Url)))
+                    {
+                        if (response.IsSuccessStatusCode && (response.Content.Headers.ContentType?.MediaType.StartsWith("image") ?? false))
+                        {
+                            isImage = true;
+                            InvokeAsync(() => StateHasChanged());
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+        });
+    }
+
+}
