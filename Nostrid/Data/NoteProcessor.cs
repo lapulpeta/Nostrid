@@ -14,11 +14,11 @@ namespace Nostrid.Data
         private const string LinkRegexText = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)";
         private const string NumberRegexText = "\\d+";
         private const string LabelRegexText = "[a-z0-9_]+";
-        private static readonly Regex hashtagRegex = new Regex($"#({LabelRegexText})", RegexOptions.Compiled);
-        private static readonly Regex partsRegex = new Regex($"(#(?:\\[{NumberRegexText}\\]|{LabelRegexText}))", RegexOptions.Compiled);
-        private static readonly Regex partsWithLinksRegex = new Regex($"(#(?:\\[{NumberRegexText}\\]|{LabelRegexText})|{LinkRegexText})", RegexOptions.Compiled);
-        private static readonly Regex linkRegex = new Regex($"({LinkRegexText})", RegexOptions.Compiled);
-        private static readonly Regex mentionWithIndexRegex = new Regex($"#\\[({NumberRegexText})\\]", RegexOptions.Compiled);
+        private static readonly Regex hashtagRegex = HashtagRegex();
+        private static readonly Regex partsRegex = PartsRegex();
+        private static readonly Regex partsWithLinksRegex = PartsWithLinksRegex();
+        private static readonly Regex linkRegex = LinkRegex();
+        private static readonly Regex mentionWithIndexRegex = MentionWithIndexRegex();
 
         private readonly MarkdownPipeline pipeline;
 
@@ -123,6 +123,21 @@ namespace Nostrid.Data
                 }
             }
         }
+
+        [GeneratedRegex($"#({LabelRegexText})", RegexOptions.Compiled)]
+        private static partial Regex HashtagRegex();
+
+        [GeneratedRegex($"(#(?:\\[{NumberRegexText}\\]|{LabelRegexText}))", RegexOptions.Compiled)]
+        private static partial Regex PartsRegex();
+
+        [GeneratedRegex($"(#(?:\\[{NumberRegexText}\\]|{LabelRegexText})|{LinkRegexText})", RegexOptions.Compiled)]
+        private static partial Regex PartsWithLinksRegex();
+
+        [GeneratedRegex($"({LinkRegexText})", RegexOptions.Compiled)]
+        private static partial Regex LinkRegex();
+
+        [GeneratedRegex($"#\\[({NumberRegexText})\\]", RegexOptions.Compiled)]
+        private static partial Regex MentionWithIndexRegex();
     }
 
     #region Helper Classes
