@@ -65,7 +65,7 @@ namespace Nostrid.Data
         {
             // Here we decide whether we use markdown or not
             var doc = Markdown.Parse(content);
-            var useMarkdown = HasMarkup(doc);
+            var useMarkdown = false; // HasMarkup(doc); // TODO: enable markdown but fix formatting errors https://github.com/lapulpeta/Nostrid/issues/13
             if (useMarkdown)
             {
                 return GetPartsInternal(Markdown.ToHtml(doc, pipeline).Replace("\n", "<br/>"), metadata, false);
