@@ -149,7 +149,13 @@ public class AccountService
             eventDatabase.SaveEvent(eventToProcess);
         }
         if (accountChanged != null)
+        {
+            if (accountChanged.Id == mainAccount?.Id)
+            {
+                MainAccount = accountChanged;
+            }
             AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
+        }
     }
 
     // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md

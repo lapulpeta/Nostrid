@@ -75,6 +75,8 @@ namespace Nostrid.Data
         public void DeleteAccount(Account account)
         {
             Accounts.Delete(account.Id);
+            Events.DeleteMany(e => e.PublicKey == account.Id);
+            OwnEvents.DeleteMany(e => e.Event.PublicKey == account.Id);
         }
 
         public List<string> GetAccountIdsWithPk()
