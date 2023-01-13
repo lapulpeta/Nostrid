@@ -5,8 +5,9 @@
 
 ---
 
-Nostrid is a multi-platform, open-source Nostr client.
-It is written in .NET and runs in Windows and Android (in theory it should run in iOS and macOS too but it hasn't been tested yet).
+Nostrid is a multi-platform, open-source Nostr client. It is written in .NET and runs in Windows and Android (in theory it should run in iOS and macOS too but it hasn't been tested yet).
+
+Also a [web version](https://web.nostrid.app/) is available. It runs completely on the browser, and it can even be installed locally as a [PWA](https://en.wikipedia.org/wiki/Progressive_web_app).
 
 ## Features
 
@@ -22,9 +23,10 @@ It is written in .NET and runs in Windows and Android (in theory it should run i
 - [x] Automatic relay management (no user intervention is required)
 - [x] Local cache of events
 - [x] Notification of mentions for current account
+- [x] Embedded links and images
 - [x] Embedded mentions of other accounts and notes - PARTIAL
 - [x] Reposts (aka Boosts) - PARTIAL
-- [ ] Embedded links, images and videos - SOON
+- [ ] Embedded videos - SOON
 - [ ] NIP-05 profiles - SOON
 - [ ] Direct messages - SOON
 - [ ] Channels - SOON
