@@ -9,8 +9,9 @@ namespace Nostrid.Data;
 
 public class RelayService
 {
-    private readonly string[] DefaultHighPriorityRelays = new[] { "wss://relay.damus.io", "wss://relay.nostr.info" };
-    private readonly string[] DefaultLowPriorityRelays = new[] { "wss://nostr-pub.wellorder.net", "wss://nostr.onsats.org", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://nostr.zebedee.cloud", "wss://rsslay.fiatjaf.com", "wss://nostr.openchain.fr", "wss://nostr.sandwich.farm", "wss://nostr.ono.re", "wss://nostr.rocks", "wss://nostr-relay.untethr.me", "wss://nostr.mom", "wss://relayer.fiatjaf.com", "wss://expensive-relay.fiatjaf.com", "wss://freedom-relay.herokuapp.com/ws", "wss://nostr-relay.freeberty.net", "wss://relay.nostr.ch", "wss://nostr.zaprite.io", "wss://nostr.delo.software", "wss://nostr-relay.untethr.me", "wss://nostr.semisol.dev", "wss://nostr-pub.semisol.dev", "wss://nostr-verified.wellorder.net", "wss://nostr.drss.io", "wss://nostr.unknown.place", "wss://nostr.oxtr.dev", "wss://relay.grunch.dev", "wss://relay.cynsar.foundation", "wss://nostr-2.zebedee.cloud", "wss://nostr-relay.digitalmob.ro", "wss://no.str.cr" };
+    private readonly string[] DefaultHighPriorityRelays = new[] { "wss://relay.damus.io", "wss://relay.nostr.info", "wss://nostr-pub.wellorder.net", "wss://nostr.onsats.org", "wss://nostr-pub.semisol.dev", "wss://nostr.walletofsatoshi", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://nostr.zebedee.cloud" };
+    private readonly string[] DefaultLowPriorityRelays = new[] { "wss://nostr.openchain.fr", "wss://nostr.sandwich.farm", "wss://nostr.ono.re", "wss://nostr.rocks", "wss://nostr-relay.untethr.me", "wss://nostr.mom", "wss://relayer.fiatjaf.com", "wss://expensive-relay.fiatjaf.com", "wss://freedom-relay.herokuapp.com/ws", "wss://nostr-relay.freeberty.net", "wss://relay.nostr.ch", "wss://nostr.zaprite.io", "wss://nostr.delo.software", "wss://nostr-relay.untethr.me", "wss://nostr.semisol.dev", "wss://nostr-verified.wellorder.net", "wss://nostr.drss.io", "wss://nostr.unknown.place", "wss://nostr.oxtr.dev", "wss://relay.grunch.dev", "wss://relay.cynsar.foundation", "wss://nostr-2.zebedee.cloud", "wss://nostr-relay.digitalmob.ro", "wss://no.str.cr" };
+    private const int MinRelays = 6;
 
     private readonly EventDatabase eventDatabase;
     private readonly List<SubscriptionFilter> filters = new();
@@ -29,7 +30,7 @@ public class RelayService
     public int ConnectedRelays => connectedClients;
     public int PendingRelays => pendingRelaysByPriority.Values.SelectMany(a => a).Count();
     public int RateLimitedRelays => relayRateLimited.Count;
-    public int MaxRelays => Math.Max(4, Environment.ProcessorCount);
+    public int MaxRelays => Math.Max(MinRelays, Environment.ProcessorCount);
     public int FiltersCount => filters.Count;
 
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
@@ -96,7 +97,7 @@ public class RelayService
                 eventDatabase.SaveRelay(new Relay()
                 {
                     Uri = relay,
-                    Priority = 0
+                    Priority = 5
                 });
             }
         }
