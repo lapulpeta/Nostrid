@@ -75,7 +75,7 @@ else
     private ConcurrentDictionary<string, Event> renderedN = new();
     private List<NoteTree> noteTrees = new();
     private Timer refreshTimer;
-    private SubscriptionFilter[] detailsFilters = { };
+    private ConcurrentDictionary<string, SubscriptionFilter> detailsFiltersByAccountId = new();
     private SubscriptionFilter eventFilter;
     private bool maxReached;
     private BootstrapModal composeModal;
@@ -84,8 +84,6 @@ else
 
     protected override void OnParametersSet()
     {
-        int subscribedCnt = -1;
-
         Cleanup();
 
         renderedN = new();
@@ -95,12 +93,13 @@ else
             if (_disposed)
                 return;
 
-            var mustRefresh = Event.Merge(renderedN, feedService.GetNotesThread(EventId, downLevels: 4, out maxReached));
+            var copied = new List<Event>();
+            var mustRefresh = Event.Merge(renderedN, feedService.GetNotesThread(EventId, downLevels: 4, out maxReached), onCopy: (ev) => copied.Add(ev));
 
-            if (subscribedCnt != renderedN.Count)
+            if (copied.Any())
             {
-                UpdateSubscriptionForEvents();
-                subscribedCnt = renderedN.Count;
+                UpdateDetailFilters(copied);
+                UpdateEventFilters();
                 mustRefresh = true;
             }
 
@@ -115,25 +114,31 @@ else
         }), null, 0, 3000);
     }
 
-    private static object atomicSwap = new object();
-    private void UpdateSubscriptionForEvents()
+    private void UpdateDetailFilters(IEnumerable<Event> newEvents)
     {
-        SubscriptionFilter[] addedFilters = { }, oldFilters;
+        var accountIds = newEvents.Select(n => n.PublicKey).Distinct();
+        foreach (var accountId in accountIds)
+        {
+            detailsFiltersByAccountId.GetOrAdd(accountId, (_) =>
+            {
+                var filter = new AccountDetailsSubscriptionFilter(accountId) { DestroyOnFirstEvent = true };
+                relayService.AddFilter(filter);
+                return filter;
+            });
+        }
+    }
+
+    private static object atomicSwap = new object();
+    private void UpdateEventFilters()
+    {
         SubscriptionFilter addedFilter, oldFilter;
         var renderedNValues = renderedN.Values;
-        var accountIds = renderedNValues.Select(n => n.PublicKey).Distinct().ToArray();
         var ids = renderedNValues.SelectMany(t => new[] { t.Id, t.NoteMetadata.ReplyToId, t.NoteMetadata.ReplyToRootId }).Union(new[] { EventId }).Where(t => !string.IsNullOrEmpty(t)).Distinct();
         relayService.AddFilter(addedFilter = new EventSubscriptionFilter(ids.ToArray()));
-        if (accountIds.Length != 0)
-        {
-            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds).ToArray());
-        }
         lock (atomicSwap)
         {
-            (detailsFilters, oldFilters) = (addedFilters, detailsFilters);
             (eventFilter, oldFilter) = (addedFilter, eventFilter);
         }
-        relayService.DeleteFilters(oldFilters);
         relayService.DeleteFilter(oldFilter);
     }
 
@@ -171,7 +176,7 @@ else
     {
         refreshTimer?.Dispose();
         relayService.DeleteFilter(eventFilter);
-        relayService.DeleteFilters(detailsFilters);
+        relayService.DeleteFilters(detailsFiltersByAccountId.Values);
     }
     #endregion
 

@@ -6,9 +6,14 @@ namespace Nostrid.Data.Relays;
 public abstract class SubscriptionFilter
 {
     public string Id { get; private set; }
+
     public LimitFilterData limitFilterData { get; } = new();
 
     public bool PreserveOldest { get; set; }
+
+    public bool DestroyOnFirstEvent { get; set; }
+
+    public bool DestroyOnEose { get; internal set; }
 
     public string ParamsId { get; protected set; }
 

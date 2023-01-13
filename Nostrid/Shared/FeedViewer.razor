@@ -63,8 +63,8 @@ else
     private ConcurrentDictionary<string, Event> renderedN, newN, oldN;
     private int dbLimit;
     private SubscriptionFilter newFilter, oldFilter;
-    private SubscriptionFilter[] detailsFilters = { };
-    private Timer refreshPageTimer, refreshIdsTimer;
+    private ConcurrentDictionary<string, SubscriptionFilter> detailsFiltersByAccountId = new();
+    private Timer refreshPageTimer;
     private string[] renderedIds;
     private NoteTreeViewer noteTreeViewer;
     private bool requestDisabled = false;
@@ -118,6 +118,8 @@ else
         if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
             return;
 
+        UpdateDetailFilters(data.notes);
+
         if (data.filterId == oldFilter.Id)
         {
             Event.Merge(renderedN, data.notes);
@@ -128,28 +130,19 @@ else
         }
     }
 
-    private static object atomicSwap = new object();
-    private void UpdateSubscriptionForDetails()
+    private void UpdateDetailFilters(IEnumerable<Event> newEvents)
     {
-        if (_disposed || renderedN == null || renderedIds == null)
-            return;
-
-        SubscriptionFilter[] addedFilters = { }, oldFilters;
-        var accountIds = renderedN.Values.Select(n => n.PublicKey).Distinct().ToArray();
-        if (!accountIds.Except(renderedIds).Any())
+        var accountIds = newEvents.Select(n => n.PublicKey).Distinct().Where(n => !detailsFiltersByAccountId.ContainsKey(n)).ToArray();
+        if (accountIds.Any())
         {
-            return;
+            foreach (var accountId in accountIds)
+                detailsFiltersByAccountId.GetOrAdd(accountId, (_) =>
+                {
+                    var filter = new AccountDetailsSubscriptionFilter(accountId) { DestroyOnFirstEvent = true };
+                    relayService.AddFilter(filter);
+                    return filter;
+                });
         }
-        if (accountIds.Length != 0)
-        {
-            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds).ToArray());
-        }
-        lock (atomicSwap)
-        {
-            renderedIds = accountIds;
-            (detailsFilters, oldFilters) = (addedFilters, detailsFilters);
-        }
-        relayService.DeleteFilters(oldFilters);
     }
 
     protected override void OnParametersSet()
@@ -181,11 +174,6 @@ else
                 StateHasChanged();
             });
         }), null, 0, 5000);
-
-        refreshIdsTimer = new Timer(new TimerCallback(_ =>
-        {
-            UpdateSubscriptionForDetails();
-        }), null, 5000, 10000);
     }
 
     private void OnReply(NoteTree noteTree)
@@ -216,11 +204,9 @@ else
     private void Cleanup()
     {
         feedService.ReceivedNotes -= ReceivedNotes;
-        renderedN = newN = oldN = null;
         relayService.DeleteFilters(newFilter, oldFilter);
-        relayService.DeleteFilters(detailsFilters);
+        relayService.DeleteFilters(detailsFiltersByAccountId.Values);
         refreshPageTimer?.Dispose();
-        refreshIdsTimer?.Dispose();
     }
     #endregion
 
