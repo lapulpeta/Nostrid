@@ -13,7 +13,9 @@ public abstract class SubscriptionFilter
 
     public bool DestroyOnFirstEvent { get; set; }
 
-    public bool DestroyOnEose { get; internal set; }
+    public bool DestroyOnEose { get; set; }
+
+    public DateTimeOffset? DestroyOn { get; set; }
 
     public string ParamsId { get; protected set; }
 

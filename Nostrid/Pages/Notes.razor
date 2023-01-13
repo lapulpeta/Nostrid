@@ -82,6 +82,8 @@ else
     private NoteTree replyingTo = null;
     private ScriptsComponent scripts;
 
+    private const int SecondsForDetailsFilters = 10;
+
     protected override void OnParametersSet()
     {
         Cleanup();
@@ -116,15 +118,19 @@ else
 
     private void UpdateDetailFilters(IEnumerable<Event> newEvents)
     {
-        var accountIds = newEvents.Select(n => n.PublicKey).Distinct();
+        var accountIds = newEvents.Select(n => n.PublicKey).Where(n => !detailsFiltersByAccountId.ContainsKey(n));
         foreach (var accountId in accountIds)
         {
-            detailsFiltersByAccountId.GetOrAdd(accountId, (_) =>
+            var filter = new AccountDetailsSubscriptionFilter(accountId)
             {
-                var filter = new AccountDetailsSubscriptionFilter(accountId) { DestroyOnFirstEvent = true };
+                DestroyOnEose = true,
+                DestroyOnFirstEvent = true,
+                DestroyOn = DateTimeOffset.UtcNow.AddSeconds(SecondsForDetailsFilters)
+            };
+            if (detailsFiltersByAccountId.GetOrAdd(accountId, filter) == filter)
+            {
                 relayService.AddFilter(filter);
-                return filter;
-            });
+            };
         }
     }
 

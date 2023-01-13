@@ -105,8 +105,8 @@ public class RelayService
                     return;
                 if (!subscriptionsByClient.TryGetValue(client, out var subs))
                     return;
-                subs.Where(s => s.Filter.Id == subscriptionId).ForEach(s => s.Unsubscribe());
-                subs.RemoveAll(s => s.Filter.Id == subscriptionId);
+                subs.Where(s => s.SubscriptionId == subscriptionId).ForEach(s => s.Unsubscribe());
+                subs.RemoveAll(s => s.SubscriptionId == subscriptionId);
                 if (!subs.Any())
                 {
                     DeleteFilter(filter);
@@ -127,6 +127,7 @@ public class RelayService
     {
         var oldest = DateTimeOffset.UtcNow;
         var newEvents = new HashSet<Event>();
+        var destroyed = false;
 
         foreach (var ev in events)
         {
@@ -152,7 +153,12 @@ public class RelayService
                 if (filter.DestroyOnFirstEvent)
                 {
                     DeleteFilter(filter);
+                    destroyed = true;
                 }
+            }
+            if (!destroyed && filter.DestroyOn.HasValue && filter.DestroyOn < DateTimeOffset.UtcNow)
+            {
+                DeleteFilter(filter);
             }
         }
     }
