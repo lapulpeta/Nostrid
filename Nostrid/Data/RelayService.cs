@@ -2,6 +2,7 @@ using Nostrid.Data.Relays;
 using Nostrid.Model;
 using NNostr.Client;
 using System.Collections.Concurrent;
+using LinqKit;
 
 namespace Nostrid.Data;
 
@@ -94,7 +95,27 @@ public class RelayService
         }
     }
 
-    private void OnNoticeReceived(Relay relay, string message)
+    private void EoseReceived(Relay relay, string subscriptionId)
+    {
+        if (filterBySubscriptionId.TryGetValue(subscriptionId, out var filter) && filter.DestroyOnEose)
+        {
+            lock (filters)
+            {
+                if (!clientByRelay.TryGetValue(relay, out var client))
+                    return;
+                if (!subscriptionsByClient.TryGetValue(client, out var subs))
+                    return;
+                subs.Where(s => s.Filter.Id == subscriptionId).ForEach(s => s.Unsubscribe());
+                subs.RemoveAll(s => s.Filter.Id == subscriptionId);
+                if (!subs.Any())
+                {
+                    DeleteFilter(filter);
+                }
+            }
+        }
+    }
+
+    private void NoticeReceived(Relay relay, string message)
     {
         if (message.Contains("rate limit", StringComparison.CurrentCultureIgnoreCase))
         {
@@ -102,7 +123,7 @@ public class RelayService
         }
     }
 
-    private void OnEventReceived(Relay relay, string subscriptionId, NostrEvent[] events)
+    private void EventReceived(Relay relay, string subscriptionId, NostrEvent[] events)
     {
         var oldest = DateTimeOffset.UtcNow;
         var newEvents = new HashSet<Event>();
@@ -128,8 +149,12 @@ public class RelayService
 			if (newEvents.Count > 0)
 			{
 				ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
-			}
-		}
+                if (filter.DestroyOnFirstEvent)
+                {
+                    DeleteFilter(filter);
+                }
+            }
+        }
     }
 
     public void AddFilter(SubscriptionFilter filter)
@@ -174,6 +199,11 @@ public class RelayService
     }
 
     public void DeleteFilters(params SubscriptionFilter[] fls)
+    {
+        DeleteFilters((IEnumerable<SubscriptionFilter>)fls);
+    }
+
+    public void DeleteFilters(IEnumerable<SubscriptionFilter> fls)
     {
         lock (filters)
         {
@@ -278,8 +308,9 @@ public class RelayService
             client = new NostrClient(new Uri(relay.Uri));
             clientByRelay[relay] = client;
         }
-        client.NoticeReceived += (_, message) => OnNoticeReceived(relay, message);
-        client.EventsReceived += (_, data) => OnEventReceived(relay, data.subscriptionId, data.events);
+        client.NoticeReceived += (_, message) => NoticeReceived(relay, message);
+        client.EventsReceived += (_, data) => EventReceived(relay, data.subscriptionId, data.events);
+        client.EoseReceived += (_, subscriptionId) => EoseReceived(relay, subscriptionId);
 
         try
         {

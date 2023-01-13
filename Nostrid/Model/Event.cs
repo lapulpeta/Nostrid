@@ -51,7 +51,7 @@ public class Event : NostrEvent
         }
     }
 
-    public static bool Merge(ConcurrentDictionary<string, Event> destination, IEnumerable<Event> source, Func<Event, bool> copyIf = null)
+    public static bool Merge(ConcurrentDictionary<string, Event> destination, IEnumerable<Event> source, Func<Event, bool> copyIf = null, Action<Event> onCopy = null)
     {
         var ret = false;
         foreach (var ev in source)
@@ -59,15 +59,28 @@ public class Event : NostrEvent
             if (copyIf == null || copyIf(ev))
             {
                 ret = true;
-                Merge(destination, ev);
+                Merge(destination, ev, onCopy);
             }
         }
         return ret;
     }
 
-    public static void Merge(ConcurrentDictionary<string, Event> destination, Event ev)
+    public static void Merge(ConcurrentDictionary<string, Event> destination, Event ev, Action<Event> onCopy = null)
     {
-        destination.AddOrUpdate(ev.Id, ev, (_, old) => !old.Processed && ev.Processed ? ev : old);
+        destination.AddOrUpdate(
+            ev.Id,
+            addValueFactory: _ =>
+            {
+                onCopy?.Invoke(ev);
+                return ev;
+            },
+            updateValueFactory: (_, old) =>
+            {
+                var copy = !old.Processed && ev.Processed;
+                if (copy)
+                    onCopy?.Invoke(ev);
+                return copy ? ev : old;
+            });
     }
 }
 
