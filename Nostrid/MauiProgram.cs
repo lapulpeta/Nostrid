@@ -21,12 +21,20 @@ public static class MauiProgram
 #endif
 
         builder.Services.AddSingleton<FeedService>();
-        builder.Services.AddSingleton<EventDatabase>();
+        builder.Services.AddSingleton(new EventDatabase(new FileStream(DbConstants.DatabasePath, FileMode.OpenOrCreate)));
         builder.Services.AddSingleton<RelayService>();
         builder.Services.AddSingleton<AccountService>();
         builder.Services.AddSingleton<HtmlSanitizer>();
         builder.Services.AddSingleton<NoteProcessor>();
 
         return builder.Build();
+    }
+
+    public static class DbConstants
+    {
+        public const string DatabaseFilename = "Nostr.db";
+
+        public static string DatabasePath =>
+            Path.Combine(FileSystem.AppDataDirectory, DatabaseFilename);
     }
 }

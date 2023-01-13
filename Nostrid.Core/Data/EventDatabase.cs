@@ -17,9 +17,9 @@ namespace Nostrid.Data
 
         public int EventsPending => Events.Query().Where(e => !e.Processed).Count();
 
-        public EventDatabase()
+        public EventDatabase(Stream storage)
         {
-            Database = new LiteDatabase(DbConstants.DatabasePath);
+            Database = new LiteDatabase(storage);
             Relays = Database.GetCollection<Relay>();
             Events = Database.GetCollection<Event>();
             Events.EnsureIndex(e => e.Processed);

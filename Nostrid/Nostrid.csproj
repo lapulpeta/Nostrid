@@ -59,25 +59,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Markdig" Version="0.30.4" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="bootstrap" Version="5.3.0-alpha1" />
-        <PackageReference Include="HtmlSanitizer" Version="8.0.601" />
-        <PackageReference Include="Jdenticon-net" Version="3.1.2" />
-        <PackageReference Include="LiteDB" Version="5.0.15" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\NNostr\NNostr.Client\NNostr.Client.csproj" />
+      <ProjectReference Include="..\Nostrid.Core\Nostrid.Core.csproj" />
     </ItemGroup>
-
-    <Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
-        <Exec Command="git describe --long --always --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
-            <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput" />
-        </Exec>
-    </Target>
 
 </Project>

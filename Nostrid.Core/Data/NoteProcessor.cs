@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace Nostrid.Data
 {
-    internal partial class NoteProcessor
+    public partial class NoteProcessor
     {
         private const string LinkRegexText = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)";
         private const string NumberRegexText = "\\d+";

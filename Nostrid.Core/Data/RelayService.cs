@@ -2,6 +2,7 @@ using Nostrid.Data.Relays;
 using Nostrid.Model;
 using NNostr.Client;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using LinqKit;
 
 namespace Nostrid.Data;
@@ -21,15 +22,15 @@ public class RelayService
 
     private CancellationTokenSource clientThreadsCancellationTokenSource;
 
+    private bool running;
     private int connectedClients;
     private List<Task> runningTasks = new();
 
     public int ConnectedRelays => connectedClients;
     public int PendingRelays => pendingRelaysByPriority.Values.SelectMany(a => a).Count();
     public int RateLimitedRelays => relayRateLimited.Count;
-    public int MaxRelays => Environment.ProcessorCount;
+    public int MaxRelays => Math.Max(4, Environment.ProcessorCount);
     public int FiltersCount => filters.Count;
-
 
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
 
@@ -42,10 +43,15 @@ public class RelayService
         {
             pendingRelaysByPriority.GetOrAdd(relay.Priority, _ => new()).Add(relay);
         }
+        StartNostrClients();
     }
 
     public void StartNostrClients()
     {
+        if (running)
+            return;
+
+        running = true;
         _ = Task.Run(() =>
         {
             clientThreadsCancellationTokenSource = new CancellationTokenSource();
@@ -58,6 +64,7 @@ public class RelayService
 
     public void StopNostrClients()
     {
+        running = false;
         clientThreadsCancellationTokenSource.Cancel();
     }
 
