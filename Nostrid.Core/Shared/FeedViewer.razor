@@ -114,7 +114,7 @@ else
         }), null, 5000, 5000);
     }
 
-    private void ReceivedNotes(object sender, (string filterId, IEnumerable<Event> notes) data)
+    private void ReceivedNotes(object? sender, (string filterId, IEnumerable<Event> notes) data)
     {
         if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
             return;
@@ -158,6 +158,8 @@ else
         oldN = new();
         renderedIds = new string[0];
 
+        feedService.NoteUpdated += NoteUpdated;
+
         newFilter = BaseFilter.Clone();
         oldFilter = BaseFilter.Clone();
         oldFilter.limitFilterData.Limit = RelayQueryLimit;
@@ -187,6 +189,15 @@ else
         composeModal.Show();
     }
 
+    private void NoteUpdated(object? sender, Event ev)
+    {
+        if (!renderedN.ContainsKey(ev.Id))
+            return;
+
+        renderedN.AddOrUpdate(ev.Id, (_) => ev, (_, _) => ev);
+        InvokeAsync(() => StateHasChanged());
+    }
+
     #region Dispose
     private bool _disposed;
 
@@ -208,6 +219,7 @@ else
     private void Cleanup()
     {
         feedService.ReceivedNotes -= ReceivedNotes;
+        feedService.NoteUpdated -= NoteUpdated;
         relayService.DeleteFilters(newFilter, oldFilter);
         relayService.DeleteFilters(detailsFiltersByAccountId.Values);
         refreshPageTimer?.Dispose();

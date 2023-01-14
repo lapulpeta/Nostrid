@@ -90,6 +90,8 @@ else
 
         renderedN = new();
 
+        feedService.NoteUpdated += NoteUpdated;
+
         refreshTimer = new Timer(new TimerCallback(_ =>
         {
             if (_disposed)
@@ -132,6 +134,15 @@ else
                 relayService.AddFilter(filter);
             };
         }
+    }
+
+    private void NoteUpdated(object? sender, Event ev)
+    {
+        if (!renderedN.ContainsKey(ev.Id))
+            return;
+
+        renderedN.AddOrUpdate(ev.Id, (_) => ev, (_, _) => ev);
+        InvokeAsync(() => StateHasChanged());
     }
 
     private static object atomicSwap = new object();
@@ -180,6 +191,7 @@ else
 
     private void Cleanup()
     {
+        feedService.NoteUpdated -= NoteUpdated;
         refreshTimer?.Dispose();
         relayService.DeleteFilter(eventFilter);
         relayService.DeleteFilters(detailsFiltersByAccountId.Values);

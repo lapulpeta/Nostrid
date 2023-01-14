@@ -12,6 +12,9 @@ public class FeedService
     private readonly RelayService relayService;
     private readonly AccountService accountService;
 
+    public event EventHandler<(string filterId, IEnumerable<Event> notes)> ReceivedNotes;
+    public event EventHandler<Event> NoteUpdated;
+
     public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService)
     {
         this.eventDatabase = eventDatabase;
@@ -26,7 +29,6 @@ public class FeedService
         foreach (var ev in events)
             _ = Task.Run(() => HandleEvent(ev));
     }
-
 
     private void HandleEvent(Event eventToProcess)
     {
@@ -59,8 +61,6 @@ public class FeedService
                 break;
         }
     }
-
-    public event EventHandler<(string filterId, IEnumerable<Event> notes)> ReceivedNotes;
 
     private void ReceivedEvents(object sender, (string filterId, IEnumerable<Event> events) data)
     {
@@ -146,6 +146,8 @@ public class FeedService
 
         eventToProcess.Processed = true;
         eventDatabase.SaveEvent(eventToProcess);
+
+        NoteUpdated?.Invoke(this, eventToProcess);
     }
 
     public void HandleKind2(Event eventToProcess)
@@ -184,6 +186,8 @@ public class FeedService
         }
         eventToProcess.Processed = true;
         eventDatabase.SaveEvent(eventToProcess);
+
+        NoteUpdated?.Invoke(this, eventToProcess);
     }
 
     public void HandleKind6(Event eventToProcess)
@@ -220,8 +224,10 @@ public class FeedService
 
     public void HandleKind7(Event eventToProcess)
     {
+        Event? eventUpdated = null;
+
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
-        string e = null;
+        string? e = null;
         var etag = eventToProcess.Tags.Where(t => t.TagIdentifier == "e").LastOrDefault();
         if (etag != null)
         {
@@ -233,25 +239,29 @@ public class FeedService
             // According to NIP-25 the content should be either +, - or an emoji, but some clients send an empty content, so let's disable this check
             //if (!string.IsNullOrEmpty(reaction) && reaction.Length == 1)
             {
-                var reactedTweet = eventDatabase.GetEventOrNull(e);
-                if (reactedTweet == null || !reactedTweet.Processed)
+                var reactedNote = eventDatabase.GetEventOrNull(e);
+                if (reactedNote == null || !reactedNote.Processed)
                     return; // If event doesn't exist/not processed then keep this event unprocessed and retry later
 
                 // Only save if note is not deleted and reaction has not been recorded already
-                if (!reactedTweet.Deleted && !reactedTweet.NoteMetadata.Reactions.Any(r => r.ReactorId == eventToProcess.PublicKey))
+                if (!reactedNote.Deleted && !reactedNote.NoteMetadata.Reactions.Any(r => r.ReactorId == eventToProcess.PublicKey))
                 {
-                    reactedTweet.NoteMetadata.Reactions.Add(
+                    reactedNote.NoteMetadata.Reactions.Add(
                         new Reaction()
                         {
                             ReactorId = eventToProcess.PublicKey,
                             Content = reaction,
                         });
-                    eventDatabase.SaveEvent(reactedTweet);
+                    eventDatabase.SaveEvent(reactedNote);
+                    eventUpdated = reactedNote;
                 }
             }
         }
         eventToProcess.Processed = true;
         eventDatabase.SaveEvent(eventToProcess);
+
+        if (eventUpdated != null)
+            NoteUpdated?.Invoke(this, eventUpdated);
     }
 
     public List<Event> GetGlobalFeed(int count)
