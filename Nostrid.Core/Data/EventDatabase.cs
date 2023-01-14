@@ -163,6 +163,16 @@ namespace Nostrid.Data
             return notes;
         }
 
+        public int GetNotesCount(NostrSubscriptionFilter[] filters)
+        {
+            int count = 0;
+            foreach (var filter in filters)
+            {
+                count += ApplyFilter(Events.Query().Where(e => e.Kind == 1).OrderByDescending(n => n.CreatedAtCurated), filter).Count();
+            }
+            return count;
+        }
+
         private ILiteQueryable<Event> ApplyFilter(ILiteQueryable<Event> notes, NostrSubscriptionFilter filter)
         {
             if (filter.PublicKey != null)
