@@ -17,9 +17,17 @@ namespace Nostrid.Data
 
         public int EventsPending => Events.Query().Where(e => !e.Processed).Count();
 
-        public EventDatabase(Stream storage)
+        public EventDatabase(Stream storage) : this(new LiteDatabase(storage))
         {
-            Database = new LiteDatabase(storage);
+        }
+
+        public EventDatabase(string filename) : this(new LiteDatabase(filename))
+        {
+        }
+
+        private EventDatabase(LiteDatabase database)
+        {
+            Database = database;
             Relays = Database.GetCollection<Relay>();
             Events = Database.GetCollection<Event>();
             Events.EnsureIndex(e => e.Processed);
@@ -34,10 +42,10 @@ namespace Nostrid.Data
             OwnEvents.EnsureIndex(e => e.SeenByRelay);
             OwnEvents.EnsureIndex(e => e.Event.CreatedAt);
             FeedSources = Database.GetCollection<FeedSource>();
-			FeedSources.EnsureIndex(e => e.OwnerId);
-		}
+            FeedSources.EnsureIndex(e => e.OwnerId);
+        }
 
-		public void SaveRelay(Relay relay)
+        public void SaveRelay(Relay relay)
         {
             Relays.Upsert(relay);
         }

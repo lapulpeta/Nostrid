@@ -21,7 +21,7 @@ public static class MauiProgram
 #endif
 
         builder.Services.AddSingleton<FeedService>();
-        builder.Services.AddSingleton(new EventDatabase(new FileStream(DbConstants.DatabasePath, FileMode.OpenOrCreate)));
+        builder.Services.AddSingleton(new EventDatabase(DbConstants.DatabasePath));
         builder.Services.AddSingleton<RelayService>();
         builder.Services.AddSingleton<AccountService>();
         builder.Services.AddSingleton<HtmlSanitizer>();
