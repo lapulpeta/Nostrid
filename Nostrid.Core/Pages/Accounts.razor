@@ -62,7 +62,7 @@
                             {
                                     <div class="mt-3">
                                     <h5 class="card-title fw-bold">@account.Details?.Name</h5>
-                                    <p class="card-text fst-italic m-0">@account.Details?.About</p>
+                                    <p class="card-text m-0">@account.Details?.About</p>
                                 </div>   
                             }
                             <button class="mt-3 btn btn-outline-primary w-100 @(accountService.MainAccount?.Id == account.Id ? "disabled" : "")" @onclick="() => SelectAccount(account)">
@@ -139,7 +139,7 @@
                                 </button>
                             </div>
                             <button type="submit" class="btn btn-outline-primary w-100 mt-3">
-                                Save
+                                Create/Restore
                             </button>
                         </EditForm>
                     }
@@ -235,7 +235,7 @@
 
     private void GeneratePrivateKey()
     {
-        privateKeyModel.Text = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower();
+        privateKeyModel.Text = ByteTools.PubkeyToNsec(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower());
     }
 
     private void CreateNewAccount()
@@ -254,18 +254,29 @@
         }
     }
 
-    private bool TryCreateAccount(string privateKey, out Account account)
+    private bool TryCreateAccount(string privateKey, out Account? account)
     {
         try
         {
-            account = new Model.Account(privateKey);
-            return true;
+            if (!string.IsNullOrEmpty(privateKey))
+            {
+                if (Utils.IsValidNostrId(privateKey))
+                {
+                    account = new Model.Account(privateKey);
+                    return true;
+                }
+                else if (ByteTools.TryDecodeBech32(privateKey, out var prefix, out var hex) && prefix == "nsec" && !string.IsNullOrEmpty(hex))
+                {
+                    account = new Model.Account(hex);
+                    return true;
+                }
+            }
         }
         catch
         {
-            account = null;
-            return false;
         }
+        account = null;
+        return false;
     }
 
     private void RemoveAccount(Account account)
