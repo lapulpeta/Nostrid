@@ -504,5 +504,15 @@ public class FeedService
     {
         eventDatabase.DeleteFeedSource(id);
     }
+
+    public int GetUnreadMentionsCount()
+    {
+        if (accountService.MainAccount == null)
+            return 0;
+
+		var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
+		mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
+		return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
+    }
 }
 

@@ -19,6 +19,12 @@
 		</div>
 		<button title="Navigation menu" class="navbar-toggler p-1 my-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
 			<span class="navbar-toggler-icon"></span>
+			@if (mentionsCount > 0)
+			{
+				<span class="badge rounded-pill bg-danger">
+					@mentionsCount
+				</span>
+			}
 		</button>
 	</div>
 </nav>
@@ -58,8 +64,7 @@
 								@if (mentionsCount > 0)
 								{
 									<span class="badge rounded-pill bg-danger">
-										@(Math.Min(MaxMentions, mentionsCount))
-										@(mentionsCount > MaxMentions ? "+" : "")
+										@mentionsCount
 									</span>
 								}
 							</NavLink>
@@ -121,8 +126,6 @@
 	private bool isDarkTheme;
 	private int mentionsCount;
 
-	private const int MaxMentions = 5;
-
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
@@ -140,15 +143,10 @@
 	{
 		if (accountService.MainAccount != null)
 		{
-			var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
-			mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
-			(mentionsCount, var oldCount) = (feedService.GetNotesFeed(mentionsFilter.GetFilters(), MaxMentions + 1).Count(), mentionsCount);
+			(mentionsCount, var oldCount) = (feedService.GetUnreadMentionsCount(), mentionsCount);
 			if (oldCount != mentionsCount)
 			{
-				InvokeAsync(() =>
-				{
-					StateHasChanged();
-				});
+				InvokeAsync(() => StateHasChanged());
 			}
 		}
 		else
