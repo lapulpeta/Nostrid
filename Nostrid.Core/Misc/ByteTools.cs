@@ -27,27 +27,49 @@ namespace Nostrid.Misc
 
         private static readonly string[] ValidPrefixes = { "npub", "nsec", "note" };
 
-        public static (string Prefix, string Bech32) DecodeBech32(string bech32)
+        public static (string? Prefix, string? Hex) DecodeBech32(string bech32)
+        {
+            if (TryDecodeBech32(bech32, out var prefix, out var hex))
+            {
+                return (prefix, hex);
+            }
+            return (null, null);
+        }
+
+        public static bool TryDecodeBech32(string bech32, out string? prefix, out string? hex)
         {
             try
             {
-                foreach (var prefix in ValidPrefixes)
+                if (!string.IsNullOrEmpty(bech32))
                 {
-                    if (bech32.StartsWith(prefix))
+                    foreach (var pr in ValidPrefixes)
                     {
-                        return (prefix, Bech32ToHex(bech32, prefix));
+                        if (bech32.StartsWith(pr))
+                        {
+                            prefix = pr;
+                            hex = Bech32ToHex(bech32, pr);
+                            return true;
+                        }
                     }
                 }
             }
             catch
             {
             }
-            return (null, null);
+
+            prefix = null;
+            hex = null;
+            return false;
         }
 
         public static string PubkeyToNpub(string pubkey, bool shorten = false)
         {
             return PubkeyToBech32(pubkey, "npub", shorten);
+        }
+
+        public static string PubkeyToNsec(string pubkey, bool shorten = false)
+        {
+            return PubkeyToBech32(pubkey, "nsec", shorten);
         }
 
         public static string PubkeyToNote(string pubkey, bool shorten = false)

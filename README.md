@@ -19,7 +19,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Custom feeds based on hashtags
 - [x] Username and profile images (read and update)
 - [x] Follows (read and update)
-- [x] Bech32 (`npub`, `note`)
+- [x] Bech32 (`npub`, `note`, `nsec`)
 - [x] Automatic relay management (no user intervention is required)
 - [x] Local cache of events
 - [x] Notification of mentions for current account
