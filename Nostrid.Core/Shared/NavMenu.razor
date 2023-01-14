@@ -17,11 +17,11 @@
 		<div class="flex-grow-1 text-center">
 			<a class="navbar-brand m-0" href="/">Nostrid</a>
 		</div>
-		<button title="Navigation menu" class="navbar-toggler p-1 my-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
+		<button title="Navigation menu" class="position-relative navbar-toggler p-1 my-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
 			<span class="navbar-toggler-icon"></span>
 			@if (mentionsCount > 0)
 			{
-				<span class="badge rounded-pill bg-danger">
+				<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
 					@mentionsCount
 				</span>
 			}
@@ -63,7 +63,7 @@
 								<span class="bi bi-house-exclamation-fill" aria-hidden="true"></span> Mentions
 								@if (mentionsCount > 0)
 								{
-									<span class="badge rounded-pill bg-danger">
+									<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
 										@mentionsCount
 									</span>
 								}
