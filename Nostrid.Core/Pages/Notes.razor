@@ -91,6 +91,7 @@ else
         renderedN = new();
 
         feedService.NoteUpdated += NoteUpdated;
+        feedService.NoteReceivedChild += NoteReceivedChild;
 
         refreshTimer = new Timer(new TimerCallback(_ =>
         {
@@ -141,7 +142,16 @@ else
         if (!renderedN.ContainsKey(ev.Id))
             return;
 
-        renderedN.AddOrUpdate(ev.Id, (_) => ev, (_, _) => ev);
+        renderedN[ev.Id] = ev;
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
+    {
+        if (!renderedN.ContainsKey(data.EventId))
+            return;
+
+        renderedN[data.Child.Id] = data.Child;
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -192,6 +202,7 @@ else
     private void Cleanup()
     {
         feedService.NoteUpdated -= NoteUpdated;
+        feedService.NoteReceivedChild -= NoteReceivedChild;
         refreshTimer?.Dispose();
         relayService.DeleteFilter(eventFilter);
         relayService.DeleteFilters(detailsFiltersByAccountId.Values);

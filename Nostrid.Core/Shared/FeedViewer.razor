@@ -158,8 +158,6 @@ else
         oldN = new();
         renderedIds = new string[0];
 
-        feedService.NoteUpdated += NoteUpdated;
-
         newFilter = BaseFilter.Clone();
         oldFilter = BaseFilter.Clone();
         oldFilter.limitFilterData.Limit = RelayQueryLimit;
@@ -172,6 +170,8 @@ else
         LoadMore();
 
         feedService.ReceivedNotes += ReceivedNotes;
+        feedService.NoteUpdated += NoteUpdated;
+        feedService.NoteReceivedChild += NoteReceivedChild;
 
         refreshPageTimer = new Timer(new TimerCallback(_ =>
         {
@@ -194,7 +194,16 @@ else
         if (!renderedN.ContainsKey(ev.Id))
             return;
 
-        renderedN.AddOrUpdate(ev.Id, (_) => ev, (_, _) => ev);
+        renderedN[ev.Id] = ev;
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
+    {
+        if (!renderedN.ContainsKey(data.EventId))
+            return;
+
+        renderedN[data.Child.Id] = data.Child;
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -220,6 +229,7 @@ else
     {
         feedService.ReceivedNotes -= ReceivedNotes;
         feedService.NoteUpdated -= NoteUpdated;
+        feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
         relayService.DeleteFilters(detailsFiltersByAccountId.Values);
         refreshPageTimer?.Dispose();

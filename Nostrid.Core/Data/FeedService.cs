@@ -14,6 +14,7 @@ public class FeedService
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> ReceivedNotes;
     public event EventHandler<Event> NoteUpdated;
+    public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
     public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService)
     {
@@ -148,6 +149,10 @@ public class FeedService
         eventDatabase.SaveEvent(eventToProcess);
 
         NoteUpdated?.Invoke(this, eventToProcess);
+        if (!string.IsNullOrEmpty(replyToId))
+        {
+            NoteReceivedChild?.Invoke(this, (replyToId, eventToProcess));
+        }
     }
 
     public void HandleKind2(Event eventToProcess)
