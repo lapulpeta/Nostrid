@@ -77,6 +77,7 @@ else
     private void ShowNewPosts()
     {
         Event.MergeAndClear(renderedN, newN);
+        TrimOlder();
     }
 
     private void LoadMore()
@@ -124,6 +125,7 @@ else
         if (data.filterId == oldFilter.Id)
         {
             Event.Merge(renderedN, data.notes);
+            TrimOlder();
         }
         else
         {
@@ -204,7 +206,19 @@ else
             return;
 
         renderedN[data.Child.Id] = data.Child;
+        TrimOlder();
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private void TrimOlder()
+    {
+        while (renderedN.Count > dbLimit)
+        {
+            var oldest = renderedN.Values.OrderBy(n => n.CreatedAtCurated).FirstOrDefault();
+            if (oldest == null)
+                break;
+            renderedN.TryRemove(oldest.Id, out _);
+        }
     }
 
     #region Dispose
