@@ -11,12 +11,12 @@
 
 <div role="button" @onclick="@(() => navigationManager.NavigateTo($"account/{Account.Id}"))" class="d-flex flex-row align-items-start p-3 bg-tertiary-hover text-decoration-none">
     <div class="d-flex flex-shrink-0">
-        <AccountPicture Account="Account" Size="48" />
+        <AccountPicture Details="@Account.Details" Id="@Account.Id" Size="48" />
     </div>
     <div class="d-flex flex-column flex-grow-1 ms-3">
         <div class="d-flex flex-row align-items-center">
             <div class="fs-5 fw-bolder lh-1 flex-grow-1">
-                @(Account?.Details?.Name ?? ByteTools.PubkeyToNpub(Account.Id, true))
+                <AccountName Details="@Account.Details" Id="@Account.Id" />
             </div>
             @if (IsMainAccountLoaded && accountService.MainAccount.Id != Account.Id)
             {

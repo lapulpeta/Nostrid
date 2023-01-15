@@ -1,10 +1,10 @@
 ﻿
 @code{
     [Parameter]
-    public Account Account { get; set; }
+    public string Id { get; set; }
 
     [Parameter]
-    public NoteTree NoteTree { get; set; }
+    public AccountDetails Details { get; set; }
 
     [Parameter]
     public int? Size { get; set; }
@@ -27,13 +27,6 @@ else if (!string.IsNullOrEmpty(AccountId))
 @code {
     const int DEFAULT_SIZE = 48;
 
-    private string PictureUrl => IsNullOrEmpty(Account?.Details?.PictureUrl, NoteTree?.PictureUrl);
-    private string AccountId => IsNullOrEmpty(Account?.Id, NoteTree?.Note?.PublicKey);
-
-    private string IsNullOrEmpty(string value, string defaultValue)
-    {
-        return string.IsNullOrEmpty(value)
-            ? defaultValue
-            : value;
-    }
+    private string? PictureUrl => Details?.PictureUrl;
+    private string? AccountId => Id;
 }

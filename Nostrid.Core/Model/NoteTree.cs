@@ -4,9 +4,7 @@ public class NoteTree
 {
     public Event Note { get; set; }
 
-    public string AccountName { get; set; }
-
-    public string PictureUrl { get; set; }
+    public AccountDetails Details { get; set; }
 
     public List<NoteTree> Children { get; set; } = new();
 

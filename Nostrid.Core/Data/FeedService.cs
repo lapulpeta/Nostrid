@@ -293,7 +293,7 @@ public class FeedService
             if (rootTrees.Exists(tw.Id)) continue;
             var root = rootTrees.Find(tw.NoteMetadata.ReplyToId);
             var newTree = new NoteTree(tw);
-            (newTree.AccountName, newTree.PictureUrl) = accountService.GetAccountNamePictureUrl(tw.PublicKey);
+            newTree.Details = accountService.GetAccountDetails(tw.PublicKey);
             if (root != null)
             {
                 root.Children.Add(newTree);

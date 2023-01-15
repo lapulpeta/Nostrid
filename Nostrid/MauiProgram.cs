@@ -26,6 +26,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AccountService>();
         builder.Services.AddSingleton<HtmlSanitizer>();
         builder.Services.AddSingleton<NoteProcessor>();
+        builder.Services.AddSingleton<Nip05Service>();
 
         return builder.Build();
     }
