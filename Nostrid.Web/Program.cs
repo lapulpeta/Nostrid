@@ -16,5 +16,6 @@ builder.Services.AddSingleton<RelayService>();
 builder.Services.AddSingleton<AccountService>();
 builder.Services.AddSingleton<HtmlSanitizer>();
 builder.Services.AddSingleton<NoteProcessor>();
+builder.Services.AddSingleton<Nip05Service>();
 
 await builder.Build().RunAsync();

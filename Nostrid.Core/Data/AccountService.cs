@@ -10,21 +10,21 @@ public class AccountService
 {
     private readonly EventDatabase eventDatabase;
     private readonly RelayService relayService;
+    private readonly Nip05Service nip05Service;
+    private SubscriptionFilter[]? mainFilters;
 
-    private SubscriptionFilter[] mainFilters;
+    public event EventHandler? MainAccountChanged;
+    public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
+    public event EventHandler<(string accountId, List<string> follows)>? AccountFollowsChanged;
+    public event EventHandler? MentionsUpdated;
 
-    public event EventHandler MainAccountChanged;
-    public event EventHandler<(string accountId, AccountDetails details)> AccountDetailsChanged;
-    public event EventHandler<(string accountId, List<string> follows)> AccountFollowsChanged;
-    public event EventHandler MentionsUpdated;
+    public SubscriptionFilter? MainAccountMentionsFilter { get; private set; }
 
-    public SubscriptionFilter MainAccountMentionsFilter { get; private set; }
-
-    public AccountService(EventDatabase eventDatabase, RelayService relayService)
+    public AccountService(EventDatabase eventDatabase, RelayService relayService, Nip05Service nip05Service)
     {
         this.eventDatabase = eventDatabase;
         this.relayService = relayService;
-
+        this.nip05Service = nip05Service;
         relayService.ReceivedEvents += (_, data) =>
         {
             if (data.filterId != MainAccountMentionsFilter?.Id)
@@ -34,9 +34,9 @@ public class AccountService
         };
     }
 
-    private Account mainAccount;
+    private Account? mainAccount;
 
-    public Account MainAccount
+    public Account? MainAccount
     {
         get => mainAccount;
         set
@@ -47,10 +47,18 @@ public class AccountService
             {
                 relayService.DeleteFilters(mainFilters);
             }
-            MainAccountMentionsFilter = new MentionSubscriptionFilter(mainAccount.Id);
-            MainAccountMentionsFilter.limitFilterData.Limit = 1;
-            mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
-            relayService.AddFilters(mainFilters);
+            if (mainAccount == null)
+            {
+                MainAccountMentionsFilter = null;
+                mainFilters = null;
+            }
+            else
+            {
+                MainAccountMentionsFilter = new MentionSubscriptionFilter(mainAccount.Id);
+                MainAccountMentionsFilter.limitFilterData.Limit = 1;
+                mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
+                relayService.AddFilters(mainFilters);
+            }
         }
     }
 
@@ -133,6 +141,10 @@ public class AccountService
                         if (!eventToProcess.CreatedAt.HasValue || !account.DetailsLastUpdate.HasValue ||
                             eventToProcess.CreatedAt.Value > account.DetailsLastUpdate.Value)
                         {
+                            if (string.IsNullOrEmpty(accountDetails.Nip05Id))
+                            {
+                                accountDetails.Nip05Data = null;
+                            }
                             account.Details = accountDetails;
                             account.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
                             eventDatabase.SaveAccount(account);
@@ -154,7 +166,29 @@ public class AccountService
             {
                 MainAccount = accountChanged;
             }
-            AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
+            if (string.IsNullOrEmpty(accountChanged.Details.Nip05Id))
+            {
+                AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
+            }
+            else
+            {
+                Task.Run(async () =>
+                {
+                    var details = accountChanged.Details;
+                    if (await nip05Service.RefreshNip05(accountChanged.Id, details))
+                    {
+                        // Refresh from DB just in case it changed
+                        accountChanged = eventDatabase.GetAccount(accountChanged.Id);
+                        accountChanged.Details = details;
+                        eventDatabase.SaveAccount(accountChanged);
+                        if (accountChanged.Id == mainAccount?.Id)
+                        {
+                            MainAccount = accountChanged;
+                        }
+                    }
+                    AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
+                });
+            }
         }
     }
 
@@ -222,12 +256,6 @@ public class AccountService
     public string GetAccountName(string accountId)
     {
         return eventDatabase.GetAccountName(accountId) ?? ByteTools.PubkeyToNpub(accountId, true);
-    }
-
-    public (string Name, string ProfileUrl) GetAccountNamePictureUrl(string accountId)
-    {
-        var accountDetails = eventDatabase.GetAccount(accountId)?.Details;
-        return (accountDetails?.Name ?? ByteTools.PubkeyToNpub(accountId, true), accountDetails?.PictureUrl);
     }
 
     public AccountDetails GetAccountDetails(string accountId)

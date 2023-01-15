@@ -17,9 +17,9 @@
 
 <div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
     
-    <AccountPicture Account="account" Size="128" />
+    <AccountPicture Details="@account.Details" Id="@account.Id" Size="128" />
 
-    <div class="fs-4 fw-bolder">@accountService.GetAccountName(PubKey)</div>
+    <div class="fs-4 fw-bolder"><AccountName Details="@account.Details" Id="@account.Id" /></div>
     <div class="fs-7 text-body-tertiary text-break mb-3">@ByteTools.PubkeyToNpub(PubKey)</div>
     <p>@account.Details?.About</p>
 

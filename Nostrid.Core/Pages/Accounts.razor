@@ -13,7 +13,7 @@
 
 <div class="container-fluid p-0">
     <div class="row g-3">
-        @foreach (var account in accounts.Values.ToList())
+        @foreach (var account in accounts.Values)
         {
             <div class="col-md-6 col-lg-4 col-xl-3 col-xxl-3">
                 <div class="card h-100 @(accountService.MainAccount?.Id == account.Id ? "border-primary" : "")">
@@ -58,10 +58,10 @@
                         }
                         @if (account.Id != accountEditing)
                         {
-                            @if(!string.IsNullOrEmpty(account.Details?.Name) || !string.IsNullOrEmpty(account.Details?.About))
+                            <AccountName Details="@account.Details" Id="@account.Id" />
+                            @if (!string.IsNullOrEmpty(account.Details?.About))
                             {
                                     <div class="mt-3">
-                                    <h5 class="card-title fw-bold">@account.Details?.Name</h5>
                                     <p class="card-text m-0">@account.Details?.About</p>
                                 </div>   
                             }
@@ -86,6 +86,10 @@
                                     <InputText class="form-control" id="picture-control" @bind-Value="accountDetails.PictureUrl" />
                                     <label for="picture-control">Picture URL</label>
                                 </div>
+                                <div class="form-floating mt-3">
+                                    <InputText class="form-control" id="nip05-control" @bind-Value="accountDetails.Nip05Id" />
+                                    <label for="nip05-control">NIP-05 ID:</label>
+                                </div>
                                 <button type="submit" class="btn btn-outline-primary w-100 mt-3">
                                     Save
                                 </button>
@@ -94,7 +98,6 @@
                     </div>
                     <div class="card-footer text-muted fs-7">
                         <div class="flex-grow-1 text-break">
-                            Public Key: @account.Id <br />
                             Npub: @ByteTools.PubkeyToNpub(account.Id)
                         </div>
                     </div>
@@ -148,7 +151,6 @@
                 {
                     <div class="card-footer text-muted fs-7">
                         <div class="flex-grow-1 text-break">
-                            Public Key: @PublicKey <br />
                             Npub: @ByteTools.PubkeyToNpub(PublicKey)
                         </div>
                     </div>
@@ -281,6 +283,10 @@
 
     private void RemoveAccount(Account account)
     {
+        if (account.Id == accountService.MainAccount?.Id)
+        {
+            accountService.MainAccount = null;
+        }
         eventDatabase.DeleteAccount(account);
         LoadAccounts();
     }

@@ -1,0 +1,20 @@
+﻿@code{
+    [Parameter]
+    public string Id { get; set; }
+
+    [Parameter]
+    public AccountDetails? Details { get; set; }
+}
+
+@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@if (Details?.Nip05Data != null)
+{
+    <span>@(Details.Nip05Data.Username != "_" ? $"{Details.Nip05Data.Username}@" : "")@Details.Nip05Data.Domain <i class="text-success bi bi-patch-check-fill"></i></span>
+}
+else
+{
+    <span>@(Details?.Name ?? ByteTools.PubkeyToNpub(Id, true))</span>
+}

@@ -49,7 +49,7 @@
     {
         <div class="d-flex flex-column align-items-center">
             <a class="flex-shrink-0" href="/account/@Tree.Note.PublicKey" @onclick:stopPropagation="true">
-                <AccountPicture NoteTree="Tree"></AccountPicture>
+                <AccountPicture Details="@Tree.Details" Id="@Tree.Note.PublicKey"></AccountPicture>
             </a>
             @if (Tree.Children.Count > 0 || ReplyingTo)
             {
@@ -59,7 +59,7 @@
         <div class="flex-grow-1 ms-2">
             @*<a style="font-size: 13px; margin: 0px; padding: 0px;" href="/note/@Tree.Note.Id">@ByteTools.PubkeyToNote(Tree.Note.Id, true)</a>*@
             <p class="mb-1">
-                <a href="/account/@Tree.Note.PublicKey" @onclick:stopPropagation="true" class="fw-bold text-decoration-none mb-1">@Tree.AccountName</a>
+                <a href="/account/@Tree.Note.PublicKey" @onclick:stopPropagation="true" class="fw-bold text-decoration-none mb-1"><AccountName Details="@Tree.Details" Id="@Tree.Note.Id" /></a>
                 <span class="text-secondary">
                     <span>·</span>
                     <span>@Utils.FormatDate(Tree.Note.CreatedAtCurated)</span>
@@ -260,8 +260,7 @@
     private void AccountDetailsChanged(object sender, (string accountId, AccountDetails details) data)
     {
         if (data.accountId != Tree.Note.PublicKey) return;
-        Tree.AccountName = data.details.Name;
-        Tree.PictureUrl = data.details.PictureUrl;
+        Tree.Details = data.details;
         InvokeAsync(() =>
         {
             StateHasChanged();
