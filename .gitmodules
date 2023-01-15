@@ -1,3 +1,6 @@
 [submodule "NNostr"]
 	path = NNostr
 	url = https://github.com/lapulpeta/NNostr
+[submodule "LiteDB"]
+	path = LiteDB
+	url = https://github.com/lapulpeta/LiteDB

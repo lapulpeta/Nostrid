@@ -8,7 +8,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NNostr.Client", "NNostr\NNo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nostrid.Core", "Nostrid.Core\Nostrid.Core.csproj", "{2973DB5B-2017-458C-9E7D-EC075067D30B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nostrid.Web", "Nostrid.Web\Nostrid.Web.csproj", "{2497051C-074F-4D7F-B81B-BB3C409B63FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nostrid.Web", "Nostrid.Web\Nostrid.Web.csproj", "{2497051C-074F-4D7F-B81B-BB3C409B63FE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiteDB", "LiteDB\LiteDB\LiteDB.csproj", "{FA1D8572-A8C3-4C4A-A307-968662562F26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,12 +36,16 @@ Global
 		{2497051C-074F-4D7F-B81B-BB3C409B63FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2497051C-074F-4D7F-B81B-BB3C409B63FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2497051C-074F-4D7F-B81B-BB3C409B63FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA1D8572-A8C3-4C4A-A307-968662562F26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA1D8572-A8C3-4C4A-A307-968662562F26}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA1D8572-A8C3-4C4A-A307-968662562F26}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA1D8572-A8C3-4C4A-A307-968662562F26}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {33769592-85D7-4327-BA48-652B9AD87329}
 		        SolutionGuid = {61F7FB11-1E47-470C-91E2-47F8143E1572}
+		SolutionGuid = {33769592-85D7-4327-BA48-652B9AD87329}
 	EndGlobalSection
 EndGlobal

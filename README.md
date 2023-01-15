@@ -87,7 +87,7 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 1. Install Visual Studio 2022 with support for .NET Multi-platform App UI development
 2. Clone this repository
 3. Make sure `git` is in your `PATH` system variable
-4. Run `git submodule update` to restore custom NNostr library
+4. Run `git submodule update` to restore custom libraries
 5. Open solution in Visual Studio and run
 
 ## Authors
