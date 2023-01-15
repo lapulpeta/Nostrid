@@ -12,6 +12,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 ## Features
 
 - [x] Multiaccount (generate and restore existing account)
+- [x] NIP-05 profiles
 - [x] Read and send notes
 - [x] Read and send reactions
 - [x] Delete notes
@@ -27,7 +28,6 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Embedded mentions of other accounts and notes - PARTIAL
 - [x] Reposts (aka Boosts) - PARTIAL
 - [ ] Embedded videos - SOON
-- [ ] NIP-05 profiles - SOON
 - [ ] Direct messages - SOON
 - [ ] Channels - SOON
 - [ ] Manual/advanced relay management - SOON
