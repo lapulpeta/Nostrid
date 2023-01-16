@@ -59,6 +59,7 @@ public class AccountService
                 mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
                 relayService.AddFilters(mainFilters);
             }
+            MentionsUpdated?.Invoke(this, EventArgs.Empty);
         }
     }
 
