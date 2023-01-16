@@ -1,6 +1,7 @@
 using Ganss.Xss;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Nostrid;
 using Nostrid.Data;
 using Nostrid.Web;
 
@@ -17,5 +18,7 @@ builder.Services.AddSingleton<AccountService>();
 builder.Services.AddSingleton<HtmlSanitizer>();
 builder.Services.AddSingleton<NoteProcessor>();
 builder.Services.AddSingleton<Nip05Service>();
+builder.Services.AddSingleton<NotificationService>();
+builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
 
 await builder.Build().RunAsync();
