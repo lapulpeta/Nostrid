@@ -1,4 +1,4 @@
-﻿namespace Nostrid.Data
+﻿namespace Nostrid.Misc
 {
     public static class DbConstants
     {

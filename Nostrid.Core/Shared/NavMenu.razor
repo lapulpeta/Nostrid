@@ -6,6 +6,7 @@
 @inject FeedService feedService
 @inject EventDatabase eventDatabase
 @inject AccountService accountService
+@inject NotificationService notificationService
 @inject IJSRuntime jsRuntime
 @implements IAsyncDisposable
 
@@ -139,20 +140,9 @@
 		}), null, 0, 2000);
 	}
 
-	private void MentionsUpdated(object sender, EventArgs eventArgs)
+	private void NotificationNumberChanged(object sender, int mentionsCount)
 	{
-		if (accountService.MainAccount != null)
-		{
-			(mentionsCount, var oldCount) = (feedService.GetUnreadMentionsCount(), mentionsCount);
-			if (oldCount != mentionsCount)
-			{
-				InvokeAsync(() => StateHasChanged());
-			}
-		}
-		else
-		{
-			mentionsCount = 0;
-		}
+		this.mentionsCount = mentionsCount;
 	}
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -162,7 +152,7 @@
 		{
 			jsModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
 			isDarkTheme = await SetTheme(null) == DARK_THEME;
-			accountService.MentionsUpdated += MentionsUpdated;
+			notificationService.NotificationNumberChanged += NotificationNumberChanged;
 		}
 	}
 
@@ -215,7 +205,7 @@
 		{
 			await jsModule.DisposeAsync();
 		}
-		accountService.MentionsUpdated -= MentionsUpdated;
+		notificationService.NotificationNumberChanged -= NotificationNumberChanged;
 	}
 	#endregion
 }
