@@ -1,0 +1,24 @@
+﻿.note-content > ::deep *:last-child {
+    margin-bottom: 0;
+}
+
+.note-content ::deep blockquote {
+    padding-left: .5rem;
+    border-left: solid .3rem var(--bs-tertiary-color);
+}
+
+    .note-content ::deep blockquote::before {
+        content: "\F6B0";
+        font-family: bootstrap-icons !important;
+        color: var(--bs-tertiary-color);
+        font-size: 1.3rem;
+    }
+
+.note-content ::deep img,
+.note-content ::deep video {
+    display: block;
+    max-width: 100%;
+    max-height: 50vh;
+    border: var(--bs-border-width) var(--bs-border-style) var(--bs-tertiary-color) !important;
+    border-radius: var(--bs-border-radius) !important;
+}

@@ -1,28 +1,69 @@
-﻿@code{
+﻿@using System.Net.Mime;
+@code{
     [Parameter]
     public string Url { get; set; }
 
     [Parameter]
     public bool StopPropagation { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
 }
 
-@if (isImage)
+@if (mediaType == MediaType.Image)
 {
-    <img class="d-block rounded-2 border border-2 border-secondary-suble" src="@Url" style="max-width: 100%; max-height: 80vh;" />
+    <img src="@Url" alt="Note attachment" />
+} 
+else if (mediaType == MediaType.Video)
+{
+    <video controls>
+        <source src="@Url" type="@mediaTypeHeader">
+        Video not supported
+    </video>
+}
+else if (mediaType == MediaType.Audio)
+{
+    <audio controls>
+        <source src="@Url" type="@mediaTypeHeader">
+        Audio not supported
+    </audio>
 }
 else
 {
-    <NavLink href="@Url" @onclick:stopPropagation="StopPropagation">@Url</NavLink>
+    <NavLink href="@Url" @onclick:stopPropagation="StopPropagation">
+        @if (ChildContent != null)
+        {
+            <text>@ChildContent</text>
+        }
+        else
+        {
+            <text>@Url</text>
+        }
+    </NavLink>
 }
 
 @code {
-    private bool isImage;
+
+    enum MediaType
+    {
+        Other = 0,
+        Image = 1,
+        Video = 2,
+        Audio = 3
+    }
+
+    private MediaType mediaType = AsyncLink.MediaType.Other;
+    private string mediaTypeHeader = string.Empty;
 
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
 
-        isImage = false;
+        if (ChildContent is not null)
+        {
+            return;
+        }
+
         Task.Run(async () =>
         {
             using (var client = new HttpClient())
@@ -31,11 +72,28 @@ else
                 {
                     using (var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, Url)))
                     {
-                        if (response.IsSuccessStatusCode && (response.Content.Headers.ContentType?.MediaType.StartsWith("image") ?? false))
+                        if (!response.IsSuccessStatusCode)
                         {
-                            isImage = true;
-                            InvokeAsync(() => StateHasChanged());
+                            return;
                         }
+                        mediaTypeHeader = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+                        if (mediaTypeHeader.StartsWith("image"))
+                        {
+                            mediaType = MediaType.Image;
+                        }
+                        else if (mediaTypeHeader.StartsWith("video"))
+                        {
+                            mediaType = MediaType.Video;
+                        }
+                        else if (mediaTypeHeader.StartsWith("audio"))
+                        {
+                            mediaType = MediaType.Audio;
+                        }
+                        else
+                        {
+                            return;    
+                        }
+                        var task = InvokeAsync(() => StateHasChanged());
                     }
                 }
                 catch
@@ -44,5 +102,4 @@ else
             }
         });
     }
-
 }

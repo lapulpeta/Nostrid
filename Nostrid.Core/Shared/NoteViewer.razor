@@ -77,36 +77,9 @@
                     }
                 </span>
             </p>
-            <p class="text-break" style="margin-bottom: .3rem;">
-                @foreach (var part in noteProcessor.GetParts(Tree.Note?.Content ?? string.Empty, Tree.Note.NoteMetadata))
-                {
-                    switch (part.Type)
-                    {
-                        case PartType.Event:
-                            <NavLink href="@($"/note/{part.Content}")" @onclick:stopPropagation="true">
-                                @ByteTools.PubkeyToNote(@part.Content, true)
-                            </NavLink>
-                            break;
-                        case PartType.Account:
-                            <NavLink href="@($"/account/{part.Content}")" @onclick:stopPropagation="true">
-                                @HttpUtility.HtmlEncode(accountService.GetAccountName(@part.Content))
-                            </NavLink>
-                            break;
-                        case PartType.Hashtag:
-                            <NavLink href="@($"/tag/{part.Content.ToLower()}")" @onclick:stopPropagation="true">
-                                #@part.Content
-                            </NavLink>
-                            break;
-                        case PartType.Link:
-                            <AsyncLink Url="@part.Content" StopPropagation="true" />
-                            break;
-                        default:
-                            @((MarkupString)htmlSanitizer.Sanitize(part.Content))
-                            break;
-                    }
-                }
-            </p>
-
+            <div class="mb-1 text-break note-content">
+                @noteProcessor.GetContent(Tree.Note?.Content ?? string.Empty, Tree.Note?.NoteMetadata)
+            </div>
             @*@if (Tree.Note.NoteMetadata.HashTags.Count > 0)
             {
                 <p class="mb-1">

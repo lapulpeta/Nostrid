@@ -10,10 +10,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Shared\NoteViewer.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Shared\NoteViewer.razor.css" />
+  </ItemGroup>
+
+  <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.2" />
     <PackageReference Include="Microsoft.JSInterop" Version="7.0.2" />
   </ItemGroup>
