@@ -10,11 +10,20 @@
 @using Nostrid.Misc;
 @using Nostrid.Model;
 
-@if (Details?.Nip05Data != null)
-{
-    <span>@(Details.Nip05Data.Username != "_" ? $"{Details.Nip05Data.Username}@" : "")@Details.Nip05Data.Domain <i class="text-success bi bi-patch-check-fill"></i></span>
-}
-else
-{
-    <span>@(Details?.Name ?? ByteTools.PubkeyToNpub(Id, true))</span>
-}
+<span class="text-break">
+    @if (Details?.Nip05Data != null)
+    {
+        if (Details.Nip05Data.Username != "_")
+        {
+            @Details.Nip05Data.Username
+        }
+        <span class="d-inline-block">
+            @(Details.Nip05Data.Username != "_" ? "@" : "")@Details.Nip05Data.Domain
+        </span>
+        <i class="text-success bi bi-patch-check-fill"></i>
+    }
+    else
+    {
+        @(Details?.Name ?? ByteTools.PubkeyToNpub(Id, true))
+    }
+</span>

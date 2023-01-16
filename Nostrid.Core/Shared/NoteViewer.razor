@@ -16,26 +16,30 @@
 @inject HtmlSanitizer htmlSanitizer
 @inject NoteProcessor noteProcessor
 
-<div role="button" @ref="referenceElement" class="d-flex flex-row px-3 py-2 @(!ReplyingTo ? "bg-tertiary-hover border-top" : "" ) @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
+<div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 @(!ReplyingTo ? "bg-tertiary-hover border-top" : "" ) @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
      @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem; font-size: .95rem;">
 
     @for (var i = 1; i < TreeLayout.Length; i++)
     {
         var last = i == TreeLayout.Length - 1;
-        <div class="flex-shrink-0 d-flex flex-row justify-content-center align-items-top" style="width: 48px;">
-            <div class="flex-grow-1"></div>
+        <div class="flex-shrink-0 d-flex flex-row">
+            <div class="tree-placeholder-width-half"></div>
             @if (TreeLayout[i] > 1)
             {
-                <div class="bg-secondary opacity-75" style="width: 2px; margin-bottom: -1.07rem;"></div>
+                <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
             }
             else if (!OnlyChild && TreeLayout[i] == 1 && last)
             {
-                <div class="bg-secondary opacity-75" style="width: 2px; height: 25px;"></div>
+                <div class="bg-secondary opacity-75 tree-line-width tree-placeholder-height-half"></div>
             }
-            <div class="flex-grow-1 d-flex flex-column justify-content-center" style="height: 48px;">
+            else
+            {
+                <div class="tree-line-width"></div>
+            }
+            <div class="d-flex flex-column justify-content-center tree-placeholder-height tree-placeholder-width-last">
                 @if (!OnlyChild && last)
                 {
-                    <div class="bg-secondary opacity-75" style="height: 2px;"></div>
+                    <div class="bg-secondary opacity-75 tree-line-height"></div>
                 }
             </div>
         </div>
@@ -47,13 +51,16 @@
     }
     else
     {
-        <div class="d-flex flex-column align-items-center">
+        <div class="d-flex flex-column">
             <a class="flex-shrink-0" href="/account/@Tree.Note.PublicKey" @onclick:stopPropagation="true">
                 <AccountPicture Details="@Tree.Details" Id="@Tree.Note.PublicKey"></AccountPicture>
             </a>
             @if (Tree.Children.Count > 0 || ReplyingTo)
             {
-                <div class="flex-grow-1 bg-secondary opacity-75" style="width: 2px; margin-bottom: -1.07rem;"></div>
+                <div class="flex-grow-1 d-flex flex-row">
+                    <div class="tree-placeholder-width-half"></div>
+                    <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+                </div>
             }
         </div>
         <div class="flex-grow-1 ms-2">

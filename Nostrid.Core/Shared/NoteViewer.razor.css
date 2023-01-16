@@ -1,4 +1,39 @@
-﻿.note-content > ::deep *:last-child {
+﻿.note {
+    --tree-placeholder-size: 48px;
+    --tree-line-size: 2px;
+}
+
+.tree-placeholder-height {
+    height: var(--tree-placeholder-size)
+}
+
+.tree-placeholder-height-half {
+    height: calc(var(--tree-placeholder-size) / 2 + var(--tree-line-size) / 2);
+}
+
+.tree-placeholder-width-half {
+    width: calc((var(--tree-placeholder-size) - var(--tree-line-size)) / 2);
+}
+
+.tree-placeholder-width-last {
+    width: 10px
+}
+
+@media (min-width: 992px) {
+    .tree-placeholder-width-last {
+        width: calc((var(--tree-placeholder-size) - var(--tree-line-size)) / 2);
+    }    
+}
+
+.tree-line-height {
+    height: var(--tree-line-size);
+}
+
+.tree-line-width {
+    width: var(--tree-line-size);
+}
+
+.note-content > ::deep *:last-child {
     margin-bottom: 0;
 }
 
