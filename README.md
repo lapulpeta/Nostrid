@@ -11,23 +11,22 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 
 ## Features
 
-- [x] Multiaccount (generate and restore existing account)
+- [x] Multiaccount with simple switching
 - [x] NIP-05 profiles
-- [x] Read and send notes
+- [x] Read and send notes with support for markdown
 - [x] Read and send reactions
 - [x] Delete notes
 - [x] Hashtags (send and search)
-- [x] Custom feeds based on hashtags
+- [x] Customizable feeds based on hashtags
 - [x] Username and profile images (read and update)
 - [x] Follows (read and update)
 - [x] Bech32 (`npub`, `note`, `nsec`)
 - [x] Automatic relay management (no user intervention is required)
 - [x] Local cache of events
-- [x] Notification of mentions for current account
-- [x] Embedded links and images
-- [x] Embedded mentions of other accounts and notes - PARTIAL
+- [x] Notification of unread mentions
+- [x] Display embedded images, videos and audios
+- [x] Embedded mentions of other accounts and notes - PARTIAL (only links, no previews)
 - [x] Reposts (aka Boosts) - PARTIAL
-- [ ] Embedded videos - SOON
 - [ ] Direct messages - SOON
 - [ ] Channels - SOON
 - [ ] Manual/advanced relay management - SOON
