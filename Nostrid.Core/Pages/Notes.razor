@@ -93,6 +93,8 @@ else
         feedService.NoteUpdated += NoteUpdated;
         feedService.NoteReceivedChild += NoteReceivedChild;
 
+        UpdateEventFilters();
+
         refreshTimer = new Timer(new TimerCallback(_ =>
         {
             if (_disposed)
