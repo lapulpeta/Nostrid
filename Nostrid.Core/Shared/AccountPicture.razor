@@ -13,7 +13,7 @@
 @using Nostrid.Model;
 @using Nostrid.Misc;
 
-@if (!string.IsNullOrEmpty(PictureUrl))
+@if (!string.IsNullOrEmpty(PictureUrl) && Uri.IsWellFormedUriString(PictureUrl, UriKind.Absolute))
 {
     <img style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" src="@PictureUrl" class="card-img-top rounded-999" alt="">
 }
