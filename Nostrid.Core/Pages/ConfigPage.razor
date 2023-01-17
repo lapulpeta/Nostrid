@@ -4,40 +4,71 @@
 
 @inject ConfigService configService
 
-<h2>Options</h2>
-<EditForm Model="@configModel" OnValidSubmit="@Save">
+<h2 class="mb-4">Options</h2>
 
-    <h4>
-        Proof of Work Configuration (NIP-13)
-    </h4>
-    <div>
-        <label>
-            Display difficulty of notes
-            <InputCheckbox @bind-Value="configModel.ShowDifficulty"></InputCheckbox>
-        </label>
-    </div>
-    <div>
-        <label>
-            Minimum difficulty to accept notes (0 to accept all):
-            <InputNumber @bind-Value="configModel.MinDiffIncoming" />
-        </label>
-    </div>
-    <div>
-        <label>
-            Strict PoW check (notes must explicitly indicate difficulty target)
-            <InputCheckbox @bind-Value="configModel.StrictDiffCheck"></InputCheckbox>
-        </label>
-    </div>
-    <div>
-        <label>
-            Difficulty target for sending messages (0 to disable PoW):
-            <InputNumber @bind-Value="configModel.TargetDiffOutgoing" />
-        </label>
-    </div>
+<h5 class="mb-3">Proof of Work Configuration (NIP-13)</h5>
 
-    <button type="submit">Save</button>
-
-</EditForm>
+<div class="card shadow">
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-6" for="switchShowDifficulty">
+                    Display difficulty of notes
+                </label>
+                <div class="col-6 text-right">
+                    <div class="form-check form-switch m-0 p-0 fs-4">
+                        <InputCheckbox class="form-check-input m-0 float-end" role="switch" id="switchShowDifficulty"
+                                        @bind-Value="@configModel.ShowDifficulty" @onclick="@Save"></InputCheckbox>
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-lg-6" for="rangeMinimumPow">
+                    Minimum difficulty to accept notes
+                    <span class="d-block text-secondary">To accept all set to 0</span>
+                </label>
+                <div class="col-lg-6">
+                    <div class="d-flex">
+                        <span class="me-3 badge text-bg-light">@configModel.MinDiffIncoming</span>
+                        <input type="range" class="form-range" min="0" max="255" step="1" id="rangeMinimumPow"
+                                @bind-value="@configModel.MinDiffIncoming" @bind-value:event="oninput" onchange="@(() => Save())" />
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-6" for="switchPowCheck">
+                    Strict PoW check
+                    <span class="d-block text-secondary">Notes must explicitly indicate difficulty target</span>
+                </label>
+                <div class="col-6 text-right">
+                    <div class="form-check form-switch m-0 p-0 fs-4">
+                        <InputCheckbox class="form-check-input m-0 float-end" role="switch" id="switchPowCheck"
+                                        @bind-Value="@configModel.StrictDiffCheck" @onclick="@Save"></InputCheckbox>
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-lg-6" for="rangeTargetDiff">
+                    Difficulty target for sending messages
+                    <span class="d-block text-secondary">To disable PoW set to 0</span>
+                </label>
+                <div class="col-lg-6">
+                    <div class="d-flex">
+                        <span class="me-3 badge text-bg-light">@configModel.TargetDiffOutgoing</span>
+                        <input type="range" class="form-range w-100" min="0" max="255" step="1" id="rangeTargetDiff"
+                                @bind-value="@configModel.TargetDiffOutgoing" @bind-value:event="oninput" onchange="@(() => Save())" />
+                    </div>
+                </div>
+            </div>
+        </li>
+    </ul>
+</div>
 
 @code {
     private Config configModel = new();
