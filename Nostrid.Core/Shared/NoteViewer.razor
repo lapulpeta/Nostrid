@@ -121,7 +121,7 @@
             }*@
             @if (!ReplyingTo)
             {
-                <div class="lh-lg w-100" style="margin-right:-1.5rem;">
+                <div class="w-100" style="margin-right:-1.5rem;">
                     @if (Tree.Note.NoteMetadata.Reactions.Count > 0)
                     {
                         var groupedReactions = Tree.Note.NoteMetadata.Reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count());
@@ -150,24 +150,24 @@
                     @if (accountService.MainAccount != null)
                     {
                         <div class="d-inline-block">
-                            <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                            <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                 <i class="bi bi-chat"></i>
                             </a>
-                            @*<a role="button"  @onclick="@(() => { })" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                            @*<a role="button"  @onclick="@(() => { })" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                 <i class="bi bi-repeat"></i>
                             </a>*@
-                            <a role="button" @onclick="@LikeNote" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 @(!likeSent ? "bg-primary-opacity-10-hover" : "")">
+                            <a role="button" @onclick="@LikeNote" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 @(!likeSent ? "bg-primary-opacity-10-hover" : "")">
                                 <i class="bi @(!likeSent ? "bi-heart" : "bi-heart-fill")"></i>
                             </a>
                             @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
                             {
-                                <a role="button" @onclick="@Delete" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <a role="button" @onclick="@Delete" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                     <i class="bi bi-trash3"></i>
                                 </a>
                             }
                         </div>
                     }
-                    @*<a role="button" @onclick="@(() => { })" @onclick:stopPropagation="true" class="p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                    @*<a role="button" @onclick="@(() => { })" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                         <i class="bi bi-clipboard"></i>
                     </a>*@
                 </div>

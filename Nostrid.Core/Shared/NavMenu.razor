@@ -35,9 +35,9 @@
 		<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 	</div>
 	<div class="offcanvas-body d-flex flex-column flex-grow-1">
-		<div class="top">
+		<div class="container d-flex flex-column">
 			<a class="d-block pb-3 text-center text-decoration-none" href="/">Nostrid</a>
-			<nav class="p-0">
+			<nav class="p-0 flex-grow-1">
 				<ul class="nav nav-pills flex-column">
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap" href="/" Match="NavLinkMatch.All" @onclick="HideOffCanvasMenu">
@@ -105,15 +105,15 @@
 					</li>
 				</ul>
 			</nav>
-		</div>
-		<div class="bottom fs-7 text-muted text-left">
-			<div>
-				Relays <br />
-				-Connected: @relayService.ConnectedRelays/@relayService.MaxRelays <button class="btn bi bi-arrow-clockwise p-0 text-secondary border" @onclick="@ChangeRelays"></button> <br />
-				-Available: @relayService.PendingRelays <br />
-				-Rate Limited: @relayService.RateLimitedRelays <br />
-				Filters: @relayService.FiltersCount <br />
-				Version: @Utils.GetCurrentVersion()
+			<div class="fs-7 text-muted text-left">
+				<div>
+					Relays <br />
+					-Connected: @relayService.ConnectedRelays/@relayService.MaxRelays <button class="btn bi bi-arrow-clockwise p-0 text-secondary border" @onclick="@ChangeRelays"></button> <br />
+					-Available: @relayService.PendingRelays <br />
+					-Rate Limited: @relayService.RateLimitedRelays <br />
+					Filters: @relayService.FiltersCount <br />
+					Version: @Utils.GetCurrentVersion()
+				</div>
 			</div>
 		</div>
 	</div>
