@@ -1,4 +1,4 @@
-# Nostrid - Nostr Client
+﻿# Nostrid - Nostr Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Contribute: LN](https://img.shields.io/badge/Contribute-LN-green)](https://legend.lnbits.com/tipjar/786)
@@ -14,8 +14,9 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Multiaccount with simple switching
 - [x] NIP-05 profiles
 - [x] Read and send notes with support for markdown
-- [x] Read and send reactions
 - [x] Delete notes
+- [x] PoW (NIP-13)
+- [x] Read and send reactions
 - [x] Hashtags (send and search)
 - [x] Customizable feeds based on hashtags
 - [x] Username and profile images (read and update)
@@ -31,6 +32,38 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [ ] Channels - SOON
 - [ ] Manual/advanced relay management - SOON
 - [ ] Lightning Network payments - SOON
+
+## Supported NIPs
+
+✅ = Supported
+✔️ = Partially-supported
+
+- NIP-01: Basic protocol flow description ✅
+- NIP-02: Contact List and Petnames ✅
+- NIP-03: OpenTimestamps Attestations for Events
+- NIP-04: Encrypted Direct Message
+- NIP-05: Mapping Nostr keys to DNS-based internet identifiers ✅
+- NIP-06: Basic key derivation from mnemonic seed phrase
+- NIP-07: window.nostr capability for web browsers
+- NIP-08: Handling Mentions ✔️
+- NIP-09: Event Deletion ✅
+- NIP-10: Conventions for clients' use of e and p tags in text events. ✅
+- NIP-11: Relay Information Document
+- NIP-12: Generic Tag Queries ✅
+- NIP-13: Proof of Work ✅
+- NIP-14: Subject tag in text events.
+- NIP-15: End of Stored Events Notice ✅
+- NIP-16: Event Treatment
+- NIP-19: bech32-encoded entities ✅
+- NIP-20: Command Results
+- NIP-22: Event created_at Limits
+- NIP-25: Reactions ✅
+- NIP-26: Delegated Event Signing
+- NIP-28: Public Chat
+- NIP-33: Parameterized Replaceable Events
+- NIP-36: Sensitive Content
+- NIP-40: Expiration Timestamp
+- NIP-42: Authentication of clients to relays
 
 ## Screenshots
 
