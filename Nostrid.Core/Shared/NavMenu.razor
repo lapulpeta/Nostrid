@@ -76,6 +76,11 @@
 							<span class="bi bi-search" aria-hidden="true"></span> Explore
 						</NavLink>
 					</li>
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap" href="config" @onclick="HideOffCanvasMenu">
+							<span class="bi bi-gear" aria-hidden="true"></span> Options
+						</NavLink>
+					</li>
 					@if (accountService.MainAccount != null)
 					{
 						<li class="nav-item pb-2">

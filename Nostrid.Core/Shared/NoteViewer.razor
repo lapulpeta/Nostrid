@@ -15,6 +15,7 @@
 @inject IJSRuntime jsRuntime
 @inject HtmlSanitizer htmlSanitizer
 @inject NoteProcessor noteProcessor
+@inject ConfigService configService
 
 <div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 @(!ReplyingTo ? "bg-tertiary-hover border-top" : "" ) @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
      @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem; font-size: .95rem;">
@@ -70,6 +71,15 @@
                 <span class="text-secondary">
                     <span>·</span>
                     <span>@Utils.FormatDate(Tree.Note.CreatedAtCurated)</span>
+                    @if (showDifficulty)
+                    {
+                        <span>·</span>
+                        <span>diff @Tree.Note.Difficulty</span>
+                        @if (Tree.Note.HasPow)
+                        {
+                            <span> 🏋️</span>
+                        }
+                    }
                     @if (!ReplyingTo
                         && Tree.Note.NoteMetadata.ReplyToId != null
                         && TreeLayout.Length == 1
@@ -188,6 +198,7 @@
 @code {
     private bool likeClicked = false;
     private bool likeSent => likeClicked || Tree.Note.NoteMetadata.Reactions.Any(r => r.ReactorId == accountService?.MainAccount.Id);
+    private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private IJSObjectReference jsModule;
     private ElementReference referenceElement;
     private NoteTreeViewer NoteTreeViewerRef;

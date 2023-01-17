@@ -2,7 +2,6 @@ using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
-using System.Web;
 
 namespace Nostrid.Data;
 
@@ -318,7 +317,66 @@ public class FeedService
         return rootTrees;
     }
 
-    public void SendNote(string content, Event replyTo, Account sender)
+    public async Task SendNoteWithPow(string content, Event replyTo, Account sender, int diff, CancellationToken cancellationToken)
+    {
+        var unsignedNote = AssembleNote(content, replyTo, sender);
+
+        if (diff > 0)
+        {
+            // Create placeholders for real values
+            var nonceMarker = IdGenerator.Generate();
+            var randomLong = (long)(Random.Shared.Next() << 32) + Random.Shared.Next();
+            unsignedNote.CreatedAt = DateTimeOffset.FromUnixTimeSeconds(randomLong);
+            var createdMarker = randomLong.ToString();
+
+            var nonceTag = new NostrEventTag()
+            {
+                TagIdentifier = "nonce",
+                Data = { nonceMarker, diff.ToString() }
+            };
+            unsignedNote.Tags.Add(nonceTag);
+
+            var eventJson = unsignedNote.ToJson(true);
+
+            int maxTasks = Environment.ProcessorCount;
+
+            ulong? foundNonce = null;
+            DateTimeOffset? foundCreated = null;
+            await Task.WhenAll(
+                Enumerable.Range(0, maxTasks).Select(taskIndex => Task.Run(() =>
+                {
+                    ulong nonce = (uint)taskIndex;
+                    while (!foundNonce.HasValue)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var created = DateTimeOffset.UtcNow;
+                        var eventJsonWithNonce = eventJson
+                            .Replace(nonceMarker, nonce.ToString())
+                            .Replace(createdMarker, created.ToUnixTimeSeconds().ToString());
+                        var id = eventJsonWithNonce.ComputeEventId();
+                        if (Event.CalculateDifficulty(id) >= diff)
+                        {
+                            foundNonce = nonce;
+                            foundCreated = created;
+                            return;
+                        }
+                        nonce += (uint)maxTasks;
+                    }
+                }, cancellationToken))
+            );
+
+            if (!foundNonce.HasValue) // Sanity
+                throw new Exception("Nonce not found!");
+
+            nonceTag.Data[0] = foundNonce.ToString();
+            unsignedNote.CreatedAt = foundCreated;
+        }
+
+        sender.ComputeIdAndSign(unsignedNote);
+        relayService.SendEvent(unsignedNote);
+    }
+
+    private NostrEvent AssembleNote(string content, Event replyTo, Account sender)
     {
         var unescapedContent = content.Trim();
 
@@ -428,8 +486,7 @@ public class FeedService
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "t", Data = new[] { t }.ToList() });
         }
 
-        sender.ComputeIdAndSign(nostrEvent);
-        relayService.SendEvent(nostrEvent);
+        return nostrEvent;
     }
 
     public void SendReaction(string reaction, Event reactTo, Account sender)
@@ -515,9 +572,9 @@ public class FeedService
         if (accountService.MainAccount == null)
             return 0;
 
-		var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
-		mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
-		return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
+        var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
+        mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
+        return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
     }
 }
 

@@ -7,6 +7,7 @@
 
 @inject AccountService accountService
 @inject FeedService feedService
+@inject ConfigService configService
 
 @code{
     [Parameter]
@@ -22,7 +23,7 @@
     {
         <NoteTreeViewer Trees="@(new List<NoteTree>() { ReplyTo })" ReplyingTo="true" />
     }
-    <div class="d-flex flex-row flex-grow-1 align-items-start px-3 py-2" style="margin: 0 -1rem;">
+    <div class="d-flex flex-row flex-grow-1 align-items-start px-2 px-lg-3 py-2" style="margin: 0 -1rem;">
         <a class="flex-shrink-0" href="/account/@accountService.MainAccount.Id">
             <AccountPicture Details="@accountService.MainAccount?.Details" Id="@accountService.MainAccount?.Id"></AccountPicture>
         </a>
@@ -36,9 +37,23 @@
                 <DataAnnotationsValidator />
                 <ValidationSummary />
                 <InputTextArea @bind-Value="textInput.Text" rows="3" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
-                <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary my-2">
-                    @(ReplyTo != null ? "Reply" : "Send note")
-                </button>
+                @if (sending)
+                {
+                    <button class="btn btn-secondary my-2 me-2" @onclick="@CancelPow">
+                        <i class="bi bi-x"></i>
+                        Cancel PoW
+                    </button>
+                    <span class="d-inline-block" style="vertical-align: -2px;">
+                        <span>Sending with pow @configService.MainConfig.TargetDiffOutgoing.</span>
+                        <span class="d-inline-block">If you leave this page it will be aborted.</span>
+                    </span>
+                }
+                else
+                {
+                    <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary my-2">
+                        @(ReplyTo != null ? "Reply" : "Send note")
+                    </button>
+                }
             </EditForm>
         </div>
     </div>
@@ -48,16 +63,39 @@
 
     private TextInput textInput = new();
 
+    private bool sending;
+
+    private CancellationTokenSource? powCancelSource;
+
+
+    private void CancelPow()
+    {
+        if (powCancelSource == null)
+            return;
+
+        powCancelSource.Cancel();
+        powCancelSource = new();
+        sending = false;
+    }
+
     private void Send()
     {
+        powCancelSource = new();
         if (!string.IsNullOrEmpty(textInput.Text))
         {
-            feedService.SendNote(textInput.Text, ReplyTo?.Note, accountService.MainAccount);
+            var content = textInput.Text;
             textInput.Text = string.Empty;
-            if (OnSend != null)
-            {
-                OnSend();
-            }
+            sending = true;
+            feedService
+                .SendNoteWithPow(content, ReplyTo?.Note, accountService.MainAccount, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
+                .ContinueWith((_) =>
+                {
+                    powCancelSource = null;
+                    sending = false;
+                    OnSend?.Invoke();
+                    InvokeAsync(() => StateHasChanged());
+                }, TaskContinuationOptions.OnlyOnRanToCompletion)
+                .ContinueWith((_) => InvokeAsync(() => StateHasChanged()));
         }
     }
 
@@ -85,6 +123,7 @@
         {
             if (disposing)
             {
+                CancelPow();
                 accountService.MainAccountChanged -= MainAccountChanged;
             }
 
