@@ -197,7 +197,7 @@ public class FeedService
     public void HandleKind6(Event eventToProcess)
     {
         // NIP-18: https://github.com/nostr-protocol/nips/blob/master/18.md
-        if (string.IsNullOrEmpty(eventToProcess.Content)) // As per the NIP, content must be empty
+        //if (string.IsNullOrEmpty(eventToProcess.Content)) // As per the NIP, content must be empty (disabled since many clients ignore this)
         {
             var e = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "e" && t.Data.Count > 0);
             var p = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "p" && t.Data.Count > 0);

@@ -95,7 +95,19 @@
                 </span>
             </p>
             <div class="mb-1 text-break note-content">
-                @noteProcessor.GetContent(Tree.Note?.Content ?? string.Empty, Tree.Note?.NoteMetadata)
+                @switch (Tree.Note.Kind)
+                {
+                    case NostrKind.Text:
+                        @noteProcessor.GetContent(Tree.Note?.Content ?? string.Empty, Tree.Note?.NoteMetadata)
+                        break;
+                    case NostrKind.Repost:
+                        <i class="bi bi-repeat p-1"></i>
+
+                        <a href="/note/@Tree.Note.NoteMetadata.RepostEventId" @onclick:stopPropagation="true">
+                            @ByteTools.PubkeyToNote(Tree.Note.NoteMetadata.RepostEventId, true)
+                        </a>
+                        break;
+                }
             </div>
             @*@if (Tree.Note.NoteMetadata.HashTags.Count > 0)
             {
