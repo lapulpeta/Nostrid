@@ -20,5 +20,6 @@ builder.Services.AddSingleton<NoteProcessor>();
 builder.Services.AddSingleton<Nip05Service>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
+builder.Services.AddSingleton<ConfigService>();
 
 await builder.Build().RunAsync();

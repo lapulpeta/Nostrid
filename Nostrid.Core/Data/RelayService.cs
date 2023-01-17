@@ -15,6 +15,7 @@ public class RelayService
     private const int PriorityHigherBound = 10;
 
     private readonly EventDatabase eventDatabase;
+    private readonly ConfigService configService;
     private readonly List<SubscriptionFilter> filters = new();
     private readonly ConcurrentDictionary<NostrClient, List<Subscription>> subscriptionsByClient = new();
     private readonly ConcurrentDictionary<Relay, NostrClient> clientByRelay = new();
@@ -37,12 +38,13 @@ public class RelayService
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
 
     // This method starts one client per relay in a separate thread
-    public RelayService(EventDatabase eventDatabase)
+    public RelayService(EventDatabase eventDatabase, ConfigService configService)
     {
         if (PriorityLowerBound > PriorityHigherBound)
             throw new Exception("MinPriority > MaxPriority");
 
         this.eventDatabase = eventDatabase;
+        this.configService = configService;
         InitRelays();
         foreach (var index in Enumerable.Range(PriorityLowerBound, PriorityHigherBound - PriorityLowerBound + 1))
         {
@@ -146,13 +148,20 @@ public class RelayService
         var newEvents = new HashSet<Event>();
         var destroyed = false;
 
-        foreach (var ev in events)
+        foreach (var nostrEvent in events)
         {
+            var ev = new Event(nostrEvent);
+            if (ev.Kind == NostrKind.Text && configService.MainConfig.MinDiffIncoming > 0)
+            {
+                if (!ev.HasPow || ev.Difficulty < configService.MainConfig.MinDiffIncoming || !ev.CheckPowTarget(configService.MainConfig.StrictDiffCheck))
+                    continue;
+            }
+
             if (ev.CreatedAt.HasValue && ev.CreatedAt < oldest)
             {
                 oldest = ev.CreatedAt.Value;
             }
-            var newEvent = eventDatabase.SaveNostrEvent(ev, relay);
+            var newEvent = eventDatabase.SaveNewEvent(ev, relay);
             if (newEvent != null)
             {
                 newEvents.Add(newEvent);

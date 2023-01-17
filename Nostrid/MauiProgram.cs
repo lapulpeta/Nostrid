@@ -35,6 +35,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<Nip05Service>();
         builder.Services.AddSingleton<NotificationService>();
         builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
+        builder.Services.AddSingleton<ConfigService>();
 
 		return builder.Build();
     }

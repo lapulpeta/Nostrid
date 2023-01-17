@@ -2,7 +2,6 @@ using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
-using System.Web;
 
 namespace Nostrid.Data;
 
@@ -318,7 +317,43 @@ public class FeedService
         return rootTrees;
     }
 
-    public void SendNote(string content, Event replyTo, Account sender)
+    public async Task SendNoteWithPow(string content, Event replyTo, Account sender, int diff, CancellationToken cancellationToken)
+    {
+        var unsignedNote = AssembleNote(content, replyTo, sender);
+
+        if (diff == 0)
+        {
+            sender.ComputeIdAndSign(unsignedNote);
+        }
+        else
+        {
+            var nonceTag = new NostrEventTag()
+            {
+                TagIdentifier = "nonce",
+                Data = { "", diff.ToString() }
+            };
+            unsignedNote.Tags.Add(nonceTag);
+
+            ulong nonce = 0;
+            while (true)
+            {
+                if (await Task.Run(() => TryNonce(unsignedNote, nonce++, diff, nonceTag, sender), cancellationToken))
+                    break;
+            }
+        }
+
+        relayService.SendEvent(unsignedNote);
+    }
+
+    private bool TryNonce(NostrEvent ev, ulong nonce, int diff, NostrEventTag nonceTag, Account sender)
+    {
+        nonceTag.Data[0] = nonce.ToString();
+        ev.CreatedAt = DateTimeOffset.UtcNow;
+        sender.ComputeIdAndSign(ev);
+        return Event.CalculateDifficulty(ev.Id) >= diff;
+    }
+
+    private NostrEvent AssembleNote(string content, Event replyTo, Account sender)
     {
         var unescapedContent = content.Trim();
 
@@ -428,8 +463,7 @@ public class FeedService
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "t", Data = new[] { t }.ToList() });
         }
 
-        sender.ComputeIdAndSign(nostrEvent);
-        relayService.SendEvent(nostrEvent);
+        return nostrEvent;
     }
 
     public void SendReaction(string reaction, Event reactTo, Account sender)
@@ -515,9 +549,9 @@ public class FeedService
         if (accountService.MainAccount == null)
             return 0;
 
-		var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
-		mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
-		return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
+        var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
+        mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
+        return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
     }
 }
 

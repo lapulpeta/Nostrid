@@ -1,0 +1,56 @@
+﻿@page "/config"
+@using Nostrid.Data;
+@using Nostrid.Model;
+
+@inject ConfigService configService
+
+<h2>Options</h2>
+<EditForm Model="@configModel" OnValidSubmit="@Save">
+
+    <h4>
+        Proof of Work Configuration (NIP-13)
+    </h4>
+    <div>
+        <label>
+            Display difficulty of notes
+            <InputCheckbox @bind-Value="configModel.ShowDifficulty"></InputCheckbox>
+        </label>
+    </div>
+    <div>
+        <label>
+            Minimum difficulty to accept notes (0 to accept all):
+            <InputNumber @bind-Value="configModel.MinDiffIncoming" />
+        </label>
+    </div>
+    <div>
+        <label>
+            Strict PoW check (notes must explicitly indicate difficulty target)
+            <InputCheckbox @bind-Value="configModel.StrictDiffCheck"></InputCheckbox>
+        </label>
+    </div>
+    <div>
+        <label>
+            Difficulty target for sending messages (0 to disable PoW):
+            <InputNumber @bind-Value="configModel.TargetDiffOutgoing" />
+        </label>
+    </div>
+
+    <button type="submit">Save</button>
+
+</EditForm>
+
+@code {
+    private Config configModel = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        configModel = configService.MainConfig.Clone();
+    }
+
+    private void Save()
+    {
+        configService.MainConfig = configModel;
+    }
+}

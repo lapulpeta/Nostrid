@@ -7,6 +7,7 @@
 
 @inject AccountService accountService
 @inject FeedService feedService
+@inject ConfigService configService
 
 @code{
     [Parameter]
@@ -39,6 +40,10 @@
                 <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary my-2">
                     @(ReplyTo != null ? "Reply" : "Send note")
                 </button>
+                @if (sending)
+                {
+                    <p>Sending with pow @configService.MainConfig.TargetDiffOutgoing... <button class="btn bi bi-x-octagon p-0 text-secondary" @onclick="@CancelPow" /> </p>
+                }
             </EditForm>
         </div>
     </div>
@@ -48,16 +53,38 @@
 
     private TextInput textInput = new();
 
+    private bool sending;
+
+    private CancellationTokenSource? powCancelSource;
+
+
+    private void CancelPow()
+    {
+        if (powCancelSource == null)
+            return;
+
+        powCancelSource.Cancel();
+        powCancelSource = new();
+        sending = false;
+    }
+
     private void Send()
     {
+        powCancelSource = new();
         if (!string.IsNullOrEmpty(textInput.Text))
         {
-            feedService.SendNote(textInput.Text, ReplyTo?.Note, accountService.MainAccount);
+            var content = textInput.Text;
             textInput.Text = string.Empty;
-            if (OnSend != null)
-            {
-                OnSend();
-            }
+            sending = true;
+            feedService
+                .SendNoteWithPow(content, ReplyTo?.Note, accountService.MainAccount, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
+                .ContinueWith((_) =>
+                {
+                    powCancelSource = null;
+                    sending = false;
+                    OnSend?.Invoke();
+                    InvokeAsync(() => StateHasChanged());
+                });
         }
     }
 
@@ -85,6 +112,7 @@
         {
             if (disposing)
             {
+                CancelPow();
                 accountService.MainAccountChanged -= MainAccountChanged;
             }
 

@@ -14,6 +14,7 @@ namespace Nostrid.Data
         private readonly ILiteCollection<FilterData> FilterDatas;
         private readonly ILiteCollection<OwnEvent> OwnEvents;
         private readonly ILiteCollection<FeedSource> FeedSources;
+        private readonly ILiteCollection<Config> Configs;
 
         public int EventsPending => Events.Query().Where(e => !e.Processed).Count();
 
@@ -43,6 +44,7 @@ namespace Nostrid.Data
             OwnEvents.EnsureIndex(e => e.Event.CreatedAt);
             FeedSources = Database.GetCollection<FeedSource>();
             FeedSources.EnsureIndex(e => e.OwnerId);
+            Configs = Database.GetCollection<Config>();
         }
 
         public void SaveRelay(Relay relay)
@@ -112,27 +114,24 @@ namespace Nostrid.Data
             Events.Update(ev);
         }
 
-        public Event SaveNostrEvent(NostrEvent ev, Relay relay)
+        public Event? SaveNewEvent(Event ev, Relay relay)
         {
-            var eventData = Events.FindById(ev.Id);
-            if (eventData != null)
+            var existingEvent = Events.FindById(ev.Id);
+            if (existingEvent != null)
             {
-                if (!eventData.Deleted || eventData.PublicKey == ev.PublicKey)
+                if (!existingEvent.Deleted || existingEvent.PublicKey == ev.PublicKey)
                 {
-                    return !eventData.Processed ? eventData : null;
+                    return !existingEvent.Processed ? existingEvent : null;
                 }
                 // This point can be reached only if event is marked as deleted but the recorded owner is not the real one,
                 // so we have to processed it again
             }
 
             var now = DateTimeOffset.UtcNow;
-            eventData = new Event(ev)
-            {
-                CreatedAtCurated = !ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value
-            };
-            Events.Upsert(eventData);
+            ev.CreatedAtCurated = !ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value;
+            Events.Upsert(ev);
 
-            return !eventData.Processed ? eventData : null;
+            return !ev.Processed ? ev : null;
         }
 
         public List<Event> ListUnprocessedEvents(int? count = null)
@@ -311,6 +310,16 @@ namespace Nostrid.Data
         public List<FeedSource> ListFeedSources(string ownerId)
         {
             return FeedSources.Query().Where(f => f.OwnerId == ownerId).ToList();
+        }
+
+        public Config GetConfig()
+        {
+            return Configs.Query().FirstOrDefault() ?? new Config();
+        }
+
+        public void SaveConfig(Config config)
+        {
+            Configs.Upsert(config);
         }
     }
 }
