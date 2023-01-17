@@ -321,36 +321,59 @@ public class FeedService
     {
         var unsignedNote = AssembleNote(content, replyTo, sender);
 
-        if (diff == 0)
+        if (diff > 0)
         {
-            sender.ComputeIdAndSign(unsignedNote);
-        }
-        else
-        {
+            // Create placeholders for real values
+            var nonceMarker = IdGenerator.Generate();
+            var randomLong = (long)(Random.Shared.Next() << 32) + Random.Shared.Next();
+            unsignedNote.CreatedAt = DateTimeOffset.FromUnixTimeSeconds(randomLong);
+            var createdMarker = randomLong.ToString();
+
             var nonceTag = new NostrEventTag()
             {
                 TagIdentifier = "nonce",
-                Data = { "", diff.ToString() }
+                Data = { nonceMarker, diff.ToString() }
             };
             unsignedNote.Tags.Add(nonceTag);
 
-            ulong nonce = 0;
-            while (true)
-            {
-                if (await Task.Run(() => TryNonce(unsignedNote, nonce++, diff, nonceTag, sender), cancellationToken))
-                    break;
-            }
+            var eventJson = unsignedNote.ToJson(true);
+
+            int maxTasks = Environment.ProcessorCount;
+
+            ulong? foundNonce = null;
+            DateTimeOffset? foundCreated = null;
+            await Task.WhenAll(
+                Enumerable.Range(0, maxTasks).Select(taskIndex => Task.Run(() =>
+                {
+                    ulong nonce = (uint)taskIndex;
+                    while (!foundNonce.HasValue)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var created = DateTimeOffset.UtcNow;
+                        var eventJsonWithNonce = eventJson
+                            .Replace(nonceMarker, nonce.ToString())
+                            .Replace(createdMarker, created.ToUnixTimeSeconds().ToString());
+                        var id = eventJsonWithNonce.ComputeEventId();
+                        if (Event.CalculateDifficulty(id) >= diff)
+                        {
+                            foundNonce = nonce;
+                            foundCreated = created;
+                            return;
+                        }
+                        nonce += (uint)maxTasks;
+                    }
+                }, cancellationToken))
+            );
+
+            if (!foundNonce.HasValue) // Sanity
+                throw new Exception("Nonce not found!");
+
+            nonceTag.Data[0] = foundNonce.ToString();
+            unsignedNote.CreatedAt = foundCreated;
         }
 
+        sender.ComputeIdAndSign(unsignedNote);
         relayService.SendEvent(unsignedNote);
-    }
-
-    private bool TryNonce(NostrEvent ev, ulong nonce, int diff, NostrEventTag nonceTag, Account sender)
-    {
-        nonceTag.Data[0] = nonce.ToString();
-        ev.CreatedAt = DateTimeOffset.UtcNow;
-        sender.ComputeIdAndSign(ev);
-        return Event.CalculateDifficulty(ev.Id) >= diff;
     }
 
     private NostrEvent AssembleNote(string content, Event replyTo, Account sender)

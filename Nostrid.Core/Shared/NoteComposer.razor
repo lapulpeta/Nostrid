@@ -84,7 +84,8 @@
                     sending = false;
                     OnSend?.Invoke();
                     InvokeAsync(() => StateHasChanged());
-                });
+                }, TaskContinuationOptions.OnlyOnRanToCompletion)
+                .ContinueWith((_) => InvokeAsync(() => StateHasChanged()));
         }
     }
 
