@@ -57,3 +57,7 @@
     border: var(--bs-border-width) var(--bs-border-style) var(--bs-tertiary-color) !important;
     border-radius: var(--bs-border-radius) !important;
 }
+
+.note-content ::deep code {
+    white-space: break-spaces;
+}
