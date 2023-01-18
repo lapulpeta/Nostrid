@@ -1,4 +1,5 @@
 ﻿@page "/config"
+@using Nostrid.Components;
 @using Nostrid.Data;
 @using Nostrid.Model;
 
@@ -6,10 +7,11 @@
 
 <h2 class="mb-4">Options</h2>
 
-<h5 class="mb-3">Proof of Work Configuration (NIP-13)</h5>
-
-<div class="card shadow">
+<div class="mt-4 card shadow">
     <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <h5 class="my-2">Proof of Work Configuration (NIP-13)</h5>
+        </li>
         <li class="list-group-item">
             <div class="row align-items-center">
                 <label class="col-6" for="switchShowDifficulty">
@@ -17,8 +19,9 @@
                 </label>
                 <div class="col-6 text-right">
                     <div class="form-check form-switch m-0 p-0 fs-4">
-                        <InputCheckbox class="form-check-input m-0 float-end" role="switch" id="switchShowDifficulty"
-                                        @bind-Value="@configModel.ShowDifficulty" @onclick="@Save"></InputCheckbox>
+                        <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchShowDifficulty"
+                               checked="@configModel.ShowDifficulty"
+                               @onchange="@(args => { configModel.ShowDifficulty = args.Value as bool? ?? false; Save(); })" />
                     </div>
                 </div>
             </div>
@@ -33,7 +36,7 @@
                     <div class="d-flex">
                         <span class="me-3 badge text-bg-light">@configModel.MinDiffIncoming</span>
                         <input type="range" class="form-range" min="0" max="255" step="1" id="rangeMinimumPow"
-                                @bind-value="@configModel.MinDiffIncoming" @bind-value:event="oninput" onchange="@(() => Save())" />
+                                @bind-value="@configModel.MinDiffIncoming" @bind-value:event="oninput" @onchange="@Save" />
                     </div>
                 </div>
             </div>
@@ -46,8 +49,9 @@
                 </label>
                 <div class="col-6 text-right">
                     <div class="form-check form-switch m-0 p-0 fs-4">
-                        <InputCheckbox class="form-check-input m-0 float-end" role="switch" id="switchPowCheck"
-                                        @bind-Value="@configModel.StrictDiffCheck" @onclick="@Save"></InputCheckbox>
+                        <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchPowCheck"
+                               checked="@configModel.StrictDiffCheck"
+                               @onchange="@(args => { configModel.StrictDiffCheck = args.Value as bool? ?? false; Save(); })" />
                     </div>
                 </div>
             </div>
@@ -62,7 +66,7 @@
                     <div class="d-flex">
                         <span class="me-3 badge text-bg-light">@configModel.TargetDiffOutgoing</span>
                         <input type="range" class="form-range w-100" min="0" max="255" step="1" id="rangeTargetDiff"
-                                @bind-value="@configModel.TargetDiffOutgoing" @bind-value:event="oninput" onchange="@(() => Save())" />
+                               @bind-value="@configModel.TargetDiffOutgoing" @bind-value:event="oninput" @onchange="@Save" />
                     </div>
                 </div>
             </div>
@@ -70,13 +74,50 @@
     </ul>
 </div>
 
+<div class="mt-4 card shadow">
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <h5 class="my-2">Appearance</h5>
+        </li>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-6" for="switchTheme">
+                    <i class="bi bi-moon-fill pe-1" aria-hidden="true"></i>
+                    Use dark theme
+                </label>
+                <div class="col-6 text-right">
+                    <div class="form-check form-switch m-0 p-0 fs-4">
+                        <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchTheme"
+                               checked="@Theme"
+                               @onchange="@(args => { Theme = args.Value as bool? ?? false; Save(); })" />
+                    </div>
+                </div>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<ScriptsComponent @ref="scripts" />
+
 @code {
+    private ScriptsComponent? scripts;
     private Config configModel = new();
+
+    private const string DARK_THEME = "dark";
+
+    private bool Theme
+    {
+        get => configModel?.Theme == DARK_THEME;
+        set
+        { 
+            configModel.Theme = (value ? DARK_THEME : null);
+            scripts?.InvokeVoid("setTheme", configModel.Theme ?? string.Empty);
+        }
+    }
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
-
         configModel = configService.MainConfig.Clone();
     }
 

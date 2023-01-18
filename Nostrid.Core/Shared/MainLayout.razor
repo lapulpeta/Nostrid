@@ -1,4 +1,10 @@
-﻿@inherits LayoutComponentBase
+﻿@using Nostrid.Components;
+@using Nostrid.Data;
+
+@inject AccountService accountService
+@inject ConfigService configService
+
+@inherits LayoutComponentBase
 
 <div class="d-flex flex-row flex-grow-1">
 	<NavMenu />
@@ -30,3 +36,24 @@
 	</nav>
 
 </div>
+
+<ScriptsComponent @ref="scripts" OnAfterFirstRender="@SetTheme" />
+
+@code{
+	private ScriptsComponent? scripts;
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		if (!string.IsNullOrEmpty(configService.MainConfig.MainAccountId))
+		{
+			accountService.MainAccount = accountService.GetAccount(configService.MainConfig.MainAccountId);
+		}
+	}
+
+	private void SetTheme()
+	{
+		scripts?.InvokeVoid("setTheme", configService.MainConfig.Theme ?? string.Empty);
+	}
+}

@@ -11,6 +11,10 @@ public class Config
     public bool StrictDiffCheck { get; set; }
 
     public int TargetDiffOutgoing { get; set; }
+    
+    public string? MainAccountId { get; set; } 
+    
+    public string? Theme { get; set; }
 
     public Config Clone()
     {
@@ -20,7 +24,9 @@ public class Config
             ShowDifficulty = ShowDifficulty,
             MinDiffIncoming = MinDiffIncoming,
             StrictDiffCheck = StrictDiffCheck,
-            TargetDiffOutgoing = TargetDiffOutgoing
+            TargetDiffOutgoing = TargetDiffOutgoing,
+            MainAccountId = MainAccountId,
+            Theme = Theme
         };
     }
 }

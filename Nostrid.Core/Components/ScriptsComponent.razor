@@ -1,8 +1,13 @@
-﻿@implements IAsyncDisposable
+﻿@using Nostrid.Data;
 @inject IJSRuntime jsRuntime
+@implements IAsyncDisposable
+
 @code {
 
-    public IJSObjectReference JSModule { get; private set; }
+    [Parameter]
+    public Action? OnAfterFirstRender { get; set; }
+
+    public IJSObjectReference? JSModule { get; private set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -10,6 +15,7 @@
         if (firstRender)
         {
             JSModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
+            OnAfterFirstRender?.Invoke();
         }
     }
 

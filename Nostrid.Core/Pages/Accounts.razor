@@ -5,6 +5,7 @@
 @using Nostrid.Model;
 @using System.Security.Cryptography;
 
+@inject ConfigService configService
 @inject AccountService accountService
 @inject EventDatabase eventDatabase
 @implements IDisposable
@@ -208,9 +209,13 @@
         accounts = accountIds.Select(accountId => eventDatabase.GetAccount(accountId)).ToDictionary(account => account.Id, account => account);
     }
 
-    private void SelectAccount(Account account)
+    private void SelectAccount(Account? account)
     {
         accountService.MainAccount = account;
+
+        var config = configService.MainConfig.Clone();
+        config.MainAccountId = account?.Id;
+        configService.MainConfig = config;
     }
 
     private void ToggleEditAccountDetails(Account account)
@@ -224,7 +229,7 @@
     // TODO: move save account details to profile
     private void SaveAccountDetails(Account account)
     {
-        accountService.MainAccount = account;
+        SelectAccount(account);
         accountService.SaveAccountDetails(accountDetails);
         accountEditing = null;
         LoadAccounts();
@@ -285,7 +290,7 @@
     {
         if (account.Id == accountService.MainAccount?.Id)
         {
-            accountService.MainAccount = null;
+            SelectAccount(null);
         }
         eventDatabase.DeleteAccount(account);
         LoadAccounts();
