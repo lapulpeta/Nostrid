@@ -103,15 +103,16 @@
     private ScriptsComponent? scripts;
     private Config configModel = new();
 
-    private const string DARK_THEME = "dark";
+    public const string DARK_THEME = "dark";
+    public const string LIGHT_THEME = "light";
 
     private bool Theme
     {
-        get => configModel?.Theme == DARK_THEME;
+        get => string.IsNullOrEmpty(configModel?.Theme) || configModel?.Theme == DARK_THEME;
         set
         { 
-            configModel.Theme = (value ? DARK_THEME : null);
-            scripts?.InvokeVoid("setTheme", configModel.Theme ?? string.Empty);
+            configModel.Theme = (value ? DARK_THEME : LIGHT_THEME);
+            scripts?.InvokeVoid("setTheme", configModel.Theme);
         }
     }
 

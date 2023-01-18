@@ -1,5 +1,6 @@
 ﻿@using Nostrid.Components;
 @using Nostrid.Data;
+@using Nostrid.Pages;
 
 @inject AccountService accountService
 @inject ConfigService configService
@@ -41,7 +42,7 @@
 
 @code{
 	private ScriptsComponent? scripts;
-
+	
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
@@ -54,6 +55,6 @@
 
 	private void SetTheme()
 	{
-		scripts?.InvokeVoid("setTheme", configService.MainConfig.Theme ?? string.Empty);
+		scripts?.InvokeVoid("setTheme", configService.MainConfig.Theme ?? ConfigPage.DARK_THEME);
 	}
 }
