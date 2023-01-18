@@ -27,7 +27,7 @@ public static class MauiProgram
 #endif
 
 		builder.Services.AddSingleton<FeedService>();
-        builder.Services.AddSingleton(new EventDatabase(DbConstants.DatabasePath));
+        builder.Services.AddSingleton<EventDatabase>();
         builder.Services.AddSingleton<RelayService>();
         builder.Services.AddSingleton<AccountService>();
         builder.Services.AddSingleton<HtmlSanitizer>();
@@ -37,6 +37,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
         builder.Services.AddSingleton<ConfigService>();
 
-		return builder.Build();
+		var app = builder.Build();
+
+        var eventDatabase = app.Services.GetRequiredService<EventDatabase>();
+        eventDatabase.InitDatabase(DbConstants.DatabasePath);
+
+        return app;
     }
 }
