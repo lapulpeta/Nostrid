@@ -7,26 +7,30 @@ namespace Nostrid.Data
 {
     public class EventDatabase
     {
-        private readonly LiteDatabase Database;
-        private readonly ILiteCollection<Relay> Relays;
-        private readonly ILiteCollection<Event> Events;
-        private readonly ILiteCollection<Account> Accounts;
-        private readonly ILiteCollection<FilterData> FilterDatas;
-        private readonly ILiteCollection<OwnEvent> OwnEvents;
-        private readonly ILiteCollection<FeedSource> FeedSources;
-        private readonly ILiteCollection<Config> Configs;
+        private LiteDatabase Database;
+        private ILiteCollection<Relay> Relays;
+        private ILiteCollection<Event> Events;
+        private ILiteCollection<Account> Accounts;
+        private ILiteCollection<FilterData> FilterDatas;
+        private ILiteCollection<OwnEvent> OwnEvents;
+        private ILiteCollection<FeedSource> FeedSources;
+        private ILiteCollection<Config> Configs;
 
         public int EventsPending => Events.Query().Where(e => !e.Processed).Count();
 
-        public EventDatabase(Stream storage) : this(new LiteDatabase(storage))
+        public event EventHandler? DatabaseHasChanged;
+
+        public void InitDatabase(Stream storage)
         {
+            InitDatabase(new LiteDatabase(storage));
         }
 
-        public EventDatabase(string filename) : this(new LiteDatabase(filename))
+        public void InitDatabase(string filename)
         {
+            InitDatabase(new LiteDatabase(filename));
         }
 
-        private EventDatabase(LiteDatabase database)
+        private void InitDatabase(LiteDatabase database)
         {
             Database = database;
             Relays = Database.GetCollection<Relay>();
@@ -80,6 +84,10 @@ namespace Nostrid.Data
         public void SaveAccount(Account account)
         {
             Accounts.Upsert(account);
+            if (!string.IsNullOrEmpty(account.PrivKey))
+            {
+                DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         public void DeleteAccount(Account account)
@@ -87,6 +95,7 @@ namespace Nostrid.Data
             Accounts.Delete(account.Id);
             Events.DeleteMany(e => e.PublicKey == account.Id);
             OwnEvents.DeleteMany(e => e.Event.PublicKey == account.Id);
+            DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public List<string> GetAccountIdsWithPk()
@@ -280,6 +289,7 @@ namespace Nostrid.Data
         public void SaveOwnEvents(OwnEvent nostrEvent)
         {
             OwnEvents.Upsert(nostrEvent);
+            DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void AddSeenBy(string ownEventId, long relayId)
@@ -300,11 +310,13 @@ namespace Nostrid.Data
         public void SaveFeedSource(FeedSource feedSource)
         {
             FeedSources.Upsert(feedSource);
+            DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void DeleteFeedSource(long id)
         {
             FeedSources.Delete(id);
+            DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public List<FeedSource> ListFeedSources(string ownerId)
@@ -320,6 +332,7 @@ namespace Nostrid.Data
         public void SaveConfig(Config config)
         {
             Configs.Upsert(config);
+            DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }
