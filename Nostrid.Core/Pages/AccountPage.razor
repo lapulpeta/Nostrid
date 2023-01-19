@@ -34,9 +34,18 @@
         </div>
         @if (IsMainAccountLoaded && !IsMainAccount)
         {
-            <div class="btn-group  mb-3" role="group" aria-label="Second group">
+            <div class="btn-group mb-3 me-3" role="group">
                 <button type="button" class="btn @(!accountService.IsFollowing(PubKey) ? "btn-primary" : "btn-danger")" @onclick="@(async () => await FollowUnfollow(PubKey))">
                     @(!accountService.IsFollowing(PubKey) ? "Follow" : "Unfollow")
+                </button>
+            </div>
+        }
+        @if ((!IsMainAccountLoaded || !IsMainAccount)
+            && !string.IsNullOrEmpty(account.Details?.Lud16Id))
+        {
+            <div class="btn-group mb-3" role="group">
+                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payPopup.Show(account.Details?.Lud16Id ?? string.Empty))">
+                    <i class="bi bi-lightning-charge"></i> Pay
                 </button>
             </div>
         }
@@ -111,6 +120,8 @@
     </div>
 </BootstrapModal>
 
+<PayPopup @ref="payPopup" />
+
 <FeedViewer BaseFilter="@feedFilter" />
 
 @code {
@@ -120,6 +131,7 @@
     private ConcurrentDictionary<string, Account> accounts;
     private BootstrapModal followingModal;
     private BootstrapModal followerModal;
+    private PayPopup payPopup;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount.Id;

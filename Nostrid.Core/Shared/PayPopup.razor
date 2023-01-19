@@ -1,0 +1,129 @@
+﻿@using Nostrid.Components;
+@using Nostrid.Data;
+@using Nostrid.Model;
+@using QRCoder;
+
+@inject Lud16Service lud16Service
+
+<BootstrapModal @ref="payModal">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Pay</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0" style="height: var(--bs-modal-width);">
+                    @if (state == State.Loading)
+                    {
+                        <div class="spinner-border" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                    }
+                    else if (state == State.RequestAmount)
+                    {
+                        <div class="p-3 text-center">
+                            <span class="fs-5">Amount</span>
+                            <div class="d-flex flex-row align-items-end position-relative border-bottom border-secondary border-opacity-25">
+                                <input type="number" class="form-control fw-bold glow-0 bg-body fs-5 text-center border-0" style="padding: 0px 35px 0 50px;"
+                                       value="@amount" @oninput="@(args => { long value; amount = long.TryParse(args.Value?.ToString(), out value) ? value : minAmount; })">
+                                <span class="position-absolute" style="bottom: 0; right: 0">sats</span>
+                            </div>
+                            <input type="range" class="form-range my-4" min="@minAmount" max="@maxAmount" step="@stepAmount"
+                                   @bind-value="@amount" @bind-value:event="oninput" />
+                            <button type="button" class="btn btn-primary" @onclick="@Pay">
+                                <i class="bi bi-lightning-charge"></i> Pay
+                            </button>
+                        </div>
+                    }
+                    else if (state == State.ShowQR)
+                    {
+                        <img style="max-width: 100%; max-height: 80vh; border-radius: var(--bs-modal-border-radius);" src="@imageSrc" alt="qr" />
+                    }
+                    else
+                    {
+                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                        <div class="mb-2">Something went wrong.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</BootstrapModal>
+
+@code {
+
+    private enum State
+    {
+        Loading,
+        RequestAmount,
+        ShowQR,
+        Error
+    }
+
+    private const int MSAT_UNIT = 1000;
+
+    private BootstrapModal? payModal;
+    private State state = State.Loading;
+    private Lud16Data? lud16Data;
+    private long amount;
+    private long minAmount;
+    private long maxAmount;
+    private long stepAmount = 1;
+    private string? imageSrc;
+
+    public void Show(string lud16Id)
+    {
+        state = State.Loading;
+        InvokeAsync(() => StateHasChanged());
+
+        payModal?.Show();
+
+        lud16Service.DecodeLud16(lud16Id).ContinueWith(t =>
+        {
+            if (!t.IsCompletedSuccessfully
+                || t.Result == null)
+            {
+                state = State.Error;
+            }
+            else
+            {
+                state = State.RequestAmount;
+                lud16Data = t.Result;
+                minAmount = (long)t.Result.MinSendableMsat / MSAT_UNIT;
+                maxAmount = (long)t.Result.MaxSendableMsat / MSAT_UNIT;
+                amount = minAmount;
+            }
+            InvokeAsync(() => StateHasChanged());
+        });
+    }
+
+    private void Pay()
+    {
+        if (lud16Data == null
+            || amount > maxAmount
+            || amount < minAmount)
+        {
+            return;
+        }
+
+        state = State.Loading;
+
+        lud16Service.GetPayReq(lud16Data, amount * MSAT_UNIT).ContinueWith(t =>
+        {
+            if (!t.IsCompletedSuccessfully
+                || t.Result == null)
+            {
+                state = State.Error;
+            }
+            else
+            {
+                state = State.ShowQR;
+                var qrData = QRCodeGenerator.GenerateQrCode(t.Result, QRCodeGenerator.ECCLevel.Q);
+                var qr = new BitmapByteQRCode(qrData).GetGraphic(10);
+                imageSrc = $"data:image/png;base64,{Convert.ToBase64String(qr)}";
+            }
+            InvokeAsync(() => StateHasChanged());
+        });
+    }
+}

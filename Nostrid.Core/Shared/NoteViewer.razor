@@ -169,9 +169,9 @@
                             </span>
                         }
                     }
-                    @if (accountService.MainAccount != null)
-                    {
-                        <div class="d-inline-block">
+                    <div class="d-inline-block">
+                        @if (accountService.MainAccount != null)
+                        {
                             <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                 <i class="bi bi-chat"></i>
                             </a>
@@ -187,11 +187,18 @@
                                     <i class="bi bi-trash3"></i>
                                 </a>
                             }
-                        </div>
-                    }
-                    @*<a role="button" @onclick="@(() => { })" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                        <i class="bi bi-clipboard"></i>
-                    </a>*@
+                        }
+                        @if ((accountService.MainAccount == null || Tree.Note.PublicKey != accountService.MainAccount.Id)
+                            && !string.IsNullOrEmpty(Tree.Details.Lud16Id))
+                        {
+                            <a role="button" @onclick="@Pay" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <i class="bi bi-lightning-charge"></i>
+                            </a>
+                        }
+                        @*<a role="button" @onclick="@(() => { })" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                            <i class="bi bi-clipboard"></i>
+                        </a>*@
+                    </div>
                 </div>
             }
         </div>
@@ -239,6 +246,9 @@
     [Parameter]
     public Action<NoteTree> OnReply { get; set; }
 
+    [Parameter]
+    public Action<string> OnPay { get; set; }
+
     protected override void OnInitialized()
     {
         accountService.AccountDetailsChanged += AccountDetailsChanged;
@@ -278,6 +288,11 @@
         }
         await feedService.SendReaction("+", Tree.Note);
         likeClicked = true;
+    }
+
+    private void Pay()
+    {
+        OnPay?.Invoke(Tree.Details.Lud16Id);
     }
 
     private void Reply()
