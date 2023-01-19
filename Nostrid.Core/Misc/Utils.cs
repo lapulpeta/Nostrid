@@ -7,11 +7,12 @@ using System.Reflection;
 
 namespace Nostrid.Misc
 {
-    internal partial class Utils
+    public partial class Utils
     {
         private static readonly Regex hashtagRegex = HashtagRegex();
         private static readonly Regex accountMentionPubKeyRegex = AccountMentionPubKeyRegex();
         private static readonly Regex accountMentionBech32Regex = AccountMentionBech32Regex();
+        private static readonly Regex noteMentionBech32Regex = NoteMentionBech32Regex();
         private static readonly Regex onlyHashtagRegex = OnlyHashtagRegex();
 
         public static string ToSvgIdenticon(string hex, int size = 48)
@@ -49,6 +50,11 @@ namespace Nostrid.Misc
         public static IEnumerable<string> GetAccountNpubMentions(string content)
         {
             return accountMentionBech32Regex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
+        }
+
+        public static IEnumerable<string> GetNoteMentions(string content)
+        {
+            return noteMentionBech32Regex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
         }
 
         public static bool IsValidNostrId(string id)
@@ -105,6 +111,9 @@ namespace Nostrid.Misc
 
         [GeneratedRegex("@(npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{6,})", RegexOptions.Compiled)]
         private static partial Regex AccountMentionBech32Regex();
+
+        [GeneratedRegex("(note1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{6,})", RegexOptions.Compiled)]
+        private static partial Regex NoteMentionBech32Regex();
 
         [GeneratedRegex("^#([a-zA-Z0-9_]+)$", RegexOptions.Compiled)]
         private static partial Regex OnlyHashtagRegex();

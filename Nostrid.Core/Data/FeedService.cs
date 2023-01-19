@@ -381,6 +381,8 @@ public class FeedService
         var unescapedContent = content.Trim();
 
         var ps = new List<string>();
+        var prs = new List<string>();
+        var es = new List<string>();
         var ers = new List<(string, string)>();
 
         // Process account mentions
@@ -389,7 +391,7 @@ public class FeedService
             var index = ps.IndexOf(pubKey);
             if (index == -1)
             {
-                index = ps.Count;
+                index = ps.Count; // Start at 0 index
                 ps.Add(pubKey);
             }
             unescapedContent = unescapedContent.Replace($"@{pubKey}", $"#[{index}]");
@@ -402,10 +404,25 @@ public class FeedService
                 var index = ps.IndexOf(pubKey);
                 if (index == -1)
                 {
-                    index = ps.Count;
+                    index = ps.Count; // Continues after previous p's
                     ps.Add(pubKey);
                 }
                 unescapedContent = unescapedContent.Replace($"@{bech32}", $"#[{index}]");
+            }
+        }
+        foreach (var bech32 in Utils.GetNoteMentions(unescapedContent))
+        {
+            var (prefix, pubKey) = ByteTools.DecodeBech32(bech32);
+            if (prefix == "note" && Utils.IsValidNostrId(pubKey))
+            {
+                var index = es.IndexOf(pubKey);
+                if (index == -1)
+                {
+                    index = es.Count;
+                    es.Add(pubKey);
+                }
+                index += ps.Count; // Continues after both p's
+                unescapedContent = unescapedContent.Replace($"{bech32}", $"#[{index}]");
             }
         }
 
@@ -448,7 +465,7 @@ public class FeedService
                     rootId = ev.NoteMetadata.ReplyToId;
                 }
             }
-            if (string.IsNullOrEmpty(rootId))
+            if (string.IsNullOrEmpty(rootId) || replyToId == rootId)
             {
                 // A direct reply to the root of a thread should have a single marked "e" tag of type "root".
                 ers.Add((replyToId, "root"));
@@ -462,28 +479,40 @@ public class FeedService
             // When replying to a text event E the reply event's "p" tags should contain all of E's "p" tags as well as the "pubkey" of the event being replied to.
             foreach (var mention in replyTo.NoteMetadata.AccountMentions.Values.Union(new[] { replyTo.PublicKey }))
             {
-                if (!ps.Contains(mention))
-                    ps.Add(mention);
+                if (!ps.Contains(mention) && !prs.Contains(mention))
+                    prs.Add(mention);
             }
         }
 
-        // First p's
+        // First p's (mentions) (indexed)
         foreach (var p in ps)
         {
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { p }.ToList() });
         }
 
-        // Then e's
+        // Then e's (mentions) (indexed)
         var relay = relayService.GetRecommendedRelayUri();
+        foreach (var e in es)
+        {
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { e, relay, "mention" }.ToList() });
+        }
+
+        // Then e's (reply/root) (non-indexed)
         foreach (var er in ers)
         {
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { er.Item1, relay, er.Item2 }.ToList() });
         }
 
-        // Then t's
+        // Then t's (non-indexed)
         foreach (var t in Utils.GetHashTags(content))
         {
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "t", Data = new[] { t }.ToList() });
+        }
+
+        // Then p's (reply/root) (non-indexed)
+        foreach (var p in prs)
+        {
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { p }.ToList() });
         }
 
         return nostrEvent;
