@@ -20,6 +20,10 @@ public class AccountDetails
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string Nip05Id { get; set; }
 
+    [JsonPropertyName("lud16")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string Lud16Id { get; set; }
+
     [JsonIgnore]
     public Nip05Data? Nip05Data { get; set; }
 }

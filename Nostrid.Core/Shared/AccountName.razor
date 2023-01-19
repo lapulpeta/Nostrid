@@ -11,6 +11,10 @@
 @using Nostrid.Model;
 
 <span class="text-break">
+    @if (Details?.Lud16Id.IsNotNullOrEmpty() ?? false)
+    {
+        <i class="bi bi-lightning-charge-fill text-warning"></i>
+    }
     @if (Details?.Nip05Data != null)
     {
         if (Details.Nip05Data.Username != "_")

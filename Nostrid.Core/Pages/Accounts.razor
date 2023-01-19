@@ -92,6 +92,10 @@
                                     <InputText class="form-control" id="nip05-control" @bind-Value="accountDetails.Nip05Id" />
                                     <label for="nip05-control">NIP-05 ID:</label>
                                 </div>
+                                <div class="form-floating mt-3">
+                                    <InputText class="form-control" id="lud16-control" @bind-Value="accountDetails.Lud16Id" />
+                                    <label for="lud16-control">LUD-16 ID:</label>
+                                </div>
                                 <button type="submit" class="btn btn-outline-primary w-100 mt-3">
                                     Save
                                 </button>
@@ -236,6 +240,8 @@
         accountDetails.Name = account.Details?.Name;
         accountDetails.About = account.Details?.About;
         accountDetails.PictureUrl = account.Details?.PictureUrl;
+        accountDetails.Nip05Id = account.Details?.Nip05Id;
+        accountDetails.Lud16Id = account.Details?.Lud16Id;
     }
 
     // TODO: move save account details to profile
