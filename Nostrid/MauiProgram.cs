@@ -1,5 +1,6 @@
 ﻿using Ganss.Xss;
 using Nostrid.Data;
+using Nostrid.Interfaces;
 using Nostrid.Misc;
 using Plugin.LocalNotification;
 
@@ -37,6 +38,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<NotificationService>();
         builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
         builder.Services.AddSingleton<ConfigService>();
+        builder.Services.AddSingleton<IClipboardService, ClipboardService>();
 
 		var app = builder.Build();
 

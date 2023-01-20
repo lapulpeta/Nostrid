@@ -308,7 +308,7 @@
         accountDetailsToSave.PictureUrl = accountDetails.PictureUrl;
 
         SelectAccount(account);
-        await accountService.SaveAccountDetails(accountDetails);
+        await accountService.SaveAccountDetails(accountDetailsToSave);
         accountEditing = null;
         LoadAccounts();
     }

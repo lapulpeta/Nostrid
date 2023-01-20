@@ -16,7 +16,7 @@
 <span class="text-break">
     @if (!OnlyText && (Details?.Lud16Id.IsNotNullOrEmpty() ?? false))
     {
-        <i class="bi bi-lightning-charge-fill text-warning"></i>
+        <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
     }
     @if (Details?.Nip05Data != null)
     {
@@ -27,10 +27,9 @@
         <span class="d-inline-block">
             @(Details.Nip05Data.Username != "_" ? "@" : "")@Details.Nip05Data.Domain
         </span>
-
         @if (!OnlyText)
         {
-            <i class="text-success bi bi-patch-check-fill"></i>
+            <i class="text-success bi bi-patch-check-fill ms-1"></i>
         }
     }
     else

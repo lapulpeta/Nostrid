@@ -1,9 +1,11 @@
 ﻿@using Nostrid.Components;
 @using Nostrid.Data;
+@using Nostrid.Interfaces;
 @using Nostrid.Model;
 @using QRCoder;
 
 @inject Lud06Service lud06Service
+@inject IClipboardService clipboardService
 
 <BootstrapModal @ref="payModal">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
@@ -11,7 +13,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h1 class="modal-title fs-5" id="staticBackdropLabel">
-                        Pay <AccountName Details="accountDetails" OnlyText="true"></AccountName>
+                        Pay to <AccountName Details="accountDetails" OnlyText="true"></AccountName>
                     </h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -41,8 +43,13 @@
                         {
                             <img style="max-width: 70%; max-height: 70vh;" src="@invoiceQR" alt="qr" />
                             <div>
-                                <a href="@($"lightning:{invoice}")" class="btn btn-outline-secondary my-2 me-4" style="width: 130px;">Open in wallet</a>
-                                @*<button type="button" class="btn btn-outline-secondary my-2" style="width: 130px;" @onclick="@CopyInvoice">Copy</button>*@
+                                <a href="@($"lightning:{invoice}")" class="btn btn-outline-secondary my-2 me-4" style="width: 130px;">
+                                    Open in wallet
+                                </a>
+                                <button type="button" class="btn btn-outline-secondary my-2" style="width: 130px;" @onclick="@CopyInvoice">
+                                    <i class="bi bi-files"></i>
+                                    Copy
+                                </button>
                             </div>
                         }
                         else
@@ -146,8 +153,11 @@
         });
     }
 
-    private void CopyInvoice()
+    private async Task CopyInvoice()
     {
-        
+        if (invoice != null)
+        {
+            await clipboardService.CopyAsync(invoice);
+        }
     }
 }

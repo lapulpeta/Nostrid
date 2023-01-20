@@ -3,6 +3,7 @@
 @using Markdig;
 @using Nostrid.Data.Relays;
 @using Nostrid.Data;
+@using Nostrid.Interfaces;
 @using Nostrid.Misc;
 @using Nostrid.Model;
 @using Ganss.Xss;
@@ -16,6 +17,7 @@
 @inject HtmlSanitizer htmlSanitizer
 @inject NoteProcessor noteProcessor
 @inject ConfigService configService
+@inject IClipboardService clipboardService
 
 <div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 @(!ReplyingTo ? "bg-tertiary-hover border-top" : "" ) @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
      @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem; font-size: .95rem;">
@@ -188,16 +190,15 @@
                                 </a>
                             }
                         }
-                        @if ((accountService.MainAccount == null || Tree.Note.PublicKey != accountService.MainAccount.Id)
-                             && (Tree.Details?.Lud16Id ?? Tree.Details?.Lud06Url).IsNotNullOrEmpty())
+                        @if ((Tree.Details?.Lud16Id ?? Tree.Details?.Lud06Url).IsNotNullOrEmpty())
                         {
                             <a role="button" @onclick="@Pay" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                 <i class="bi bi-lightning-charge"></i>
                             </a>
                         }
-                        @*<a role="button" @onclick="@(() => { })" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                            <i class="bi bi-clipboard"></i>
-                        </a>*@
+                        <a role="button" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id, false)))" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                            <i class="bi bi-files"></i>
+                        </a>
                     </div>
                 </div>
             }
