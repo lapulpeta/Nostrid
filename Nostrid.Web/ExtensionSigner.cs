@@ -24,10 +24,17 @@ internal class ExtensionSigner : ISigner
 		if (init)
 			return _pubKey;
 
-		var module = await _moduleTask.Value;
-		_pubKey = await module.InvokeAsync<string>("getPublicKey");
-		init = true;
-		return _pubKey;
+		try
+		{
+			var module = await _moduleTask.Value;
+			_pubKey = await module.InvokeAsync<string>("getPublicKey");
+			init = true;
+			return _pubKey;
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	public async Task<bool> Sign(NostrEvent ev)
