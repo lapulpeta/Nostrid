@@ -7,9 +7,27 @@ namespace Nostrid.Misc
 
         // NIP-19 https://github.com/nostr-protocol/nips/blob/master/19.md
 
+        public static string StringToBech32(string str, string prefix)
+        {
+            var hrp = Encoding.ASCII.GetBytes(prefix);
+            var bytes = Encoding.UTF8.GetBytes(str);
+            return Bech32.Encode(hrp, bytes);
+        }
+
+        public static string? Bech32ToString(string bech32, string prefix)
+        {
+            if (!bech32.StartsWith(prefix))
+            {
+                return null;
+            }
+            var hrp = Encoding.ASCII.GetBytes(prefix);
+            var bytes = Bech32.Decode(hrp, bech32);
+            return Encoding.UTF8.GetString(bytes).ToLower();
+        }
+
         public static string HexToBech32(string hex, string prefix)
         {
-            var hrp = ASCIIEncoding.ASCII.GetBytes(prefix);
+            var hrp = Encoding.ASCII.GetBytes(prefix);
             var bytes = Convert.FromHexString(hex);
             return Bech32.Encode(hrp, bytes);
         }
@@ -20,7 +38,7 @@ namespace Nostrid.Misc
             {
                 return null;
             }
-            var hrp = ASCIIEncoding.ASCII.GetBytes(prefix);
+            var hrp = Encoding.ASCII.GetBytes(prefix);
             var bytes = Bech32.Decode(hrp, bech32);
             return Convert.ToHexString(bytes).ToLower();
         }
@@ -92,7 +110,7 @@ namespace Nostrid.Misc
         {
             if (!skipVerify)
             {
-                var (prefix, _) = ByteTools.DecodeBech32(bech32);
+                var (prefix, _) = DecodeBech32(bech32);
                 if (prefix == null) return string.Empty;
             }
             return $"{bech32[..7]}...{bech32[^7..]}";

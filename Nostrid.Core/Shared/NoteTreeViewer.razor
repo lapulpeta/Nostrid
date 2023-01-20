@@ -1,4 +1,5 @@
-﻿@using Nostrid.Model;
+﻿@using Nostrid.Components;
+@using Nostrid.Model;
 
 @{
     var i = 0;
@@ -16,8 +17,10 @@
                 MainEventId="@MainEventId"
                 ReplyingTo="@ReplyingTo"
                 TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
-                OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" OnReply="OnReply" />
+                OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" OnReply="OnReply" OnPay="OnPay" />
     }
+
+    <PayPopup @ref="payPopup" />
 }
 
 @code {
@@ -42,21 +45,22 @@
     [Parameter]
     public Action<NoteTree> OnReply { get; set; }
 
-    private List<NoteViewer> NoteViewerRefs = new List<NoteViewer>();
+    private List<NoteViewer> noteViewerRefs = new List<NoteViewer>();
+    private PayPopup payPopup;
 
     private void AddNoteViewerComponent(NoteViewer noteViewer)
     {
-        NoteViewerRefs.Add(noteViewer);
+        noteViewerRefs.Add(noteViewer);
     }
 
     private void RemoveNoteViewerComponent(NoteViewer noteViewer)
     {
-        NoteViewerRefs.Remove(noteViewer);
+        noteViewerRefs.Remove(noteViewer);
     }
 
     public IEnumerable<NoteViewer> GetNoteViewers()
     {
-        return NoteViewerRefs.SelectMany(n => n.GetNoteViewers());
+        return noteViewerRefs.SelectMany(n => n.GetNoteViewers());
     }
 
     public async Task<NoteViewer> GetFirstVisibleAsync()
@@ -66,5 +70,10 @@
             IsVisible = await n.IsVisibleAsync(),
             NoteViewer = n
         }))).FirstOrDefault(n => n.IsVisible)?.NoteViewer;
+    }
+
+    private void OnPay(AccountDetails accountDetails)
+    {
+        payPopup?.Show(accountDetails);
     }
 }

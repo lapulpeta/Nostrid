@@ -78,7 +78,7 @@ namespace Nostrid.Misc
             }
             bech = bech.ToLowerInvariant();
             var pos = bech.LastIndexOf("1", StringComparison.InvariantCultureIgnoreCase);
-            if (pos < 1 || pos + 7 > bech.Length || bech.Length > 90)
+            if (pos < 1 || pos + 7 > bech.Length)
             {
                 throw new FormatException("bech missing separator, separator misplaced or too long input");
             }

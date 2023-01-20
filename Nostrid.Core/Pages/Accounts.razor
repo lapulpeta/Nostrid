@@ -9,6 +9,8 @@
 @inject ConfigService configService
 @inject AccountService accountService
 @inject EventDatabase eventDatabase
+@inject Nip05Service nip05Service
+@inject Lud06Service lud06Service
 @implements IDisposable
 
 <h2>Accounts</h2>
@@ -92,9 +94,14 @@
                                     <InputText class="form-control" id="nip05-control" @bind-Value="accountDetails.Nip05Id" />
                                     <label for="nip05-control">NIP-05 ID:</label>
                                 </div>
+                                <div class="form-floating mt-3">
+                                    <InputText class="form-control" id="lud16-control" @bind-Value="accountDetails.Ln" />
+                                    <label for="lud16-control">LUD-16 or LNURL:</label>
+                                </div>
                                 <button type="submit" class="btn btn-outline-primary w-100 mt-3">
                                     Save
                                 </button>
+                                <div class="text-danger">@saveError</div>
                             </EditForm>
                         }
                     </div>
@@ -164,13 +171,28 @@
 
 @code {
 
+    public class EditAccountDetails
+    {
+        public string? Name { get; set; }
+
+        public string? About { get; set; }
+
+        public string? PictureUrl { get; set; }
+
+        public string? Nip05Id { get; set; }
+
+        public string? Ln { get; set; }
+    }
+
     private Dictionary<string, Account> accounts;
 
-    private string accountEditing;
-    private AccountDetails accountDetails = new();
+    private string? accountEditing;
+    private EditAccountDetails accountDetails = new();
 
     private bool accountCreating;
     public TextInput privateKeyModel = new();
+
+    private string? saveError;
 
     private string PublicKey 
     { 
@@ -236,13 +258,57 @@
         accountDetails.Name = account.Details?.Name;
         accountDetails.About = account.Details?.About;
         accountDetails.PictureUrl = account.Details?.PictureUrl;
+        accountDetails.Nip05Id = account.Details?.Nip05Id;
+        accountDetails.Ln = account.Details?.Lud16Id ?? account.Details?.Lud06Url;
+        saveError = null;
     }
 
     // TODO: move save account details to profile
     private async Task SaveAccountDetails(Account account)
     {
+        AccountDetails accountDetailsToSave = new();
+
+        accountDetails.Nip05Id = accountDetails.Nip05Id?.Trim();
+        if (accountDetails.Nip05Id.IsNullOrEmpty())
+        {
+            accountDetails.Nip05Id = null;
+        }
+        else if (!nip05Service.IsValidNip05(accountDetails.Nip05Id))
+        {
+            saveError = "Nip05 ID is not valid";
+            return;
+        }
+        accountDetailsToSave.Nip05Id = accountDetails.Nip05Id;
+
+        accountDetails.Ln = accountDetails.Ln?.Trim();
+        if (accountDetails.Ln.IsNullOrEmpty())
+        {
+            accountDetailsToSave.Lud16Id = null;
+            accountDetailsToSave.Lud06Url = null;
+        }
+        else if (lud06Service.IsValidLud16(accountDetails.Ln))
+        {
+            accountDetailsToSave.Lud16Id = accountDetails.Ln;
+            accountDetailsToSave.Lud06Url = null;
+        }
+        else if (lud06Service.TryLud06UrlToUrl(accountDetails.Ln, out var _))
+        {
+            accountDetailsToSave.Lud06Url = accountDetails.Ln;
+            accountDetailsToSave.Lud16Id = null;
+        }
+        else
+        {
+            saveError = "LUD-16 or LNURL invalid";
+            return;
+        }
+        saveError = null;
+
+        accountDetailsToSave.Name = accountDetails.Name;
+        accountDetailsToSave.About = accountDetails.About;
+        accountDetailsToSave.PictureUrl = accountDetails.PictureUrl;
+
         SelectAccount(account);
-        await accountService.SaveAccountDetails(accountDetails);
+        await accountService.SaveAccountDetails(accountDetailsToSave);
         accountEditing = null;
         LoadAccounts();
     }

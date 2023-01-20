@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Nostrid;
 using Nostrid.Data;
+using Nostrid.Interfaces;
 using Nostrid.Web;
+using Nostrid.Web.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<Main>("#app");
@@ -19,10 +21,12 @@ builder.Services.AddSingleton<AccountService>();
 builder.Services.AddSingleton<HtmlSanitizer>();
 builder.Services.AddSingleton<NoteProcessor>();
 builder.Services.AddSingleton<Nip05Service>();
+builder.Services.AddSingleton<Lud06Service>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
 builder.Services.AddSingleton<ConfigService>();
 builder.Services.AddSingleton<DatabaseService>();
+builder.Services.AddSingleton<IClipboardService, ClipboardService>();
 
 var host = builder.Build();
 
