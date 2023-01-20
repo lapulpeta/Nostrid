@@ -33,7 +33,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<HtmlSanitizer>();
         builder.Services.AddSingleton<NoteProcessor>();
         builder.Services.AddSingleton<Nip05Service>();
-        builder.Services.AddSingleton<Lud16Service>();
+        builder.Services.AddSingleton<Lud06Service>();
         builder.Services.AddSingleton<NotificationService>();
         builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
         builder.Services.AddSingleton<ConfigService>();

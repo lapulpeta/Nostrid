@@ -7,13 +7,23 @@ namespace Nostrid.Data
     // NIP-05: https://github.com/nostr-protocol/nips/blob/master/05.md
     public partial class Nip05Service
     {
-        private readonly Regex nip05Regex = Nip05Regex();
+        private readonly Regex _nip05Regex = Nip05Regex();
+
+        public bool IsValidNip05(string nip05id)
+        {
+            if (!string.IsNullOrEmpty(nip05id))
+            {
+                var match = _nip05Regex.Match(nip05id);
+                return match.Success;
+            }
+            return false;
+        }
 
         public async Task<(string Domain, string Username, string Pubkey)?> IdToPubkey(string nip05id)
         {
             if (!string.IsNullOrEmpty(nip05id))
             {
-                var match = nip05Regex.Match(nip05id);
+                var match = _nip05Regex.Match(nip05id);
                 if (match.Success)
                 {
                     var domain = match.Groups["domain"].Value;

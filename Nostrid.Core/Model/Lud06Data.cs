@@ -1,6 +1,6 @@
 namespace Nostrid.Model;
 
-public class Lud16Data
+public class Lud06Data
 {
     public string Callback { get; set; }
 

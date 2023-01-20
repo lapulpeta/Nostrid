@@ -3,7 +3,7 @@
 @using Nostrid.Model;
 @using QRCoder;
 
-@inject Lud16Service lud16Service
+@inject Lud06Service lud06Service
 
 <BootstrapModal @ref="payModal">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
@@ -65,21 +65,21 @@
 
     private BootstrapModal? payModal;
     private State state = State.Loading;
-    private Lud16Data? lud16Data;
+    private Lud06Data? lud06Data;
     private long amount;
     private long minAmount;
     private long maxAmount;
     private long stepAmount = 1;
     private string? imageSrc;
 
-    public void Show(string lud16Id)
+    public void Show(string ln)
     {
         state = State.Loading;
         InvokeAsync(() => StateHasChanged());
 
         payModal?.Show();
 
-        lud16Service.DecodeLud16(lud16Id).ContinueWith(t =>
+        lud06Service.Query(ln).ContinueWith(t =>
         {
             if (!t.IsCompletedSuccessfully
                 || t.Result == null)
@@ -89,7 +89,7 @@
             else
             {
                 state = State.RequestAmount;
-                lud16Data = t.Result;
+                lud06Data = t.Result;
                 minAmount = (long)t.Result.MinSendableMsat / MSAT_UNIT;
                 maxAmount = (long)t.Result.MaxSendableMsat / MSAT_UNIT;
                 amount = minAmount;
@@ -100,7 +100,7 @@
 
     private void Pay()
     {
-        if (lud16Data == null
+        if (lud06Data == null
             || amount > maxAmount
             || amount < minAmount)
         {
@@ -109,7 +109,7 @@
 
         state = State.Loading;
 
-        lud16Service.GetPayReq(lud16Data, amount * MSAT_UNIT).ContinueWith(t =>
+        lud06Service.GetPayReq(lud06Data, amount * MSAT_UNIT).ContinueWith(t =>
         {
             if (!t.IsCompletedSuccessfully
                 || t.Result == null)

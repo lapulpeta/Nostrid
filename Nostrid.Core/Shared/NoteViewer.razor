@@ -292,7 +292,7 @@
 
     private void Pay()
     {
-        OnPay?.Invoke(Tree.Details.Lud16Id);
+        OnPay?.Invoke(Tree.Details.Lud16Id ?? Tree.Details.Lud06Url ?? string.Empty);
     }
 
     private void Reply()
