@@ -7,44 +7,50 @@
 
 <BootstrapModal @ref="payModal">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-sm">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Pay</h1>
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">
+                        Pay <AccountName Details="accountDetails" OnlyText="true"></AccountName>
+                    </h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body d-flex flex-column align-items-center justify-content-center p-0" style="height: var(--bs-modal-width);">
-                    @if (state == State.Loading)
-                    {
-                        <div class="spinner-border" role="status">
-                          <span class="visually-hidden">Loading...</span>
-                        </div>
-                    }
-                    else if (state == State.RequestAmount)
-                    {
-                        <div class="p-3 text-center">
-                            <span class="fs-5">Amount</span>
-                            <div class="d-flex flex-row align-items-end position-relative border-bottom border-secondary border-opacity-25">
-                                <input type="number" class="form-control fw-bold glow-0 bg-body fs-5 text-center border-0" style="padding: 0px 35px 0 50px;"
-                                       value="@amount" @oninput="@(args => { long value; amount = long.TryParse(args.Value?.ToString(), out value) ? value : minAmount; })">
-                                <span class="position-absolute" style="bottom: 0; right: 0">sats</span>
+                <div class="modal-body">
+                    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 200px;">
+                        @if (state == State.Loading)
+                        {
+                            <div class="spinner-border" role="status">
+                              <span class="visually-hidden">Loading...</span>
                             </div>
-                            <input type="range" class="form-range my-4" min="@minAmount" max="@maxAmount" step="@stepAmount"
-                                   @bind-value="@amount" @bind-value:event="oninput" />
-                            <button type="button" class="btn btn-primary" @onclick="@Pay">
-                                <i class="bi bi-lightning-charge"></i> Pay
-                            </button>
-                        </div>
-                    }
-                    else if (state == State.ShowQR)
-                    {
-                        <img style="max-width: 100%; max-height: 80vh; border-radius: var(--bs-modal-border-radius);" src="@imageSrc" alt="qr" />
-                    }
-                    else
-                    {
-                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
-                        <div class="mb-2">Something went wrong.</div>
-                    }
+                        }
+                        else if (state == State.RequestAmount)
+                        {
+                            <div class="text-center">
+                                <span class="fs-5">Amount</span>
+                                <div class="d-flex flex-row align-items-end position-relative border-bottom border-secondary border-opacity-25">
+                                    <input type="number" min="@Min" max="@Max" class="form-control fw-bold glow-0 bg-body fs-5 text-center border-0" style="padding: 0px 35px 0 50px;"
+                                           value="@amount" @oninput="@(args => { long value; amount = long.TryParse(args.Value?.ToString(), out value) ? value : Min; })">
+                                    <span class="position-absolute" style="bottom: 0; right: 0">sats</span>
+                                </div>
+                                <button type="button" class="btn btn-primary my-4" @onclick="@Pay">
+                                    <i class="bi bi-lightning-charge"></i> Pay
+                                </button>
+                            </div>
+                        }
+                        else if (state == State.ShowInvoice)
+                        {
+                            <img style="max-width: 70%; max-height: 70vh;" src="@invoiceQR" alt="qr" />
+                            <div>
+                                <a href="@($"lightning:{invoice}")" class="btn btn-outline-secondary my-2 me-4" style="width: 130px;">Open in wallet</a>
+                                @*<button type="button" class="btn btn-outline-secondary my-2" style="width: 130px;" @onclick="@CopyInvoice">Copy</button>*@
+                            </div>
+                        }
+                        else
+                        {
+                            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                            <div class="mb-2">Something went wrong.</div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -57,25 +63,39 @@
     {
         Loading,
         RequestAmount,
-        ShowQR,
+        ShowInvoice,
         Error
     }
 
     private const int MSAT_UNIT = 1000;
 
     private BootstrapModal? payModal;
+    private AccountDetails? accountDetails;
     private State state = State.Loading;
     private Lud06Data? lud06Data;
     private long amount;
-    private long minAmount;
-    private long maxAmount;
-    private long stepAmount = 1;
-    private string? imageSrc;
+    private string? invoice;
+    private string? invoiceQR;
 
-    public void Show(string ln)
+    private long Min => lud06Data?.MinSendableMsat / MSAT_UNIT ?? 1;
+    private long Max => lud06Data?.MaxSendableMsat / MSAT_UNIT ?? long.MaxValue;
+
+    public void Show(AccountDetails? accountDetails)
     {
-        state = State.Loading;
-        InvokeAsync(() => StateHasChanged());
+        this.accountDetails = accountDetails;
+        var ln = accountDetails?.Lud16Id ?? accountDetails?.Lud06Url;
+
+        if (ln.IsNullOrEmpty())
+        {
+            state = State.Error;
+            InvokeAsync(() => StateHasChanged());
+            return;
+        }
+        else
+        {
+            state = State.Loading;
+            InvokeAsync(() => StateHasChanged());
+        }
 
         payModal?.Show();
 
@@ -90,9 +110,7 @@
             {
                 state = State.RequestAmount;
                 lud06Data = t.Result;
-                minAmount = (long)t.Result.MinSendableMsat / MSAT_UNIT;
-                maxAmount = (long)t.Result.MaxSendableMsat / MSAT_UNIT;
-                amount = minAmount;
+                amount = Min;
             }
             InvokeAsync(() => StateHasChanged());
         });
@@ -101,8 +119,8 @@
     private void Pay()
     {
         if (lud06Data == null
-            || amount > maxAmount
-            || amount < minAmount)
+            || amount > Max
+            || amount < Min)
         {
             return;
         }
@@ -118,12 +136,18 @@
             }
             else
             {
-                state = State.ShowQR;
+                state = State.ShowInvoice;
+                invoice = t.Result;
+
                 var qrData = QRCodeGenerator.GenerateQrCode(t.Result, QRCodeGenerator.ECCLevel.Q);
-                var qr = new BitmapByteQRCode(qrData).GetGraphic(10);
-                imageSrc = $"data:image/png;base64,{Convert.ToBase64String(qr)}";
+                invoiceQR = $"data:image/png;base64,{Convert.ToBase64String(new BitmapByteQRCode(qrData).GetGraphic(10, "000000", "ffffff"))}";
             }
             InvokeAsync(() => StateHasChanged());
         });
+    }
+
+    private void CopyInvoice()
+    {
+        
     }
 }

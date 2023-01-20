@@ -72,8 +72,8 @@
         }))).FirstOrDefault(n => n.IsVisible)?.NoteViewer;
     }
 
-    private void OnPay(string ln)
+    private void OnPay(AccountDetails accountDetails)
     {
-        payPopup?.Show(ln);
+        payPopup?.Show(accountDetails);
     }
 }

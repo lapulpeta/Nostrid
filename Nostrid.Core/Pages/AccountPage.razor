@@ -40,10 +40,10 @@
                 </button>
             </div>
         }
-        @if ((!IsMainAccountLoaded || !IsMainAccount) && (account.Details.Lud16Id ?? account.Details.Lud06Url).IsNotNullOrEmpty())
+        @if ((!IsMainAccountLoaded || !IsMainAccount) && (account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
         {
             <div class="btn-group mb-3" role="group">
-                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payPopup.Show(account.Details.Lud16Id ?? account.Details.Lud06Url ?? string.Empty))">
+                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payPopup.Show(account.Details))">
                     <i class="bi bi-lightning-charge"></i> Pay
                 </button>
             </div>
