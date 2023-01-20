@@ -35,7 +35,7 @@
         @if (IsMainAccountLoaded && !IsMainAccount)
         {
             <div class="btn-group  mb-3" role="group" aria-label="Second group">
-                <button type="button" class="btn @(!accountService.IsFollowing(PubKey) ? "btn-primary" : "btn-danger")" @onclick="@(() => FollowUnfollow(PubKey))">
+                <button type="button" class="btn @(!accountService.IsFollowing(PubKey) ? "btn-primary" : "btn-danger")" @onclick="@(async () => await FollowUnfollow(PubKey))">
                     @(!accountService.IsFollowing(PubKey) ? "Follow" : "Unfollow")
                 </button>
             </div>
@@ -196,9 +196,9 @@
         relayService.DeleteFilters(oldFilters);
     }
 
-    private void FollowUnfollow(string pubKey)
+    private async Task FollowUnfollow(string pubKey)
     {
-        accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
+        await accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
     }
 
     #region Dispose

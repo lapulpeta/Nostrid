@@ -87,15 +87,17 @@
             textInput.Text = string.Empty;
             sending = true;
             feedService
-                .SendNoteWithPow(content, ReplyTo?.Note, accountService.MainAccount, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
+                .SendNoteWithPow(content, ReplyTo?.Note, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
+                .ContinueWith((_) =>
+                {
+                    OnSend?.Invoke();
+                }, TaskContinuationOptions.OnlyOnRanToCompletion)
                 .ContinueWith((_) =>
                 {
                     powCancelSource = null;
                     sending = false;
-                    OnSend?.Invoke();
                     InvokeAsync(() => StateHasChanged());
-                }, TaskContinuationOptions.OnlyOnRanToCompletion)
-                .ContinueWith((_) => InvokeAsync(() => StateHasChanged()));
+                });
         }
     }
 

@@ -317,9 +317,9 @@ public class FeedService
         return rootTrees;
     }
 
-    public async Task SendNoteWithPow(string content, Event replyTo, Account sender, int diff, CancellationToken cancellationToken)
+    public async Task<bool> SendNoteWithPow(string content, Event replyTo, int diff, CancellationToken cancellationToken)
     {
-        var unsignedNote = AssembleNote(content, replyTo, sender);
+        var unsignedNote = AssembleNote(content, replyTo);
 
         if (diff > 0)
         {
@@ -372,11 +372,13 @@ public class FeedService
             unsignedNote.CreatedAt = foundCreated;
         }
 
-        sender.ComputeIdAndSign(unsignedNote);
+        if (!await accountService.MainAccountSigner.Sign(unsignedNote))
+            return false;
         relayService.SendEvent(unsignedNote);
+        return true;
     }
 
-    private NostrEvent AssembleNote(string content, Event replyTo, Account sender)
+    private NostrEvent AssembleNote(string content, Event replyTo)
     {
         var unescapedContent = content.Trim();
 
@@ -430,11 +432,10 @@ public class FeedService
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = 1,
-            PublicKey = sender.Id,
+            PublicKey = accountService.MainAccount.Id,
             Tags = new(),
             Content = unescapedContent,
         };
-
 
         if (replyTo != null)
         {
@@ -518,7 +519,7 @@ public class FeedService
         return nostrEvent;
     }
 
-    public void SendReaction(string reaction, Event reactTo, Account sender)
+    public async Task<bool> SendReaction(string reaction, Event reactTo)
     {
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
         var nostrEvent = new NostrEvent()
@@ -526,16 +527,18 @@ public class FeedService
             Content = reaction,
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = 7,
-            PublicKey = sender.Id,
+            PublicKey = accountService.MainAccount.Id,
             Tags = new(),
         };
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { reactTo.Id }.ToList() });
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { eventDatabase.GetEventPubKey(reactTo.Id) }.ToList() });
-        sender.ComputeIdAndSign(nostrEvent);
+        if (!await accountService.MainAccountSigner.Sign(nostrEvent))
+            return false;
         relayService.SendEvent(nostrEvent);
+        return true;
     }
 
-    public void DeleteNote(Event eventToDelete, Account sender, string reason = null)
+    public async Task<bool> DeleteNote(Event eventToDelete, string reason = null)
     {
         // NIP-09: https://github.com/nostr-protocol/nips/blob/master/09.md
         var nostrEvent = new NostrEvent()
@@ -543,23 +546,26 @@ public class FeedService
             Content = reason ?? string.Empty,
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = 5,
-            PublicKey = sender.Id,
+            PublicKey = accountService.MainAccount.Id,
             Tags = new(),
         };
-        if (eventToDelete.PublicKey != sender.Id)
+        if (eventToDelete.PublicKey != accountService.MainAccount.Id)
         {
             throw new Exception("Can only delete own events");
         }
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { eventToDelete.Id }.ToList() });
 
-        sender.ComputeIdAndSign(nostrEvent);
+        if (!await accountService.MainAccountSigner.Sign(nostrEvent))
+            return false;
         relayService.SendEvent(nostrEvent);
 
         eventToDelete.Deleted = true;
         eventDatabase.SaveEvent(eventToDelete);
+
+        return true;
     }
 
-    public void Repost(Event repost, Account sender)
+    public async Task<bool> Repost(Event repost)
     {
         // NIP-18: https://github.com/nostr-protocol/nips/blob/master/18.md
         var nostrEvent = new NostrEvent()
@@ -567,13 +573,15 @@ public class FeedService
             Content = string.Empty,
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = NostrKind.Repost,
-            PublicKey = sender.Id,
+            PublicKey = accountService.MainAccount.Id,
             Tags = new(),
         };
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { repost.Id, relayService.GetRecommendedRelayUri() }.ToList() });
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { repost.PublicKey }.ToList() });
-        sender.ComputeIdAndSign(nostrEvent);
+        if (!await accountService.MainAccountSigner.Sign(nostrEvent))
+            return false;
         relayService.SendEvent(nostrEvent);
+        return true;
     }
 
     public FeedSource GetFeedSource(long id)
