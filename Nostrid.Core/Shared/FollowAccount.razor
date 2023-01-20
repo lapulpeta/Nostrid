@@ -20,7 +20,7 @@
             </div>
             @if (IsMainAccountLoaded && accountService.MainAccount.Id != Account.Id)
             {
-                <button class="btn btn-sm @(!accountService.IsFollowing(Account.Id) ? "btn-primary" : "btn-danger")" @onclick="@(() => FollowUnfollow(Account.Id))" @onclick:stopPropagation="true">
+                <button class="btn btn-sm @(!accountService.IsFollowing(Account.Id) ? "btn-primary" : "btn-danger")" @onclick="@(async () => await FollowUnfollow(Account.Id))" @onclick:stopPropagation="true">
                     @(!accountService.IsFollowing(Account.Id) ? "Follow" : "Unfollow")
                 </button>
             }
@@ -32,8 +32,8 @@
 @code {
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
 
-    private void FollowUnfollow(string pubKey)
+    private async Task FollowUnfollow(string pubKey)
     {
-        accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
+        await accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
     }
 }

@@ -270,13 +270,13 @@
         });
     }
 
-    private void LikeNote()
+    private async Task LikeNote()
     {
         if (likeSent)
         {
             return;
         }
-        feedService.SendReaction("+", Tree.Note, accountService.MainAccount);
+        await feedService.SendReaction("+", Tree.Note);
         likeClicked = true;
     }
 
@@ -288,9 +288,9 @@
         }
     }
 
-    private void Delete()
+    private async Task Delete()
     {
-        feedService.DeleteNote(Tree.Note, accountService.MainAccount);
+        await feedService.DeleteNote(Tree.Note);
     }
 
     private string NormalizedReaction(string reaction)

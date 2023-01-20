@@ -4,6 +4,7 @@
 @using Nostrid.Misc;
 @using Nostrid.Model;
 @using System.Security.Cryptography;
+@using System.Diagnostics.CodeAnalysis;
 
 @inject ConfigService configService
 @inject AccountService accountService
@@ -72,7 +73,7 @@
                         }
                         else
                         {
-                            <EditForm class="w-100" Model="@accountDetails" OnValidSubmit="@(() => SaveAccountDetails(account))">
+                            <EditForm class="w-100" Model="@accountDetails" OnValidSubmit="@(async () => await SaveAccountDetails(account))">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary />
                                 <div class="form-floating mt-3">
@@ -175,10 +176,7 @@
     { 
         get
         {
-            Account account;
-            return TryCreateAccount(privateKeyModel.Text, out account)
-                ? account.Id
-                : string.Empty;
+            return LocalSigner.TryGetPubKeyFromPrivKey(privateKeyModel.Text, out var _, out var pubKey) ? pubKey : string.Empty;
         }
     }
 
@@ -205,17 +203,31 @@
 
     private void LoadAccounts()
     {
-        var accountIds = eventDatabase.GetAccountIdsWithPk();
+        var accountIds = new HashSet<string>(eventDatabase.GetAccountIdsWithPk());
+        accountService.GetAccountsWithSigners().ForEach(a => accountIds.Add(a));
         accounts = accountIds.Select(accountId => eventDatabase.GetAccount(accountId)).ToDictionary(account => account.Id, account => account);
     }
 
     private void SelectAccount(Account? account)
     {
-        accountService.MainAccount = account;
-
-        var config = configService.MainConfig.Clone();
-        config.MainAccountId = account?.Id;
-        configService.MainConfig = config;
+        if (account == null)
+        {
+            accountService.SetMainAccount(null, null);
+        }
+        else if (accountService.HasSigner(account.Id))
+        {
+            accountService.SetMainAccount(account);
+            var config = configService.MainConfig.Clone();
+            config.MainAccountId = account?.Id;
+            configService.MainConfig = config;
+        }
+        else if (LocalSigner.TryFromPrivKey(account.PrivKey, out var signer))
+        {
+            accountService.SetMainAccount(account, signer);
+            var config = configService.MainConfig.Clone();
+            config.MainAccountId = account?.Id;
+            configService.MainConfig = config;
+        }
     }
 
     private void ToggleEditAccountDetails(Account account)
@@ -227,10 +239,10 @@
     }
 
     // TODO: move save account details to profile
-    private void SaveAccountDetails(Account account)
+    private async Task SaveAccountDetails(Account account)
     {
         SelectAccount(account);
-        accountService.SaveAccountDetails(accountDetails);
+        await accountService.SaveAccountDetails(accountDetails);
         accountEditing = null;
         LoadAccounts();
     }
@@ -245,11 +257,16 @@
         privateKeyModel.Text = ByteTools.PubkeyToNsec(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower());
     }
 
-    private void CreateNewAccount()
+    private async Task CreateNewAccount()
     {
-        Account account;
-        if (TryCreateAccount(privateKeyModel.Text, out account))
+        var privkey = privateKeyModel.Text;
+        if (LocalSigner.TryFromPrivKey(privkey, out var signer))
         {
+            var account = new Model.Account()
+                {
+                    PrivKey = privkey,
+                    Id = await signer.GetPubKey(),
+                };
             eventDatabase.SaveAccount(account);
             ToggleCreateAccount();
             LoadAccounts();
@@ -261,37 +278,13 @@
         }
     }
 
-    private bool TryCreateAccount(string privateKey, out Account? account)
-    {
-        try
-        {
-            if (!string.IsNullOrEmpty(privateKey))
-            {
-                if (Utils.IsValidNostrId(privateKey))
-                {
-                    account = new Model.Account(privateKey);
-                    return true;
-                }
-                else if (ByteTools.TryDecodeBech32(privateKey, out var prefix, out var hex) && prefix == "nsec" && !string.IsNullOrEmpty(hex))
-                {
-                    account = new Model.Account(hex);
-                    return true;
-                }
-            }
-        }
-        catch
-        {
-        }
-        account = null;
-        return false;
-    }
-
     private void RemoveAccount(Account account)
     {
         if (account.Id == accountService.MainAccount?.Id)
         {
             SelectAccount(null);
         }
+        accountService.RemoveSigner(account.Id);
         eventDatabase.DeleteAccount(account);
         LoadAccounts();
     }

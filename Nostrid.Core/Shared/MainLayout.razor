@@ -1,5 +1,6 @@
 ﻿@using Nostrid.Components;
 @using Nostrid.Data;
+@using Nostrid.Model;
 @using Nostrid.Pages;
 
 @inject AccountService accountService
@@ -42,14 +43,23 @@
 
 @code{
 	private ScriptsComponent? scripts;
-	
+
 	protected override void OnInitialized()
 	{
 		base.OnInitialized();
 
 		if (!string.IsNullOrEmpty(configService.MainConfig.MainAccountId))
 		{
-			accountService.MainAccount = accountService.GetAccount(configService.MainConfig.MainAccountId);
+			var account = accountService.GetAccount(configService.MainConfig.MainAccountId);
+
+			if (accountService.HasSigner(account.Id))
+			{
+				accountService.SetMainAccount(account);
+			}
+			else if (LocalSigner.TryFromPrivKey(account.PrivKey, out var signer))
+			{
+				accountService.SetMainAccount(account, signer);
+			}
 		}
 	}
 
