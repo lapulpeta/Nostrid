@@ -259,8 +259,18 @@
 
     private async Task CreateNewAccount()
     {
-        var privkey = privateKeyModel.Text;
-        if (LocalSigner.TryFromPrivKey(privkey, out var signer))
+        string privkey = null;
+
+        if (Utils.IsValidNostrId(privateKeyModel.Text))
+        {
+            privkey = privateKeyModel.Text;
+        }
+        else if (ByteTools.TryDecodeBech32(privateKeyModel.Text, out var prefix, out var hex) && prefix == "nsec" && !string.IsNullOrEmpty(hex))
+        {
+            privkey = hex;
+        }
+
+        if (privkey.IsNotNullOrEmpty() && LocalSigner.TryFromPrivKey(privkey, out var signer))
         {
             var account = new Model.Account()
                 {
