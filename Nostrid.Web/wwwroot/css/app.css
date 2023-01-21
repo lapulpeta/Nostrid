@@ -2,9 +2,9 @@
 @import url('../css/bootstrap-icons-1.10.3/bootstrap-icons.css');
 
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     min-height: 100%;
     height: 100%;
+    font-size: 14px;
 }
 
 #app {
@@ -86,7 +86,7 @@ a, .btn-link {
 }
 
 .fs-7 {
-    font-size: .7rem;
+    font-size: .85rem;
 }
 
 .bg-primary-opacity-10-hover {

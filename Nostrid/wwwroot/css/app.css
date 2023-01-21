@@ -4,6 +4,7 @@
 html, body {
     min-height: 100%;
     height: 100%;
+    font-size: 14px;
 }
 
 #app {
@@ -85,7 +86,7 @@ a, .btn-link {
 }
 
 .fs-7 {
-    font-size: .7rem;
+    font-size: .85rem;
 }
 
 .bg-primary-opacity-10-hover {
