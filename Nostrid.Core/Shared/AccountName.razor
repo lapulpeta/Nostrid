@@ -14,7 +14,7 @@
 @using Nostrid.Model;
 
 <span class="text-break">
-    @if (!OnlyText && (Details?.Lud16Id.IsNotNullOrEmpty() ?? false))
+    @if (!OnlyText && (Details?.Lud16Id ?? Details?.Lud06Url).IsNotNullOrEmpty())
     {
         <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
     }
