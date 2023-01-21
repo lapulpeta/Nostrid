@@ -36,6 +36,17 @@
         Task.Run(async () => await JSModule.InvokeVoidAsync(identifier, args));
     }
 
+    public T? Invoke<T>(string identifier, params object[] args)
+    {
+        if (JSModule == null)
+        {
+            return default(T);
+        }
+        var task = Task.Run(async () => await JSModule.InvokeAsync<T>(identifier, args));
+        task.Wait();
+        return task.Result;
+    }
+
     #region Dispose
     private bool _disposed;
 

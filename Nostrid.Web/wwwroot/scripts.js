@@ -1,9 +1,15 @@
 ﻿export function setTheme(theme) {
     var attribute = "data-bs-theme";
-    if (theme!==null) {
+    if (theme !== null) {
         document.body.setAttribute(attribute, theme);
     }
     return document.body.getAttribute(attribute);
+}
+
+export function getCssVariable(name) {
+    return getComputedStyle(document.body)
+        .getPropertyValue(name)
+        .replace(RegExp("^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$"), "#$1$1$2$2$3$3")
 }
 
 export function hideOffcanvasMenu() {
@@ -27,8 +33,4 @@ export function hideModal(element) {
     var modal = bootstrap.Modal.getOrCreateInstance(element.firstChild);
     if (!modal) return;
     modal.hide();
-}
-
-export function copyToClipboard(text) {
-    navigator.clipboard.writeText(text);
 }

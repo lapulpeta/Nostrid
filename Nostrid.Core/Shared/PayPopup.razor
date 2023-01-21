@@ -64,7 +64,10 @@
     </div>
 </BootstrapModal>
 
+<ScriptsComponent @ref="scriptsComponent" />
+
 @code {
+    private ScriptsComponent? scriptsComponent;
 
     private enum State
     {
@@ -146,8 +149,11 @@
                 state = State.ShowInvoice;
                 invoice = t.Result;
 
+                var bgColor = scriptsComponent?.Invoke<string>("getCssVariable", "--bs-body-bg");
+                var color = scriptsComponent?.Invoke<string>("getCssVariable", "--bs-emphasis-color");
+                
                 var qrData = QRCodeGenerator.GenerateQrCode(t.Result, QRCodeGenerator.ECCLevel.Q);
-                invoiceQR = $"data:image/png;base64,{Convert.ToBase64String(new BitmapByteQRCode(qrData).GetGraphic(10, "000000", "ffffff"))}";
+                invoiceQR = $"data:image/png;base64,{Convert.ToBase64String(new BitmapByteQRCode(qrData).GetGraphic(10, color ?? "000000", bgColor ?? "ffffff"))}";
             }
             InvokeAsync(() => StateHasChanged());
         });
