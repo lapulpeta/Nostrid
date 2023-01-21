@@ -20,7 +20,7 @@
 <div class="fs-4 fw-bolder">Thread</div>
 <div class="fs-7 text-body-tertiary text-break mb-2">
     @ByteTools.PubkeyToNote(EventId, false)
-    <button class="btn btn-sm btn-outline-none ms-1 mb-1 p-0" type="button"
+    <button class="btn btn-sm text-secondary ms-1 mb-1 p-0" type="button"
             @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(EventId, false)))">
         <i class="bi bi-files"></i>
     </button>
