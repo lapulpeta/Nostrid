@@ -609,5 +609,68 @@ namespace Nostrid.Data
             using var db = new Context(_dbfile);
             return db.Follows.Count(f => f.FollowId == accountId);
         }
+
+        public Channel GetChannel(string id)
+        {
+            return Channels.FindById(id) ?? new Channel() { Id = id };
+        }
+
+        public void CreateChannel(string id)
+        {
+            if (!Channels.Exists(c => c.Id == id))
+            {
+                Channels.Upsert(new Channel() { Id = id });
+            }
+        }
+
+        public void SaveChannel(Channel channel)
+        {
+            Channels.Upsert(channel);
+        }
+
+        public List<Channel> ListChannels()
+        {
+            return Channels.Query().ToList();
+        }
+
+        public int GetChannelMessagesInDb(string channelId)
+        {
+            return Events.Query().Where(e => e.Kind == NostrKind.ChannelMessage && e.NoteMetadata.ChannelId == channelId).Count();
+        }
+
+        public List<ChannelWithInfo> ListChannelsWithInfo()
+        {
+            // Get message count by channel
+            var channelsQ = Events.Query()
+                .Where(e => e.Kind == NostrKind.ChannelMessage && e.NoteMetadata.ChannelId != null)
+                .GroupBy($"{nameof(Event.NoteMetadata)}.{nameof(Event.NoteMetadata.ChannelId)}")
+                .Select($"{{_id:@key, {nameof(ChannelWithInfo.MessageCount)}:Count(*)}}");
+            var channelsMessageCount = channelsQ
+                .ToEnumerable()
+                .Select(c => BsonMapper.Global.Deserialize<ChannelWithInfo>(c))
+                .ToDictionary(c => c.Id);
+
+            // Get all channels with details and populate with previous data
+            var channelsWithInfo = Channels
+                .Query()
+                .ToEnumerable()
+                .Select(c =>
+                    new ChannelWithInfo(c)
+                    {
+                        MessageCount = channelsMessageCount.TryGetValue(c.Id, out var channelInfo) ? channelInfo.MessageCount : 0
+                    })
+                .ToList();
+
+            // Add channels with count but without details
+            foreach (var (channelId, channelInfo) in channelsMessageCount)
+            {
+                if (!channelsWithInfo.Any(c => c.Id == channelId))
+                {
+                    channelsWithInfo.Add(new ChannelWithInfo() { Id = channelId, MessageCount = channelInfo.MessageCount });
+                }
+            }
+
+            return channelsWithInfo;
+        }
     }
 }

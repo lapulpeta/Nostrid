@@ -3,6 +3,7 @@ using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
+using System.Collections.Generic;
 
 namespace Nostrid.Data;
 
@@ -11,16 +12,18 @@ public class FeedService
     private readonly EventDatabase eventDatabase;
     private readonly RelayService relayService;
     private readonly AccountService accountService;
+    private readonly ChannelService channelService;
 
-    public event EventHandler<(string filterId, IEnumerable<Event> notes)> ReceivedNotes;
+    public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
     public event EventHandler<Event> NoteUpdated;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
-    public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService)
+    public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService)
     {
         this.eventDatabase = eventDatabase;
         this.relayService = relayService;
         this.accountService = accountService;
+        this.channelService = channelService;
         this.relayService.ReceivedEvents += ReceivedEvents;
     }
 
@@ -32,7 +35,12 @@ public class FeedService
                 accountService.HandleKind0(eventToProcess);
                 break;
             case NostrKind.Text:
-                HandleKind1(eventToProcess);
+            case NostrKind.ChannelMessage:
+                HandleMessage(eventToProcess);
+                if (eventToProcess.Kind == NostrKind.ChannelMessage)
+                {
+                    channelService.MessageProcessed(eventToProcess);
+                }
                 break;
             case NostrKind.Relay:
                 HandleKind2(eventToProcess);
@@ -46,6 +54,10 @@ public class FeedService
             case NostrKind.Reaction:
                 HandleKind7(eventToProcess);
                 break;
+            case NostrKind.ChannelCreation:
+            case NostrKind.ChannelMetadata:
+                channelService.HandleChannelCreationOrMetadata(eventToProcess);
+                break;
         }
     }
 
@@ -57,11 +69,11 @@ public class FeedService
         var notes = data.events.Where(ev => !eventDatabase.IsEventDeleted(ev.Id));
         if (notes.Any())
         {
-            ReceivedNotes?.Invoke(this, (data.filterId, notes));
+            NotesReceived?.Invoke(this, (data.filterId, notes));
         }
     }
 
-    public void HandleKind1(Event eventToProcess)
+    public void HandleMessage(Event eventToProcess)
     {
         if (eventToProcess.ReplyToId.IsNotNullOrEmpty())
         {
@@ -143,6 +155,11 @@ public class FeedService
         return new();
     }
 
+    public List<NoteTree> GetTreesFromNotesNoGrouping(IEnumerable<Event> evs)
+    {
+        return evs.Select(ev => new NoteTree(ev) { Details = accountService.GetAccountDetails(ev.PublicKey) }).ToList();
+    }
+
     public List<NoteTree> GetTreesFromNotes(IEnumerable<Event> tws, List<NoteTree>? rootTrees = null)
     {
         if (rootTrees == null)
@@ -187,9 +204,9 @@ public class FeedService
         return rootTrees;
     }
 
-    public async Task<bool> SendNoteWithPow(string content, Event replyTo, int diff, CancellationToken cancellationToken)
+    public async Task<bool> SendNoteWithPow(string content, bool inChannel, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds, int diff, CancellationToken cancellationToken)
     {
-        var unsignedNote = AssembleNote(content, replyTo);
+        var unsignedNote = AssembleNote(content, inChannel, replyToId, rootId, accountMentionIds);
 
         if (diff > 0)
         {
@@ -248,8 +265,13 @@ public class FeedService
         return true;
     }
 
-    private NostrEvent AssembleNote(string content, Event replyTo)
+    private NostrEvent AssembleNote(string content, bool inChannel, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds)
     {
+        if (accountService.MainAccount == null)
+        {
+            throw new Exception("MainAccount not loaded");
+        }
+
         var unescapedContent = content.Trim();
 
         var ps = new List<string>();
@@ -301,18 +323,18 @@ public class FeedService
         var nostrEvent = new NostrEvent()
         {
             CreatedAt = DateTimeOffset.UtcNow,
-            Kind = 1,
+            Kind = inChannel ? NostrKind.ChannelMessage : NostrKind.Text,
             PublicKey = accountService.MainAccount.Id,
             Tags = new(),
             Content = unescapedContent,
         };
 
-        if (replyTo != null)
+        if (!replyToId.IsNullOrEmpty())
         {
             // Use preferred method as per NIP-10 https://github.com/nostr-protocol/nips/blob/master/10.md
-            var replyToId = replyTo.Id;
-            var rootId = replyTo.ReplyToRootId;
-            if (string.IsNullOrEmpty(rootId))
+            //var replyToId = replyTo.Id;
+            //var rootId = replyTo.NoteMetadata.ReplyToRootId;
+            if (rootId.IsNullOrEmpty())
             {
                 // RootId missing maybe because of a faulty/deprecated client. Let's try to find the rootId
                 rootId = replyToId;
@@ -324,19 +346,19 @@ public class FeedService
                         rootId = null;
                         break;
                     }
-                    if (!string.IsNullOrEmpty(ev.ReplyToRootId))
+                    if (!ev.ReplyToRootId.IsNullOrEmpty())
                     {
                         rootId = ev.ReplyToRootId;
                         break;
                     }
-                    if (string.IsNullOrEmpty(ev.ReplyToId))
+                    if (ev.ReplyToId.IsNullOrEmpty())
                     {
                         break;
                     }
                     rootId = ev.ReplyToId;
                 }
             }
-            if (string.IsNullOrEmpty(rootId) || replyToId == rootId)
+            if (rootId.IsNullOrEmpty() || replyToId == rootId)
             {
                 // A direct reply to the root of a thread should have a single marked "e" tag of type "root".
                 ers.Add((replyToId, "root"));
@@ -348,11 +370,18 @@ public class FeedService
             }
 
             // When replying to a text event E the reply event's "p" tags should contain all of E's "p" tags as well as the "pubkey" of the event being replied to.
-            foreach (var mention in replyTo.GetMentionsIds('p').Union(new[] { replyTo.PublicKey }))
+            if (accountMentionIds != null)
             {
-                if (!ps.Contains(mention) && !prs.Contains(mention))
-                    prs.Add(mention);
+                foreach (var mention in accountMentionIds) // replyTo.NoteMetadata.AccountMentions.Values.Union(new[] { replyTo.PublicKey }))
+                {
+                    if (!ps.Contains(mention) && !prs.Contains(mention))
+                        prs.Add(mention);
+                }
             }
+        }
+        else if (inChannel)
+        {
+            ers.Add((rootId, "root"));
         }
 
         // First p's (mentions) (indexed)

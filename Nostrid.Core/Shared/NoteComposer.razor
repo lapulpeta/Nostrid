@@ -16,6 +16,9 @@
     public Event? ReplyTo { get; set; }
 
     [Parameter]
+    public string? ChannelId { get; set; }
+
+    [Parameter]
     public Action? OnSend { get; set; }
 
     [CascadingParameter]
@@ -47,6 +50,10 @@
                     <AccountName Id="@accountService?.MainAccount?.Id" />
                 </a>
             </p>
+            @if (!string.IsNullOrEmpty(ChannelId))
+            {
+                <p class="mb-1" style="font-size:0.5rem">Channel ID: @ChannelId</p>
+            }
             <EditForm Model="@textInput" OnValidSubmit="@Send">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
@@ -151,12 +158,24 @@
         powCancelSource = new();
         if (!string.IsNullOrEmpty(textInput.Text))
         {
+            var mentions = ReplyTo?.NoteMetadata.AccountMentions.Values.Union(new[] { ReplyTo.PublicKey });
             var content = textInput.Text;
+
             textInput.Text = string.Empty;
+
+            Task sendTask;
+            if (!string.IsNullOrEmpty(ChannelId))
+            {
+                sendTask = feedService.SendNoteWithPow(content, true, ReplyTo?.Id, ChannelId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
+            }
+            else
+            {
+                sendTask = feedService.SendNoteWithPow(content, false, ReplyTo?.Id, ReplyTo?.NoteMetadata?.ReplyToRootId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
+            }
+
             files.Clear();
             sending = true;
-            feedService
-                .SendNoteWithPow(content, ReplyTo, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
+            sendTask
                 .ContinueWith((_) =>
                 {
                     OnSend?.Invoke();

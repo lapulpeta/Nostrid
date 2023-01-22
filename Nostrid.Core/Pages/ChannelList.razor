@@ -1,0 +1,102 @@
+﻿@page "/channels"
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using System.Collections.Concurrent;
+@using Nostrid.Model;
+@inject ChannelService channelService
+@inject RelayService relayService
+
+<h4>Channels</h4>
+<table>
+    @foreach (var (channelId, channel) in channelsById.Where(m => m.Value.MessageCount > 0).OrderByDescending(m => m.Value.MessageCount))
+    {
+        <tr>
+            <td>
+                <a href="/channel/@channelId">@(channel.Details?.Name ?? channelId)</a>
+            </td>
+            <td>
+                @channel.MessageCount
+            </td>
+        </tr>
+    }
+</table>
+
+
+@code {
+    private SubscriptionFilter messageFilter, detailsFilter;
+    private ConcurrentDictionary<string, ChannelWithInfo> channelsById = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        channelService.ChannelDetailsChanged += ChannelDetailsChanged;
+        channelService.ChannelReceivedMessage += ChannelReceivedMessage;
+
+        messageFilter = new ChannelSubscriptionFilter((string[])null);
+        messageFilter.limitFilterData.Limit = 100;
+        detailsFilter = new ChannelListSubscriptionFilter();
+        relayService.AddFilters(messageFilter, detailsFilter);
+
+        channelsById = new ConcurrentDictionary<string, ChannelWithInfo>(channelService.GetChannelsWithInfo().ToDictionary(c => c.Id));
+    }
+    private void ChannelReceivedMessage(object? sender, string channelId)
+    {
+        channelsById.AddOrUpdate(channelId,
+            (_) => new ChannelWithInfo()
+                {
+                    Id = channelId,
+                    MessageCount = channelService.GetChannelMessagesInDb(channelId)
+                },
+            (_, channel) =>
+            {
+                channel.MessageCount = channelService.GetChannelMessagesInDb(channelId);
+                return channel;
+            });
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void ChannelDetailsChanged(object? sender, (string channelId, ChannelDetails details) data)
+    {
+        channelsById.AddOrUpdate(data.channelId,
+            (_) => new ChannelWithInfo()
+                {
+                    Id = data.channelId,
+                    Details = data.details,
+                    DetailsLastUpdate = DateTimeOffset.UtcNow,
+                },
+            (_, channel) =>
+            {
+                channel.Details = data.details;
+                channel.DetailsLastUpdate = DateTimeOffset.UtcNow;
+                return channel;
+            });
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        channelService.ChannelDetailsChanged -= ChannelDetailsChanged;
+        relayService.DeleteFilters(messageFilter, detailsFilter);
+    }
+    #endregion
+}
