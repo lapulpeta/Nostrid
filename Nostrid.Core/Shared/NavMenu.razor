@@ -11,15 +11,15 @@
 @inject IJSRuntime jsRuntime
 @implements IDisposable
 
-<nav class="navbar navbar-light bg-body-tertiary fixed-top d-md-none m-0 p-0 border-bottom bg-opacity-95">
-	<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center px-1">
-		<NavLink class="nav-link py-1" href="#">
-			<AccountPicture Details="@accountService.MainAccount?.Details" Id="@accountService.MainAccount?.Id" Size="40"></AccountPicture>
+<nav class="navbar navbar-light bg-body-tertiary fixed-top d-md-none m-0 px-2 py-1 border-bottom bg-opacity-95">
+	<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
+		<NavLink class="nav-link" href="#">
+			<AccountPicture Details="@accountService.MainAccount?.Details" Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
 		</NavLink>
 		<div class="flex-grow-1 text-center">
 			<a class="navbar-brand m-0" href="/">Nostrid</a>
 		</div>
-		<button title="Navigation menu" class="position-relative navbar-toggler p-1 my-1" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
+		<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
 			<span class="navbar-toggler-icon"></span>
 			@if (mentionsCount > 0)
 			{
@@ -36,9 +36,9 @@
 		<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 	</div>
 	<div class="offcanvas-body d-flex flex-column flex-grow-1">
-		<div class="container d-flex flex-column">
+		<div class="d-flex flex-column">
 			<a class="d-block pb-3 text-center text-decoration-none" href="/">Nostrid</a>
-			<nav class="p-0 flex-grow-1">
+			<nav class="p-0 flex-grow-1 fs-5" style="min-width: 150px;">
 				<ul class="nav nav-pills flex-column">
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap" href="/" Match="NavLinkMatch.All" @onclick="HideOffCanvasMenu">
@@ -100,7 +100,8 @@
 			<div class="fs-7 text-muted text-left">
 				<div>
 					Relays <br />
-					-Connected: @relayService.ConnectedRelays/@relayService.MaxRelays <button class="btn bi bi-arrow-clockwise p-0 text-secondary border" @onclick="@ChangeRelays"></button> <br />
+					-Connected: @relayService.ConnectedRelays/@relayService.MaxRelays
+					<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button><br />
 					-Available: @relayService.PendingRelays <br />
 					-Rate Limited: @relayService.RateLimitedRelays <br />
 					Filters: @relayService.FiltersCount <br />
@@ -115,7 +116,7 @@
 
 @code {
 
-	private Timer refreshTimer;
+	private Timer? refreshTimer;
 	private int mentionsCount;
 	private ScriptsComponent? scripts;
 
@@ -132,7 +133,7 @@
 		}), null, 0, 2000);
 	}
 
-	private void NotificationNumberChanged(object sender, int mentionsCount)
+	private void NotificationNumberChanged(object? sender, int mentionsCount)
 	{
 		this.mentionsCount = mentionsCount;
 	}

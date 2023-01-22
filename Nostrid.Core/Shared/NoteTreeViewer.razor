@@ -15,7 +15,6 @@
         }
         <NoteViewer Tree="@tree"
                 MainEventId="@MainEventId"
-                ReplyingTo="@ReplyingTo"
                 TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
                 OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" OnReply="OnReply" OnPay="OnPay" />
     }
@@ -24,11 +23,11 @@
 }
 
 @code {
-    [Parameter]
-    public List<NoteTree> Trees { get; set; }
+    [Parameter, EditorRequired]
+    public List<NoteTree> Trees { get; set; } = null!;
 
     [Parameter]
-    public string MainEventId { get; set; }
+    public string? MainEventId { get; set; }
 
     [Parameter]
     public bool NewestOnTop { get; set; }
@@ -37,16 +36,16 @@
     public bool ReplyingTo { get; set; }
 
     [Parameter]
-    public int[] TreeLayout { get; set; }
+    public int[] TreeLayout { get; set; } = new int[0];
 
     [Parameter]
     public bool OnlyChild { get; set; }
 
     [Parameter]
-    public Action<NoteTree> OnReply { get; set; }
+    public Action<NoteTree>? OnReply { get; set; }
 
     private List<NoteViewer> noteViewerRefs = new List<NoteViewer>();
-    private PayPopup payPopup;
+    private PayPopup? payPopup;
 
     private void AddNoteViewerComponent(NoteViewer noteViewer)
     {
@@ -63,7 +62,7 @@
         return noteViewerRefs.SelectMany(n => n.GetNoteViewers());
     }
 
-    public async Task<NoteViewer> GetFirstVisibleAsync()
+    public async Task<NoteViewer?> GetFirstVisibleAsync()
     {
         return (await Task.WhenAll(GetNoteViewers().Select(async n => new
         {

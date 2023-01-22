@@ -2,8 +2,8 @@
 @implements IDisposable
 
 @code {
-    [Parameter]
-    public string EventId { get; set; }
+    [Parameter, EditorRequired]
+    public string EventId { get; set; } = null!;
 }
 
 @using Nostrid.Components
@@ -67,7 +67,7 @@ else
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <NoteComposer ReplyTo="@replyingTo" OnSend="@(() => composeModal.Hide())"></NoteComposer>
+                        <NoteComposer ReplyTo="@replyingTo?.Note" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
                     </div>
                 </div>
             </div>
@@ -80,13 +80,13 @@ else
 @code {
     private ConcurrentDictionary<string, Event> renderedN = new();
     private List<NoteTree> noteTrees = new();
-    private Timer refreshTimer;
+    private Timer? refreshTimer;
     private ConcurrentDictionary<string, SubscriptionFilter> detailsFiltersByAccountId = new();
-    private SubscriptionFilter eventFilter;
+    private SubscriptionFilter? eventFilter;
     private bool maxReached;
-    private BootstrapModal composeModal;
-    private NoteTree replyingTo = null;
-    private ScriptsComponent scripts;
+    private BootstrapModal? composeModal;
+    private NoteTree? replyingTo;
+    private ScriptsComponent? scripts;
 
     private const int SecondsForDetailsFilters = 30;
 
@@ -181,7 +181,7 @@ else
     {
         replyingTo = noteTree;
         StateHasChanged();
-        composeModal.Show();
+        composeModal?.Show();
     }
 
     #region Dispose
@@ -207,7 +207,7 @@ else
         feedService.NoteUpdated -= NoteUpdated;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         refreshTimer?.Dispose();
-        relayService.DeleteFilter(eventFilter);
+        if (eventFilter != null) relayService.DeleteFilter(eventFilter);
         relayService.DeleteFilters(detailsFiltersByAccountId.Values);
     }
     #endregion

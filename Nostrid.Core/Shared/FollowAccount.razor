@@ -1,6 +1,6 @@
 ﻿@code {
-    [Parameter]
-    public Account Account { get; set; }
+    [Parameter, EditorRequired]
+    public Account Account { get; set; } = null!;
 }
 
 @using Nostrid.Data;
@@ -18,7 +18,7 @@
             <div class="fs-5 fw-bolder lh-1 flex-grow-1">
                 <AccountName Details="@Account.Details" Id="@Account.Id" />
             </div>
-            @if (IsMainAccountLoaded && accountService.MainAccount.Id != Account.Id)
+            @if (IsMainAccountLoaded && accountService.MainAccount?.Id != Account.Id)
             {
                 <button class="btn btn-sm @(!accountService.IsFollowing(Account.Id) ? "btn-primary" : "btn-danger")" @onclick="@(async () => await FollowUnfollow(Account.Id))" @onclick:stopPropagation="true">
                     @(!accountService.IsFollowing(Account.Id) ? "Follow" : "Unfollow")

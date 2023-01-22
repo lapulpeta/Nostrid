@@ -2,8 +2,8 @@
 @implements IDisposable
 
 @code {
-    [Parameter]
-    public string PubKey { get; set; }
+    [Parameter, EditorRequired]
+    public string PubKey { get; set; } = null!;
 }
 
 @using Nostrid.Data;
@@ -133,15 +133,15 @@
 
 @code {
     private Account account;
-    private SubscriptionFilter feedFilter, followsFilter;
+    private SubscriptionFilter? feedFilter, followsFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
     private ConcurrentDictionary<string, Account> accounts;
-    private BootstrapModal followingModal;
-    private BootstrapModal followerModal;
-    private PayPopup payPopup;
+    private BootstrapModal? followingModal;
+    private BootstrapModal? followerModal;
+    private PayPopup? payPopup;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
-    private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount.Id;
+    private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;
 
     protected override void OnParametersSet()
     {
@@ -162,7 +162,7 @@
         return accounts.GetOrAdd(accountId, _ => accountService.GetAccount(accountId));
     }
 
-    private void AccountDetailsChanged(object sender, (string accountId, AccountDetails details) data)
+    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
     {
         if (_disposed)
             return;
@@ -184,7 +184,7 @@
         });
     }
 
-    private void AccountFollowsChanged(object sender, (string accountId, List<string> follows) data)
+    private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
     {
         if (_disposed)
             return;
