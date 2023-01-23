@@ -10,11 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Shared\NoteViewer.razor.css" />
+    <None Remove="Shared\EventViewer.razor.css" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Shared\NoteViewer.razor.css" />
+    <Content Include="Shared\EventViewer.razor.css" />
   </ItemGroup>
 
   <ItemGroup>

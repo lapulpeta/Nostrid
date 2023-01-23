@@ -166,7 +166,7 @@ namespace Nostrid.Data
             List<Event> notes = new();
             foreach (var filter in filters)
             {
-                notes.AddRange(ApplyFilter(Events.Query().Where(e => e.Kind == 1).OrderByDescending(n => n.CreatedAtCurated), filter).Limit(count).ToList());
+                notes.AddRange(ApplyFilter(Events.Query().OrderByDescending(n => n.CreatedAtCurated), filter).Limit(count).ToList());
             }
             return notes;
         }

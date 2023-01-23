@@ -66,7 +66,7 @@ public class FeedService
     {
         Task.Run(() => HandleEventsAsync(data.events));
 
-        var notes = data.events.Where(ev => (ev.Kind == NostrKind.Text || ev.Kind == NostrKind.Repost) && !eventDatabase.IsEventDeleted(ev.Id));
+        var notes = data.events.Where(ev => !eventDatabase.IsEventDeleted(ev.Id));
         if (notes.Any())
         {
             ReceivedNotes?.Invoke(this, (data.filterId, notes));
@@ -200,13 +200,17 @@ public class FeedService
         //if (string.IsNullOrEmpty(eventToProcess.Content)) // As per the NIP, content must be empty (disabled since many clients ignore this)
         {
             var e = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "e" && t.Data.Count > 0);
-            var p = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "p" && t.Data.Count > 0);
 
-            if (e != null && p != null)
+            if (e != null)
             {
                 var noteMetadata = eventToProcess.NoteMetadata = new NoteMetadata();
                 noteMetadata.EventMentions[0] = noteMetadata.RepostEventId = e.Data[0].ToLower();
-                noteMetadata.AccountMentions[1] = p.Data[0].ToLower();
+
+                var p = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "p" && t.Data.Count > 0);
+                if (p != null)
+                {
+                    noteMetadata.AccountMentions[1] = p.Data[0].ToLower();
+                }
                 if (e.Data.Count > 1 && !string.IsNullOrEmpty(e.Data[1]))
                 {
                     HandleRelayRecommendation(e.Data[1]);

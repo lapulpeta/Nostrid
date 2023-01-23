@@ -1,8 +1,8 @@
 ﻿@page "/tag/{hashtags}"
 
 @code {
-    [Parameter]
-    public string Hashtags { get; set; }
+    [Parameter, EditorRequired]
+    public string Hashtags { get; set; } = null!;
 }
 
 @using Nostrid.Data;
@@ -22,31 +22,26 @@
     }
 </div>
 
-<FeedViewer BaseFilter="@filter" />
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 
 @code {
-    private SubscriptionFilter filter;
+    private SubscriptionFilter? filter;
 
     protected override void OnParametersSet()
     {
-        if (!string.IsNullOrEmpty(Hashtags))
-        {
-            var hashtags = Hashtags.Split(",");
-            filter = new TagSubscriptionFilter(hashtags);
-        }
+        var hashtags = Hashtags.Split(",");
+        filter = new TagSubscriptionFilter(hashtags);
     }
 
     private void Save()
     {
-        if (!string.IsNullOrEmpty(Hashtags))
+        if (accountService.MainAccount == null) return;
+        var feedSource = new FeedSource()
         {
-            var feedSource = new FeedSource()
-            {
-                Hashtags = Hashtags.Split(",").ToList(),
-                OwnerId = accountService.MainAccount.Id,
-            };
-            feedService.SaveFeedSource(feedSource);
-            navigationManager.NavigateTo($"/feed/{feedSource.Id}");
-        }
+            Hashtags = Hashtags.Split(",").ToList(),
+            OwnerId = accountService.MainAccount.Id,
+        };
+        feedService.SaveFeedSource(feedSource);
+        navigationManager.NavigateTo($"/feed/{feedSource.Id}");
     }
 }

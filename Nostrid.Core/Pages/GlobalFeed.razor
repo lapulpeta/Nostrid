@@ -4,14 +4,14 @@
 
 <h2>Global</h2>
 
-<div class="d-none d-md-flex px-3" style="margin: 0 -1rem;">
+<div class="d-none d-md-flex px-3 pb-2" style="margin: 0 -1rem;">
     <NoteComposer />
 </div>
 
-<FeedViewer BaseFilter="@filter" />
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 
 @code {
-    private SubscriptionFilter filter;
+    private SubscriptionFilter? filter;
 
     protected override void OnParametersSet()
     {

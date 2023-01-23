@@ -11,46 +11,58 @@
 
 @code{
     [Parameter]
-    public NoteTree ReplyTo { get; set; }
+    public Event? ReplyTo { get; set; }
 
     [Parameter]
-    public Action OnSend { get; set; }
+    public Action? OnSend { get; set; }
 }
 
 @if (accountService.MainAccount != null)
 {
     @if (ReplyTo != null)
     {
-        <NoteTreeViewer Trees="@(new List<NoteTree>() { ReplyTo })" ReplyingTo="true" />
+        <div class="pb-2">
+            <EventViewer Event="ReplyTo">
+                <LeftPlaceholder>
+                    <div class="flex-grow-1 d-flex flex-row note">
+                        <div class="tree-placeholder-width-half"></div>
+                        <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+                    </div>
+                </LeftPlaceholder>
+            </EventViewer>
+        </div>
     }
-    <div class="d-flex flex-row flex-grow-1 align-items-start px-2 px-lg-3 py-2" style="margin: 0 -1rem;">
+    <div class="d-flex flex-row flex-grow-1 align-items-start @(ReplyTo != null ? "pt-2" : "")">
         <a class="flex-shrink-0" href="/account/@accountService.MainAccount.Id">
             <AccountPicture Details="@accountService.MainAccount?.Details" Id="@accountService.MainAccount?.Id"></AccountPicture>
         </a>
         <div class="flex-grow-1 ms-2">
             <p class="mb-1">
-                <a href="/account/@accountService.MainAccount.Id" class="fw-bold text-decoration-none mb-1">
-                    <AccountName Details="@accountService.MainAccount.Details" Id="@accountService.MainAccount.Id" />
+                <a href="/account/@accountService?.MainAccount?.Id" class="fw-bold text-decoration-none mb-1">
+                    <AccountName Details="@accountService?.MainAccount?.Details" Id="@accountService?.MainAccount?.Id" />
                 </a>
             </p>
             <EditForm Model="@textInput" OnValidSubmit="@Send">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
-                <InputTextArea @bind-Value="textInput.Text" rows="3" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
+                <textarea value="@textInput.Text" @oninput="@((args) => { textInput.Text = args.Value as string ?? string.Empty; })"
+                          rows="4" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
                 @if (sending)
                 {
-                    <button class="btn btn-secondary my-2 me-2" @onclick="@CancelPow">
+                    <div class="d-flex flex-row align-items-center flex-wrap mt-2">
+                    <button class="btn btn-secondary me-2" @onclick="@CancelPow">
                         <i class="bi bi-x"></i>
                         Cancel PoW
                     </button>
-                    <span class="d-inline-block" style="vertical-align: -2px;">
+                    <span class="d-inline-block my-2">
                         <span>Sending with pow @configService.MainConfig.TargetDiffOutgoing.</span>
                         <span class="d-inline-block">If you leave this page it will be aborted.</span>
                     </span>
+                    </div>
                 }
                 else
                 {
-                    <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary my-2">
+                    <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary mt-2">
                         @(ReplyTo != null ? "Reply" : "Send note")
                     </button>
                 }
@@ -87,7 +99,7 @@
             textInput.Text = string.Empty;
             sending = true;
             feedService
-                .SendNoteWithPow(content, ReplyTo?.Note, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
+                .SendNoteWithPow(content, ReplyTo, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
                 .ContinueWith((_) =>
                 {
                     OnSend?.Invoke();
@@ -106,7 +118,7 @@
         accountService.MainAccountChanged += MainAccountChanged;
     }
 
-    private void MainAccountChanged(object sender, EventArgs args)
+    private void MainAccountChanged(object? sender, EventArgs args)
     {
         InvokeAsync(() =>
         {

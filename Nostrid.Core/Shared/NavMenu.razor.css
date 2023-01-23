@@ -11,7 +11,7 @@
             overflow: initial;
         }
 
-            .offcanvas > .offcanvas-body > div.container {
+            .offcanvas > .offcanvas-body > div {
                 position: sticky;
                 top: 16px;
                 min-height: calc(100vh - 32px);
@@ -19,7 +19,7 @@
 }
 
 @media (max-width: 767.98px) {
-    .offcanvas > .offcanvas-body > div.container {
+    .offcanvas > .offcanvas-body > div {
         flex-grow: 1;
     }
 }

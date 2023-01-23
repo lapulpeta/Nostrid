@@ -1,13 +1,13 @@
 ﻿@using System.Net.Mime;
 @code{
-    [Parameter]
-    public string Url { get; set; }
+    [Parameter, EditorRequired]
+    public string Url { get; set; } = null!;
 
     [Parameter]
     public bool StopPropagation { get; set; }
 
     [Parameter]
-    public RenderFragment ChildContent { get; set; }
+    public RenderFragment? ChildContent { get; set; }
 }
 
 @if (mediaType == MediaType.Image)

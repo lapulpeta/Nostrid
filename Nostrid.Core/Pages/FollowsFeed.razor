@@ -9,11 +9,11 @@
 
 <h2>Following Feed</h2>
 
-<div class="d-none d-md-flex px-3" style="margin: 0 -1rem;">
+<div class="d-none d-md-flex px-3 pb-2" style="margin: 0 -1rem;">
     <NoteComposer />
 </div>
 
-@if (accountService.MainAccount.FollowList.Count == 0)
+@if (accountService.MainAccount?.FollowList.Count == 0)
 {
     <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center border-top px-2 py-3" style="margin: 0 -1rem;">
         <i class="fs-1 bi bi-person-x"></i>
@@ -23,11 +23,11 @@
 }
 else
 {
-    <FeedViewer BaseFilter="@filter" />
+    <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 }
 
 @code {
-    private SubscriptionFilter filter;
+    private SubscriptionFilter? filter;
 
     protected override void OnInitialized()
     {
@@ -35,14 +35,16 @@ else
         SetFilter();
     }
 
-    private void MainAccountChanged(object sender, EventArgs args)
+    private void MainAccountChanged(object? sender, EventArgs args)
     {
         SetFilter();
+        InvokeAsync(() => StateHasChanged());
     }
 
     private void SetFilter()
     {
-        if (accountService.MainAccount.FollowList.Count == 0)
+        if (accountService.MainAccount == null
+            || accountService.MainAccount.FollowList.Count == 0)
         {
             filter = null;
         }
@@ -50,10 +52,6 @@ else
         {
             filter = new AccountSubscriptionFilter(accountService.MainAccount.FollowList.ToArray());
         }
-        InvokeAsync(() =>
-        {
-            StateHasChanged();
-        });
     }
 
     #region Dispose

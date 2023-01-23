@@ -1,8 +1,8 @@
 ﻿@implements IAsyncDisposable
 
 @code {
-	[Parameter]
-	public RenderFragment ChildContent { get; set; }
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
 }
 
 <div @ref="container">
@@ -13,17 +13,17 @@
 
 @code {
 
-    private ScriptsComponent scripts;
+    private ScriptsComponent? scripts;
     private ElementReference container;
 
     public void Show()
     {
-        scripts.InvokeVoid("showModal", container);
+        scripts?.InvokeVoid("showModal", container);
     }
 
     public void Hide()
     {
-        scripts.InvokeVoid("hideModal", container);
+        scripts?.InvokeVoid("hideModal", container);
     }
 
     #region Dispose

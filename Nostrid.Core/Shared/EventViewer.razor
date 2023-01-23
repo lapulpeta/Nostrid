@@ -1,0 +1,153 @@
+﻿@implements IDisposable
+
+@using Nostrid.Data;
+@using Nostrid.Data.Relays;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@inject AccountService accountService
+@inject NoteProcessor noteProcessor
+@inject ConfigService configService
+@inject EventDatabase eventDatabase
+@inject RelayService relayService
+
+<div class="d-flex flex-row">
+    <div class="d-flex flex-column flex-shrink-0">
+        <a href="/account/@Event?.PublicKey" @onclick:stopPropagation="true">
+            <AccountPicture Details="@accountDetails" Id="@Event?.PublicKey"></AccountPicture>
+        </a>
+        @LeftPlaceholder
+    </div>
+    <div class="flex-grow-1 ms-2">
+        <p class="mb-1">
+            <a href="/account/@Event?.PublicKey" @onclick:stopPropagation="true" class="fw-bold text-decoration-none mb-1">
+                <AccountName Details="@accountDetails" Id="@Event?.Id"></AccountName>
+            </a>
+            <span class="text-secondary">
+                <span>·</span>
+                <span>@Utils.FormatDate(Event?.CreatedAtCurated ?? DateTimeOffset.MinValue)</span>
+                @if (showDifficulty)
+                {
+                    <span>&nbsp;·</span>
+                    <span>diff @Event?.Difficulty</span>
+                    @if (Event?.HasPow ?? false)
+                    {
+                        <span> 🏋️</span>
+                    }
+                }
+                @if (ShowReplyingTo && Event?.NoteMetadata.ReplyToId != null)
+                {
+                    <span>&nbsp;·</span>
+                    <span class="d-inline-block">
+                        Replying to
+                        <a href="/note/@Event?.NoteMetadata.ReplyToId" @onclick:stopPropagation="true">
+                            @ByteTools.PubkeyToNote(Event?.NoteMetadata.ReplyToId ?? string.Empty, true)
+                        </a>
+                    </span>
+                }
+                @if (Event?.NoteMetadata.RepostEventId != null)
+                {
+                    <span>&nbsp;·</span>
+                    <span class="d-inline-block">
+                        Reposted
+                        <a href="/note/@Event.NoteMetadata.RepostEventId" @onclick:stopPropagation="true">
+                            @ByteTools.PubkeyToNote(Event.NoteMetadata.RepostEventId, true)
+                        </a>
+                    </span>
+                }
+            </span>
+        </p>
+        @switch (Event?.Kind)
+        {
+            case NostrKind.Text:
+                <div class="text-break note-content">
+                    @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.NoteMetadata)
+                </div>
+                break;
+            case NostrKind.Repost:
+                if (Event.NoteMetadata.RepostEventId != null)
+                {
+                    var repostEvent = eventDatabase.GetEventOrNull(Event.NoteMetadata.RepostEventId);
+                    if (repostEvent != null)
+                    {
+                        <div class="border border-secondary rounded-2 p-2">
+                            <EventViewer Event="repostEvent" ShowReplyingTo="true" />
+                        </div>
+                    }
+                }
+                break;
+        }
+        @BottomPlaceholder
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Event Event { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowReplyingTo { get; set; }
+
+    [Parameter]
+    public RenderFragment? LeftPlaceholder { get; set; }
+
+    [Parameter]
+    public RenderFragment? BottomPlaceholder { get; set; }
+
+    private bool showDifficulty => configService.MainConfig.ShowDifficulty;
+
+    private AccountDetails? accountDetails;
+
+    private SubscriptionFilter? subscriptionFilter;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (Event == null) return;
+
+        Cleanup();
+        accountService.AccountDetailsChanged += AccountDetailsChanged;
+
+        accountDetails = accountService.GetAccountDetails(Event.PublicKey);
+        var repostEventId = Event.NoteMetadata?.RepostEventId;
+        if (repostEventId != null)
+        {
+            relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
+        }
+    }
+
+    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
+    {
+        if (data.accountId != Event?.PublicKey) return;
+        accountDetails = data.details;
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        if (subscriptionFilter != null)
+        {
+            relayService.DeleteFilter(subscriptionFilter);
+        }
+    }
+    #endregion
+}

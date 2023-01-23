@@ -10,8 +10,11 @@
 @implements IDisposable
 
 @code {
-    [Parameter]
-    public SubscriptionFilter BaseFilter { get; set; }
+    [Parameter, EditorRequired]
+    public SubscriptionFilter BaseFilter { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public int[] MessageKinds { get; set; }
 }
 
 @if (newN.Count > 0)
@@ -52,7 +55,7 @@ else
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <NoteComposer ReplyTo="@replyingTo" OnSend="@(() => composeModal.Hide())"></NoteComposer>
+                    <NoteComposer ReplyTo="@replyingTo?.Note" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
                 </div>
             </div>
         </div>
@@ -60,16 +63,16 @@ else
 </BootstrapModal>
 
 @code {
-    private ConcurrentDictionary<string, Event> renderedN, newN, oldN;
+    private ConcurrentDictionary<string, Event> renderedN = new(), newN = new(), oldN = new();
     private int dbLimit;
-    private SubscriptionFilter newFilter, oldFilter;
+    private SubscriptionFilter? newFilter, oldFilter;
     private ConcurrentDictionary<string, SubscriptionFilter> detailsFiltersByAccountId = new();
-    private Timer refreshPageTimer;
-    private string[] renderedIds;
-    private NoteTreeViewer noteTreeViewer;
-    private bool requestDisabled = false;
-    private BootstrapModal composeModal;
-    private NoteTree replyingTo = null;
+    private Timer? refreshPageTimer;
+    private string[]? renderedIds;
+    private NoteTreeViewer? noteTreeViewer;
+    private bool requestDisabled;
+    private BootstrapModal? composeModal;
+    private NoteTree? replyingTo;
 
     private const int RelayQueryLimit = 13;
     private const int SecondsForDetailsFilters = 30;
@@ -83,7 +86,10 @@ else
     private void LoadMore()
     {
         dbLimit += RelayQueryLimit;
-        Event.Merge(renderedN, feedService.GetNotesFeed(BaseFilter.GetFilters(), dbLimit));
+        var rawFilters = BaseFilter.GetFilters();
+        foreach (var rawFilter in rawFilters)
+            rawFilter.Kinds = MessageKinds;
+        Event.Merge(renderedN, feedService.GetNotesFeed(rawFilters, dbLimit));
     }
 
     private async Task LoadMoreFromNoteAsync()
@@ -103,7 +109,7 @@ else
 
         requestDisabled = true;
 
-        Timer enableTimer = null;
+        Timer? enableTimer = null;
         enableTimer = new Timer(new TimerCallback(_ =>
         {
             requestDisabled = false;
@@ -111,7 +117,7 @@ else
             {
                 StateHasChanged();
             });
-            enableTimer.Dispose();
+            enableTimer?.Dispose();
         }), null, 5000, 5000);
     }
 
@@ -120,16 +126,20 @@ else
         if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
             return;
 
-        UpdateDetailFilters(data.notes);
+        var notes = data.notes.Where(n => MessageKinds.Contains(n.Kind));
+        if (!notes.Any())
+            return;
+
+        UpdateDetailFilters(notes);
 
         if (data.filterId == oldFilter.Id)
         {
-            Event.Merge(renderedN, data.notes);
+            Event.Merge(renderedN, notes);
             TrimOlder();
         }
         else
         {
-            Event.Merge(newN, data.notes, newEv => !renderedN.TryGetValue(newEv.Id, out var oldEv) ? true : (!oldEv.Processed && newEv.Processed));
+            Event.Merge(newN, notes, newEv => !renderedN.TryGetValue(newEv.Id, out var oldEv) ? true : (!oldEv.Processed && newEv.Processed));
         }
     }
 
@@ -188,7 +198,7 @@ else
     {
         replyingTo = noteTree;
         StateHasChanged();
-        composeModal.Show();
+        composeModal?.Show();
     }
 
     private void NoteUpdated(object? sender, Event ev)
@@ -212,7 +222,7 @@ else
 
     private void TrimOlder()
     {
-        while (renderedN.Count > dbLimit)
+        while (renderedN?.Count > dbLimit)
         {
             var oldest = renderedN.Values.OrderBy(n => n.CreatedAtCurated).FirstOrDefault();
             if (oldest == null)
