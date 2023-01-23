@@ -1,6 +1,4 @@
-﻿@using Nostrid.Components;
-
-<BootstrapModal @ref="dialog">
+﻿<ModalContainer @ref="modalContainer">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
             <div class="modal-content">
@@ -31,16 +29,16 @@
             </div>
         </div>
     </div>
-</BootstrapModal>
+</ModalContainer>
 
 @code{
-    private BootstrapModal? dialog;
+    private ModalContainer? modalContainer;
     private Options options = new();
 
     public void Show(Options options)
     {
         this.options = options;
-        dialog?.Show();
+        modalContainer?.Show();
         InvokeAsync(() => StateHasChanged());
     }
 

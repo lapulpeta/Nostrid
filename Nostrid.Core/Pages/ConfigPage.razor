@@ -1,5 +1,4 @@
 ﻿@page "/config"
-@using Nostrid.Components;
 @using Nostrid.Data;
 @using Nostrid.Model;
 
@@ -97,10 +96,10 @@
     </ul>
 </div>
 
-<ScriptsComponent @ref="scripts" />
+<Scripts @ref="scripts" />
 
 @code {
-    private ScriptsComponent? scripts;
+    private Scripts? scripts;
     private Config configModel = new();
 
     public const string DARK_THEME = "dark";

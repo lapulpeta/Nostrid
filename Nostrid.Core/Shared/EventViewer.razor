@@ -11,6 +11,20 @@
 @inject EventDatabase eventDatabase
 @inject RelayService relayService
 
+@code{
+    [Parameter, EditorRequired]
+    public Event Event { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowReplyingTo { get; set; }
+
+    [Parameter]
+    public RenderFragment? LeftPlaceholder { get; set; }
+
+    [Parameter]
+    public RenderFragment? BottomPlaceholder { get; set; }
+}
+
 <div class="d-flex flex-row">
     <div class="d-flex flex-column flex-shrink-0">
         <a href="/account/@Event?.PublicKey" @onclick:stopPropagation="true">
@@ -82,22 +96,8 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public Event Event { get; set; } = null!;
-
-    [Parameter]
-    public bool ShowReplyingTo { get; set; }
-
-    [Parameter]
-    public RenderFragment? LeftPlaceholder { get; set; }
-
-    [Parameter]
-    public RenderFragment? BottomPlaceholder { get; set; }
-
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
-
     private AccountDetails? accountDetails;
-
     private SubscriptionFilter? subscriptionFilter;
 
     protected override void OnParametersSet()
