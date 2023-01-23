@@ -10,6 +10,7 @@
 @inject ConfigService configService
 @inject EventDatabase eventDatabase
 @inject RelayService relayService
+@inject NavigationManager navigationManager
 
 @code{
     [Parameter, EditorRequired]
@@ -84,7 +85,8 @@
                     var repostEvent = eventDatabase.GetEventOrNull(Event.NoteMetadata.RepostEventId);
                     if (repostEvent != null)
                     {
-                        <div class="border border-secondary rounded-2 p-2">
+                        <div role="button" class="border border-secondary rounded-2 p-2"
+                             @onclick="@(() => navigationManager.NavigateTo($"/note/{repostEvent.Id}"))" @onclick:stopPropagation="true">
                             <EventViewer Event="repostEvent" ShowReplyingTo="true" />
                         </div>
                     }
