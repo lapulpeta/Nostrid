@@ -17,6 +17,38 @@
 @inject ConfigService configService
 @inject IClipboardService clipboardService
 
+@code{
+    [Parameter, EditorRequired]
+    public NoteTree Tree { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string MainEventId { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public int[] TreeLayout { get; set; } = null!;
+
+    [Parameter]
+    public bool OnlyChild { get; set; }
+
+    [Parameter]
+    public Action<NoteViewer>? OnComponentLoad { get; set; }
+
+    [Parameter]
+    public Action<NoteViewer>? OnComponentUnload { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnReply { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnRepost { get; set; }
+
+    [Parameter]
+    public Action<AccountDetails>? OnPay { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnDelete { get; set; }
+}
+
 <div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
      @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem;">
 
@@ -128,10 +160,9 @@
 @if (Tree.Children.Count > 0)
 {
     <NoteTreeViewer @ref="NoteTreeViewerRef"
-                    Trees="@Tree.Children" NewestOnTop="false" MainEventId="@MainEventId"
-                    TreeLayout="@TreeLayout"
-                    OnlyChild="@(Tree.Children.Count == 1)"
-                    OnReply="@OnReply" />
+                    Trees="@Tree.Children" Root="false" NewestOnTop="false" MainEventId="@MainEventId"
+                    TreeLayout="@TreeLayout" OnlyChild="@(Tree.Children.Count == 1)"
+                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete" />
 }
 
 @code {
@@ -141,30 +172,6 @@
     private IJSObjectReference? jsModule;
     private ElementReference? referenceElement;
     private NoteTreeViewer? NoteTreeViewerRef;
-
-    [Parameter, EditorRequired]
-    public NoteTree Tree { get; set; } = null!;
-
-    [Parameter, EditorRequired]
-    public string MainEventId { get; set; } = null!;
-
-    [Parameter, EditorRequired]
-    public int[] TreeLayout { get; set; } = null!;
-
-    [Parameter]
-    public bool OnlyChild { get; set; }
-
-    [Parameter]
-    public Action<NoteViewer>? OnComponentLoad { get; set; }
-
-    [Parameter]
-    public Action<NoteViewer>? OnComponentUnload { get; set; }
-
-    [Parameter]
-    public Action<NoteTree>? OnReply { get; set; }
-
-    [Parameter]
-    public Action<AccountDetails>? OnPay { get; set; }
 
     protected override void OnInitialized()
     {
@@ -194,35 +201,31 @@
         InvokeAsync(() => StateHasChanged());
     }
 
+    private void Reply()
+    {
+        OnReply?.Invoke(Tree.Note);
+    }
+
+    private void Repost()
+    {
+        OnRepost?.Invoke(Tree.Note);
+    }
+
     private async Task LikeNote()
     {
-        if (likeSent || Tree == null) return;
+        if (likeSent) return;
         await feedService.SendReaction("+", Tree.Note);
         likeClicked = true;
     }
 
     private void Pay()
     {
-        if (Tree == null) return;
         OnPay?.Invoke(Tree.Details);
     }
 
-    private void Reply()
+    private void Delete()
     {
-        if (Tree == null) return;
-        OnReply?.Invoke(Tree);
-    }
-
-    private async Task Repost()
-    {
-        if (Tree == null) return;
-        await feedService.Repost(Tree.Note);
-    }
-
-    private async Task Delete()
-    {
-        if (Tree == null) return;
-        await feedService.DeleteNote(Tree.Note);
+        OnDelete?.Invoke(Tree.Note);
     }
 
     private string NormalizedReaction(string reaction)
