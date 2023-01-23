@@ -1,0 +1,90 @@
+﻿<ModalContainer @ref="modalContainer">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+            <div class="modal-content">
+                @if (!string.IsNullOrEmpty(options.Title))
+                {
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="staticBackdropLabel">@options.Title</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(options.Content))
+                {
+                    <div class="modal-body">@options.Content</div>
+                }
+                @if (options.Buttons?.Length > 0)
+                {
+                    <div class="modal-footer">
+                        @foreach (var button in options.Buttons)
+                        {
+                            <button type="button" class="btn @button.ComputedCss" data-bs-dismiss="modal"
+                                    style="min-width: 100px;"
+                                    @onclick="@(button.Action ?? (() => {}))">
+                                @button.Text
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</ModalContainer>
+
+@code{
+    private ModalContainer? modalContainer;
+    private Options options = new();
+
+    public void Show(Options options)
+    {
+        this.options = options;
+        modalContainer?.Show();
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    public class Options
+    {
+        public static Options Create(string content, string title, params Button[] buttons)
+        {
+            return new Options()
+            {
+                Content = content,
+                Title = title,
+                Buttons = buttons
+            };
+        }
+
+        public string? Content { get; set; }
+        public string? Title { get; set; }
+        public Button[]? Buttons { get; set; }
+
+        public class Button
+        {
+            public static Button CreateNoButton(string? css = null)
+            {
+                return new Button()
+                    {
+                        Text = "No",
+                        Action = null,
+                        Css = css
+                    };
+            }
+
+            public static Button CreateYesButton(Action action, string? css = null)
+            {
+                return new Button()
+                {
+                    Text = "Yes",
+                    Action = action,
+                    Css = css
+                };    
+            }
+
+            public string Text { get; set; } = null!;
+            public Action? Action { get; set; }
+            public string? Css { get; set; }
+
+            internal string ComputedCss => Css ?? (Action == null ? "btn-secondary" : "btn-primary");
+        }
+    }
+}

@@ -1,5 +1,4 @@
-﻿@using Nostrid.Components
-@using Nostrid.Data
+﻿@using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
 @using Nostrid.Misc;
@@ -34,7 +33,7 @@
 }
 else
 {
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@feedService.GetTreesFromNotes(renderedN.Values)" NewestOnTop="true" OnReply="OnReply" />
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@feedService.GetTreesFromNotes(renderedN.Values)" NewestOnTop="true" />
     <div class="text-center border-top px-3" style="margin: 0 -1rem -1rem -1rem;">
         <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="@LoadMore">Load more</button>
     </div>
@@ -46,22 +45,6 @@ else
     </button>
 </div>
 
-<BootstrapModal @ref="composeModal">
-    <div class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Reply</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <NoteComposer ReplyTo="@replyingTo?.Note" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
-                </div>
-            </div>
-        </div>
-    </div>
-</BootstrapModal>
-
 @code {
     private ConcurrentDictionary<string, Event> renderedN = new(), newN = new(), oldN = new();
     private int dbLimit;
@@ -71,8 +54,6 @@ else
     private string[]? renderedIds;
     private NoteTreeViewer? noteTreeViewer;
     private bool requestDisabled;
-    private BootstrapModal? composeModal;
-    private NoteTree? replyingTo;
 
     private const int RelayQueryLimit = 13;
     private const int SecondsForDetailsFilters = 30;
@@ -192,13 +173,6 @@ else
                 StateHasChanged();
             });
         }), null, 0, 5000);
-    }
-
-    private void OnReply(NoteTree noteTree)
-    {
-        replyingTo = noteTree;
-        StateHasChanged();
-        composeModal?.Show();
     }
 
     private void NoteUpdated(object? sender, Event ev)

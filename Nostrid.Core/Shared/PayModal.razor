@@ -1,5 +1,4 @@
-﻿@using Nostrid.Components;
-@using Nostrid.Data;
+﻿@using Nostrid.Data;
 @using Nostrid.Interfaces;
 @using Nostrid.Model;
 @using QRCoder;
@@ -7,7 +6,7 @@
 @inject Lud06Service lud06Service
 @inject IClipboardService clipboardService
 
-<BootstrapModal @ref="payModal">
+<ModalContainer @ref="modalContainer">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
             <div class="modal-content">
@@ -62,12 +61,12 @@
             </div>
         </div>
     </div>
-</BootstrapModal>
+</ModalContainer>
 
-<ScriptsComponent @ref="scriptsComponent" />
+<Scripts @ref="scripts" />
 
 @code {
-    private ScriptsComponent? scriptsComponent;
+    private Scripts? scripts;
 
     private enum State
     {
@@ -79,7 +78,7 @@
 
     private const int MSAT_UNIT = 1000;
 
-    private BootstrapModal? payModal;
+    private ModalContainer? modalContainer;
     private AccountDetails? accountDetails;
     private State state = State.Loading;
     private Lud06Data? lud06Data;
@@ -107,7 +106,7 @@
             InvokeAsync(() => StateHasChanged());
         }
 
-        payModal?.Show();
+        modalContainer?.Show();
 
         lud06Service.Query(ln).ContinueWith(t =>
         {
@@ -149,8 +148,8 @@
                 state = State.ShowInvoice;
                 invoice = t.Result;
 
-                var bgColor = scriptsComponent?.Invoke<string>("getCssVariable", "--bs-body-bg");
-                var color = scriptsComponent?.Invoke<string>("getCssVariable", "--bs-emphasis-color");
+                var bgColor = scripts?.Invoke<string>("getCssVariable", "--bs-body-bg");
+                var color = scripts?.Invoke<string>("getCssVariable", "--bs-emphasis-color");
                 
                 var qrData = QRCodeGenerator.GenerateQrCode(t.Result, QRCodeGenerator.ECCLevel.Q);
                 invoiceQR = $"data:image/png;base64,{Convert.ToBase64String(new BitmapByteQRCode(qrData).GetGraphic(10, color ?? "000000", bgColor ?? "ffffff"))}";

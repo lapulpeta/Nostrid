@@ -8,7 +8,6 @@
 
 @using Nostrid.Data;
 @using Nostrid.Data.Relays;
-@using Nostrid.Components;
 @using Nostrid.Interfaces;
 @using Nostrid.Model;
 @using Nostrid.Misc;
@@ -51,7 +50,7 @@
         @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
         {
             <div class="btn-group mb-3" role="group">
-                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payPopup.Show(account.Details))">
+                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payModal?.Show(account.Details))">
                     <i class="bi bi-lightning-charge"></i> Pay
                 </button>
             </div>
@@ -59,7 +58,7 @@
     </div>
 </div>
 
-<BootstrapModal @ref="followingModal">
+<ModalContainer @ref="followingModal">
     <div class="modal fade" id="followingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
@@ -91,9 +90,9 @@
             </div>
         </div>
     </div>
-</BootstrapModal>
+</ModalContainer>
 
-<BootstrapModal @ref="followerModal">
+<ModalContainer @ref="followerModal">
     <div class="modal fade" id="followerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
@@ -125,9 +124,9 @@
             </div>
         </div>
     </div>
-</BootstrapModal>
+</ModalContainer>
 
-<PayPopup @ref="payPopup" />
+<PayModal @ref="payModal" />
 
 <FeedViewer BaseFilter="@feedFilter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 
@@ -136,9 +135,9 @@
     private SubscriptionFilter? feedFilter, followsFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
     private ConcurrentDictionary<string, Account> accounts;
-    private BootstrapModal? followingModal;
-    private BootstrapModal? followerModal;
-    private PayPopup? payPopup;
+    private ModalContainer? followingModal;
+    private ModalContainer? followerModal;
+    private PayModal? payModal;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;

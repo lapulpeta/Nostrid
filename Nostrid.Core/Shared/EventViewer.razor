@@ -10,6 +10,21 @@
 @inject ConfigService configService
 @inject EventDatabase eventDatabase
 @inject RelayService relayService
+@inject NavigationManager navigationManager
+
+@code{
+    [Parameter, EditorRequired]
+    public Event Event { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowReplyingTo { get; set; }
+
+    [Parameter]
+    public RenderFragment? LeftPlaceholder { get; set; }
+
+    [Parameter]
+    public RenderFragment? BottomPlaceholder { get; set; }
+}
 
 <div class="d-flex flex-row">
     <div class="d-flex flex-column flex-shrink-0">
@@ -70,7 +85,8 @@
                     var repostEvent = eventDatabase.GetEventOrNull(Event.NoteMetadata.RepostEventId);
                     if (repostEvent != null)
                     {
-                        <div class="border border-secondary rounded-2 p-2">
+                        <div role="button" class="border border-secondary rounded-2 p-2"
+                             @onclick="@(() => navigationManager.NavigateTo($"/note/{repostEvent.Id}"))" @onclick:stopPropagation="true">
                             <EventViewer Event="repostEvent" ShowReplyingTo="true" />
                         </div>
                     }
@@ -82,22 +98,8 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public Event Event { get; set; } = null!;
-
-    [Parameter]
-    public bool ShowReplyingTo { get; set; }
-
-    [Parameter]
-    public RenderFragment? LeftPlaceholder { get; set; }
-
-    [Parameter]
-    public RenderFragment? BottomPlaceholder { get; set; }
-
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
-
     private AccountDetails? accountDetails;
-
     private SubscriptionFilter? subscriptionFilter;
 
     protected override void OnParametersSet()

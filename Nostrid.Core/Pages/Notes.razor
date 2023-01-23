@@ -6,7 +6,6 @@
     public string EventId { get; set; } = null!;
 }
 
-@using Nostrid.Components
 @using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Interfaces;
@@ -56,26 +55,9 @@
 else
 {
     <div style="margin-bottom: -1rem;">
-        <NoteTreeViewer Trees="@noteTrees" NewestOnTop="true" MainEventId="@EventId" OnReply="OnReply" />
+        <NoteTreeViewer Trees="@noteTrees" NewestOnTop="true" MainEventId="@EventId" />
     </div>
-    <BootstrapModal @ref="composeModal">
-        <div class="modal fade" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="staticBackdropLabel">Reply</h1>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <NoteComposer ReplyTo="@replyingTo?.Note" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </BootstrapModal>
 }
-
-<ScriptsComponent @ref="scripts" />
 
 @code {
     private ConcurrentDictionary<string, Event> renderedN = new();
@@ -84,10 +66,7 @@ else
     private ConcurrentDictionary<string, SubscriptionFilter> detailsFiltersByAccountId = new();
     private SubscriptionFilter? eventFilter;
     private bool maxReached;
-    private BootstrapModal? composeModal;
-    private NoteTree? replyingTo;
-    private ScriptsComponent? scripts;
-
+    
     private const int SecondsForDetailsFilters = 30;
 
     protected override void OnParametersSet()
@@ -175,13 +154,6 @@ else
             (eventFilter, oldFilter) = (addedFilter, eventFilter);
         }
         relayService.DeleteFilter(oldFilter);
-    }
-
-    private void OnReply(NoteTree noteTree)
-    {
-        replyingTo = noteTree;
-        StateHasChanged();
-        composeModal?.Show();
     }
 
     #region Dispose

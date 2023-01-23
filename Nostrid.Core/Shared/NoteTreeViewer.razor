@@ -1,5 +1,39 @@
-﻿@using Nostrid.Components;
+﻿@using Nostrid.Data;
 @using Nostrid.Model;
+
+@inject FeedService feedService
+
+@code{
+    [Parameter, EditorRequired]
+    public List<NoteTree> Trees { get; set; } = null!;
+
+    [Parameter]
+    public bool Root { get; set; } = true;
+
+    [Parameter]
+    public bool NewestOnTop { get; set; }
+
+    [Parameter]
+    public string? MainEventId { get; set; }
+
+    [Parameter]
+    public int[] TreeLayout { get; set; } = new int[0];
+
+    [Parameter]
+    public bool OnlyChild { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnReply { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnRepost { get; set; }
+
+    [Parameter]
+    public Action<AccountDetails>? OnPay { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnDelete { get; set; }
+}
 
 @{
     var i = 0;
@@ -13,39 +47,42 @@
         {
             treeLayout = treeLayout.Append(trees.Count() - (i++)).ToArray();
         }
-        <NoteViewer Tree="@tree"
-                MainEventId="@MainEventId"
-                TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
-                OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent" OnReply="OnReply" OnPay="OnPay" />
+        <NoteViewer Tree="@tree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
+                OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent"
+                OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
+                OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
+                OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
+                OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)" />
     }
 
-    <PayPopup @ref="payPopup" />
+    if (Root)
+    {
+        <ModalContainer @ref="composeModal">
+            <div class="modal fade" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="staticBackdropLabel">Reply</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <NoteComposer ReplyTo="@replyingToEvent" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ModalContainer>
+        <ConfirmationModal @ref="confirmationModal"></ConfirmationModal>
+        <PayModal @ref="payModal" />
+    }
 }
 
-@code {
-    [Parameter, EditorRequired]
-    public List<NoteTree> Trees { get; set; } = null!;
-
-    [Parameter]
-    public string? MainEventId { get; set; }
-
-    [Parameter]
-    public bool NewestOnTop { get; set; }
-
-    [Parameter]
-    public bool ReplyingTo { get; set; }
-
-    [Parameter]
-    public int[] TreeLayout { get; set; } = new int[0];
-
-    [Parameter]
-    public bool OnlyChild { get; set; }
-
-    [Parameter]
-    public Action<NoteTree>? OnReply { get; set; }
-
+@code{
     private List<NoteViewer> noteViewerRefs = new List<NoteViewer>();
-    private PayPopup? payPopup;
+    private Event? replyingToEvent;
+    private ModalContainer? composeModal;
+    private ConfirmationModal? confirmationModal;
+    private PayModal? payModal;
 
     private void AddNoteViewerComponent(NoteViewer noteViewer)
     {
@@ -71,8 +108,33 @@
         }))).FirstOrDefault(n => n.IsVisible)?.NoteViewer;
     }
 
-    private void OnPay(AccountDetails accountDetails)
+    private void Reply(Event _event)
     {
-        payPopup?.Show(accountDetails);
+        replyingToEvent = _event;
+        StateHasChanged();
+        composeModal?.Show();
+    }
+
+    private void Repost(Event _event)
+    {
+        confirmationModal?.Show(ConfirmationModal.Options.Create(
+            "Are you sure you want to repost this note?",
+            "Repost",
+            ConfirmationModal.Options.Button.CreateNoButton(),
+            ConfirmationModal.Options.Button.CreateYesButton(async () => await feedService.Repost(_event))));
+    }
+
+    private void Pay(AccountDetails accountDetails)
+    {
+        payModal?.Show(accountDetails);
+    }
+
+    private void Delete(Event _event)
+    {
+        confirmationModal?.Show(ConfirmationModal.Options.Create(
+            "Are you sure you want to delete this note?",
+            "Delete",
+            ConfirmationModal.Options.Button.CreateNoButton(),
+            ConfirmationModal.Options.Button.CreateYesButton(async () => await feedService.DeleteNote(_event), "btn-danger")));
     }
 }

@@ -1,5 +1,4 @@
-﻿@using Nostrid.Components;
-@using Nostrid.Data;
+﻿@using Nostrid.Data;
 @using Nostrid.Model;
 @using Nostrid.Pages;
 
@@ -39,10 +38,10 @@
 
 </div>
 
-<ScriptsComponent @ref="scripts" OnAfterFirstRender="@SetTheme" />
+<Scripts @ref="scripts" OnAfterFirstRender="@SetTheme" />
 
 @code{
-	private ScriptsComponent? scripts;
+	private Scripts? scripts;
 
 	protected override void OnInitialized()
 	{

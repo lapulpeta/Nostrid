@@ -1,5 +1,4 @@
-﻿@using Nostrid.Components;
-@using Nostrid.Data.Relays;
+﻿@using Nostrid.Data.Relays;
 @using Nostrid.Data;
 @using Nostrid.Misc;
 
@@ -112,13 +111,13 @@
 	</div>
 </div>
 
-<ScriptsComponent @ref="scripts" />
+<Scripts @ref="scripts" />
 
 @code {
 
 	private Timer? refreshTimer;
 	private int mentionsCount;
-	private ScriptsComponent? scripts;
+	private Scripts? scripts;
 
 	protected override void OnInitialized()
 	{

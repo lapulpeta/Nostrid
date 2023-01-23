@@ -1,13 +1,14 @@
-﻿@code {
+﻿@using Nostrid.Data;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+
+@inject AccountService accountService
+@inject NavigationManager navigationManager
+
+@code {
     [Parameter, EditorRequired]
     public Account Account { get; set; } = null!;
 }
-
-@using Nostrid.Data;
-@using Nostrid.Model;
-@using Nostrid.Misc;
-@inject AccountService accountService
-@inject NavigationManager navigationManager
 
 <div role="button" @onclick="@(() => navigationManager.NavigateTo($"account/{Account.Id}"))" class="d-flex flex-row align-items-start p-3 bg-tertiary-hover text-decoration-none">
     <div class="d-flex flex-shrink-0">
