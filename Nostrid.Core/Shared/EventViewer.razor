@@ -100,21 +100,19 @@
 
     private SubscriptionFilter? subscriptionFilter;
 
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-        accountService.AccountDetailsChanged += AccountDetailsChanged;
-    }
-
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
         if (Event == null) return;
+
+        Cleanup();
+        accountService.AccountDetailsChanged += AccountDetailsChanged;
+
         accountDetails = accountService.GetAccountDetails(Event.PublicKey);
         var repostEventId = Event.NoteMetadata?.RepostEventId;
         if (repostEventId != null)
         {
-            relayService.AddFilter(subscriptionFilter = new EventSubscriptionFilter(repostEventId));
+            relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
         }
     }
 
