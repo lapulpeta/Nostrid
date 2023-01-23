@@ -65,8 +65,8 @@
                             <AccountName Details="@account.Details" Id="@account.Id" />
                             @if (!string.IsNullOrEmpty(account.Details?.About))
                             {
-                                    <div class="mt-3">
-                                    <p class="card-text m-0">@account.Details?.About</p>
+                                <div class="mt-3">
+                                    <p class="card-text m-0 text-break">@account.Details?.About</p>
                                 </div>   
                             }
                             <button class="mt-3 btn btn-outline-primary w-100 @(accountService.MainAccount?.Id == account.Id ? "disabled" : "")" @onclick="() => SelectAccount(account)">
