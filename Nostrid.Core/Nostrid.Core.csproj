@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <RootNamespace>Nostrid</RootNamespace>
-    <Version>1.9.1</Version>
+    <Version>1.10</Version>
   </PropertyGroup>
 
   <ItemGroup>
