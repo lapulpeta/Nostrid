@@ -4,24 +4,28 @@
 @using Nostrid.Data;
 @using System.Collections.Concurrent;
 @using Nostrid.Model;
+
 @inject ChannelService channelService
 @inject RelayService relayService
+@inject NavigationManager navigationManager
 
 <h4>Channels</h4>
-<table>
-    @foreach (var (channelId, channel) in channelsById.Where(m => m.Value.MessageCount > 0).OrderByDescending(m => m.Value.MessageCount))
-    {
-        <tr>
-            <td>
-                <a href="/channel/@channelId">@(channel.Details?.Name ?? channelId)</a>
-            </td>
-            <td>
-                @channel.MessageCount
-            </td>
-        </tr>
-    }
-</table>
-
+@foreach (var (channelId, channel) in channelsById.Where(m => m.Value.MessageCount > 0).OrderByDescending(m => m.Value.MessageCount))
+{
+    <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+         @onclick="@(() => navigationManager.NavigateTo($"/channel/{channelId}"))"style="margin: 0 -1rem;">
+        <div class="flex-shrink-0">
+            <AccountPicture Id="@channel.Id" Url="@channel.Details?.PictureUrl" />
+        </div>
+        <div class="flex-grow-1 px-2 text-break">
+            <div class="fw-bold">@channel.Details?.Name</div>
+            <div class="fs-7 text-secondary">@channelId</div>
+        </div>
+        <div>
+            <span class="badge text-bg-primary rounded-pill">@channel.MessageCount</span>
+        </div>
+    </div>
+}
 
 @code {
     private SubscriptionFilter messageFilter, detailsFilter;
