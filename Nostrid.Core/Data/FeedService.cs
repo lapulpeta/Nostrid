@@ -66,7 +66,7 @@ public class FeedService
     {
         Task.Run(() => HandleEventsAsync(data.events));
 
-        var notes = data.events.Where(ev => (ev.Kind == NostrKind.Text || ev.Kind == NostrKind.Repost) && !eventDatabase.IsEventDeleted(ev.Id));
+        var notes = data.events.Where(ev => !eventDatabase.IsEventDeleted(ev.Id));
         if (notes.Any())
         {
             ReceivedNotes?.Invoke(this, (data.filterId, notes));

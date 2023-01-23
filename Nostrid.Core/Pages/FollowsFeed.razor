@@ -23,7 +23,7 @@
 }
 else
 {
-    <FeedViewer BaseFilter="@filter" />
+    <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 }
 
 @code {
@@ -38,6 +38,7 @@ else
     private void MainAccountChanged(object? sender, EventArgs args)
     {
         SetFilter();
+        InvokeAsync(() => StateHasChanged());
     }
 
     private void SetFilter()
@@ -51,7 +52,6 @@ else
         {
             filter = new AccountSubscriptionFilter(accountService.MainAccount.FollowList.ToArray());
         }
-        InvokeAsync(() => StateHasChanged());
     }
 
     #region Dispose

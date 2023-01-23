@@ -12,6 +12,9 @@
 @code {
     [Parameter, EditorRequired]
     public SubscriptionFilter BaseFilter { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public int[] MessageKinds { get; set; }
 }
 
 @if (newN.Count > 0)
@@ -83,7 +86,10 @@ else
     private void LoadMore()
     {
         dbLimit += RelayQueryLimit;
-        Event.Merge(renderedN, feedService.GetNotesFeed(BaseFilter.GetFilters(), dbLimit));
+        var rawFilters = BaseFilter.GetFilters();
+        foreach (var rawFilter in rawFilters)
+            rawFilter.Kinds = MessageKinds;
+        Event.Merge(renderedN, feedService.GetNotesFeed(rawFilters, dbLimit));
     }
 
     private async Task LoadMoreFromNoteAsync()
@@ -117,19 +123,23 @@ else
 
     private void ReceivedNotes(object? sender, (string filterId, IEnumerable<Event> notes) data)
     {
-        if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter?.Id && data.filterId != newFilter?.Id))
+        if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
             return;
 
-        UpdateDetailFilters(data.notes);
+        var notes = data.notes.Where(n => MessageKinds.Contains(n.Kind));
+        if (!notes.Any())
+            return;
 
-        if (data.filterId == oldFilter?.Id)
+        UpdateDetailFilters(notes);
+
+        if (data.filterId == oldFilter.Id)
         {
-            Event.Merge(renderedN, data.notes);
+            Event.Merge(renderedN, notes);
             TrimOlder();
         }
         else
         {
-            Event.Merge(newN, data.notes, newEv => !renderedN.TryGetValue(newEv.Id, out var oldEv) ? true : (!oldEv.Processed && newEv.Processed));
+            Event.Merge(newN, notes, newEv => !renderedN.TryGetValue(newEv.Id, out var oldEv) ? true : (!oldEv.Processed && newEv.Processed));
         }
     }
 

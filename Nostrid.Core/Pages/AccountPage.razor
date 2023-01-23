@@ -129,7 +129,7 @@
 
 <PayPopup @ref="payPopup" />
 
-<FeedViewer BaseFilter="@feedFilter" />
+<FeedViewer BaseFilter="@feedFilter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 
 @code {
     private Account account;

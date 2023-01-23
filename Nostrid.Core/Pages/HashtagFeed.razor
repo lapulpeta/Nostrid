@@ -22,7 +22,7 @@
     }
 </div>
 
-<FeedViewer BaseFilter="@filter" />
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 
 @code {
     private SubscriptionFilter? filter;
