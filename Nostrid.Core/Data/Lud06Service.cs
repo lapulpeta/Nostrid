@@ -60,7 +60,7 @@ namespace Nostrid.Data
             {
                 var handler = new HttpClientHandler()
                 {
-                    AllowAutoRedirect = false
+                    AllowAutoRedirect = true
                 };
                 using var client = new HttpClient(handler);
                 using var response = await client.GetAsync(url);
