@@ -12,10 +12,12 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 ## Features
 
 - [x] Multiaccount with simple switching
+- [x] NIP-07 extensions, e.g. nos2x (Web/PWA version only)
 - [x] NIP-05 profiles
+- [x] Lightning Network (pay button and profile setup)
 - [x] Read and send notes with support for markdown
 - [x] Delete notes
-- [x] PoW (NIP-13)
+- [x] NIP-13 PoW
 - [x] Read and send reactions
 - [x] Hashtags (send and search)
 - [x] Customizable feeds based on hashtags
@@ -26,8 +28,8 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Local cache of events
 - [x] Notification of unread mentions
 - [x] Display embedded images, videos and audios
+- [x] Reposts (aka Boosts)
 - [x] Embedded mentions of other accounts and notes - PARTIAL (only links, no previews)
-- [x] Reposts (aka Boosts) - PARTIAL
 - [ ] Direct messages - SOON
 - [ ] Channels - SOON
 - [ ] Manual/advanced relay management - SOON
@@ -44,7 +46,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - NIP-04: Encrypted Direct Message
 - NIP-05: Mapping Nostr keys to DNS-based internet identifiers ✅
 - NIP-06: Basic key derivation from mnemonic seed phrase
-- NIP-07: window.nostr capability for web browsers
+- NIP-07: window.nostr capability for web browsers ✅ (Web/PWA version only)
 - NIP-08: Handling Mentions ✔️
 - NIP-09: Event Deletion ✅
 - NIP-10: Conventions for clients' use of e and p tags in text events. ✅
@@ -76,8 +78,10 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 
 ### Technologies
 
-* .NET 7.0 MAUI
+* .NET 7.0
+* MAUI
 * Blazor Hybrid
+* Blazor Webassembly
 * [Bootstrap](https://getbootstrap.com/)
 * [LiteDB](https://github.com/mbdavid/LiteDB)
 * [NNostr](https://github.com/Kukks/NNostr)
@@ -116,11 +120,12 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 
 ### Building
 
-1. Install Visual Studio 2022 with support for .NET Multi-platform App UI development
+1. Install Visual Studio 2022 with support for `.NET Multi-platform App UI development` (and optionally `.NET Webassembly Build Tools` for Web project)
 2. Clone this repository
 3. Make sure `git` is in your `PATH` system variable
 4. Run `git submodule update` to restore custom libraries
 5. Open solution in Visual Studio and run
+6. For Android: run `dotnet build -c Release -f net7.0-android` in `Nostrid` inner project
 
 ## Authors
 
