@@ -126,7 +126,9 @@ else
 
     private void UpdateDetailFilters(IEnumerable<Event> newEvents)
     {
-        var accountIds = newEvents.Select(n => n.PublicKey).Where(n => !detailsFiltersByAccountId.ContainsKey(n));
+        var accountIds = newEvents
+            .SelectMany(n => new[] { n.PublicKey }.Union(n.GetMentions().Where(n => n.Type == 'p').Select(n => n.MentionId)))
+            .Where(n => !detailsFiltersByAccountId.ContainsKey(n));
         foreach (var accountId in accountIds)
         {
             var filter = new AccountDetailsSubscriptionFilter(accountId)
