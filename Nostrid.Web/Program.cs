@@ -20,7 +20,6 @@ builder.Services.AddSingleton<EventDatabase>();
 builder.Services.AddSingleton<AccountService>();
 builder.Services.AddSingleton<HtmlSanitizer>();
 builder.Services.AddSingleton<NoteProcessor>();
-builder.Services.AddSingleton<Nip05Service>();
 builder.Services.AddSingleton<Lud06Service>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
@@ -31,16 +30,13 @@ builder.Services.AddSingleton<IClipboardService, ClipboardService>();
 var host = builder.Build();
 
 // Database
+var eventDatabase = host.Services.GetRequiredService<EventDatabase>();
 #if RELEASE
 var dbService = host.Services.GetRequiredService<DatabaseService>();
 await dbService.InitDatabaseAsync();
-var eventDatabase = host.Services.GetRequiredService<EventDatabase>();
-eventDatabase.InitDatabase(DatabaseService.FileName);
 eventDatabase.DatabaseHasChanged += (_, _) => dbService.StartSyncDatabase();
-#else
-var eventDatabase = host.Services.GetRequiredService<EventDatabase>();
-eventDatabase.InitDatabase(new MemoryStream());
 #endif
+eventDatabase.InitDatabase(DatabaseService.FileName);
 
 // Signer
 var accountService = host.Services.GetRequiredService<AccountService>();

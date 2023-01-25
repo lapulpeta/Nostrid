@@ -1,5 +1,3 @@
-using LiteDB;
-
 namespace Nostrid.Model;
 
 public class Reaction

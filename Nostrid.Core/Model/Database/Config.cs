@@ -2,7 +2,7 @@ namespace Nostrid.Model;
 
 public class Config
 {
-    public int Id { get; set; }
+    public long Id { get; set; }
 
     public bool ShowDifficulty { get; set; }
 

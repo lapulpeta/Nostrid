@@ -28,7 +28,7 @@
 @if (renderedN.Any())
 {
     @if (!noteTrees.Exists(EventId) || 
-        (!maxReached && (noteTrees.Count != 1 ||!string.IsNullOrEmpty(noteTrees[0].Note.NoteMetadata.ReplyToId))))
+        (!maxReached && (noteTrees.Count != 1 ||!string.IsNullOrEmpty(noteTrees[0].Note.ReplyToId))))
     {
         <div class="text-secondary mb-2">
             <i class="bi bi-exclamation-triangle-fill"></i>
@@ -75,7 +75,6 @@ else
 
         renderedN = new();
 
-        feedService.NoteUpdated += NoteUpdated;
         feedService.NoteReceivedChild += NoteReceivedChild;
 
         UpdateEventFilters();
@@ -86,7 +85,7 @@ else
                 return;
 
             var copied = new List<Event>();
-            var mustRefresh = Event.Merge(renderedN, feedService.GetNotesThread(EventId, downLevels: 4, out maxReached), onCopy: (ev) => copied.Add(ev));
+            var mustRefresh = EventExtension.Merge(renderedN, feedService.GetNotesThread(EventId, downLevels: 4, out maxReached), onCopy: (ev) => copied.Add(ev));
 
             if (copied.Any())
             {
@@ -124,15 +123,6 @@ else
         }
     }
 
-    private void NoteUpdated(object? sender, Event ev)
-    {
-        if (!renderedN.ContainsKey(ev.Id))
-            return;
-
-        renderedN[ev.Id] = ev;
-        InvokeAsync(() => StateHasChanged());
-    }
-
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
     {
         if (!renderedN.ContainsKey(data.EventId))
@@ -147,7 +137,7 @@ else
     {
         SubscriptionFilter addedFilter, oldFilter;
         var renderedNValues = renderedN.Values;
-        var ids = renderedNValues.SelectMany(t => new[] { t.Id, t.NoteMetadata.ReplyToId, t.NoteMetadata.ReplyToRootId }).Union(new[] { EventId }).Where(t => !string.IsNullOrEmpty(t)).Distinct();
+        var ids = renderedNValues.SelectMany(t => new[] { t.Id, t.ReplyToId, t.ReplyToRootId }).Union(new[] { EventId }).Where(t => !string.IsNullOrEmpty(t)).Distinct();
         relayService.AddFilter(addedFilter = new EventSubscriptionFilter(ids.ToArray()));
         lock (atomicSwap)
         {
@@ -176,7 +166,6 @@ else
 
     private void Cleanup()
     {
-        feedService.NoteUpdated -= NoteUpdated;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         refreshTimer?.Dispose();
         if (eventFilter != null) relayService.DeleteFilter(eventFilter);

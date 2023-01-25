@@ -14,7 +14,6 @@ public class AuthorSubscriptionFilter : SubscriptionFilter
     public AuthorSubscriptionFilter(string[] ids)
     {
         this.ids = ids;
-        ParamsId = Utils.HashWithSHA256("aasf:" + ids.OrderBy(x => x).Aggregate((a, b) => $"{a}:{b}"));
     }
 
     public override NostrSubscriptionFilter[] GetFilters()

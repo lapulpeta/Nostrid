@@ -150,7 +150,7 @@ public class RelayService
 
         foreach (var nostrEvent in events)
         {
-            var ev = new Event(nostrEvent);
+            var ev = EventExtension.FromNostrEvent(nostrEvent);
             if (ev.Kind == NostrKind.Text && configService.MainConfig.MinDiffIncoming > 0)
             {
                 if (!ev.HasPow || ev.Difficulty < configService.MainConfig.MinDiffIncoming || !ev.CheckPowTarget(configService.MainConfig.StrictDiffCheck))
@@ -161,18 +161,13 @@ public class RelayService
             {
                 oldest = ev.CreatedAt.Value;
             }
-            var newEvent = eventDatabase.SaveNewEvent(ev, relay);
-            if (newEvent != null)
+            if (eventDatabase.SaveNewEvent(ev, relay))
             {
-                newEvents.Add(newEvent);
+                newEvents.Add(ev);
             }
         }
         if (filterBySubscriptionId.TryGetValue(subscriptionId, out var filter))
         {
-            if (filter.PreserveOldest)
-            {
-                eventDatabase.UpdateFilterData(filter.ParamsId, relay.Id, oldest);
-            }
             if (newEvents.Count > 0)
             {
                 ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
@@ -277,8 +272,8 @@ public class RelayService
 
         foreach (var ev in eventDatabase.ListOwnEvents(relay.Id))
         {
-            ev.Event.Content ??= string.Empty; // TODO: LiteDb stores string.Empty as null
-            await client.PublishEvent(ev.Event);
+            ev.Content ??= string.Empty; // TODO: LiteDb stores string.Empty as null
+            await client.PublishEvent(ev.ToNostrEvent());
             eventDatabase.AddSeenBy(ev.Id, relay.Id);
         }
     }
@@ -392,7 +387,7 @@ public class RelayService
     public void DeleteRelay(Relay relay)
     {
         CleanupRelay(relay);
-        eventDatabase.DeleteRelay(relay);
+        eventDatabase.DeleteRelay(relay.Id);
     }
 
     private void UpdateSubscriptions()
@@ -429,15 +424,9 @@ public class RelayService
                 if (!subs.Any(s => s.Filter == f))
                 {
                     var sub = new Subscription(client, f);
-                    if (f.PreserveOldest)
-                    {
-                        DateTimeOffset? oldest = eventDatabase.GetFilterData(f.ParamsId, relay.Id);
-                        if (oldest.HasValue)
-                            f.limitFilterData.Until = oldest.Value;
-                    }
+                    filterBySubscriptionId[sub.SubscriptionId] = f;
                     sub.Subscribe();
                     subs.Add(sub);
-                    filterBySubscriptionId[sub.SubscriptionId] = f;
                 }
             }
 
@@ -448,7 +437,7 @@ public class RelayService
                 if (!filters.Contains(sub.Filter))
                 {
                     sub.Unsubscribe();
-                    filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _);
+                    //filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _); // TODO: find out best way to cleanup this dictionary
                     subs.RemoveAt(i);
                 }
             }
@@ -457,7 +446,7 @@ public class RelayService
 
     public void SendEvent(NostrEvent nostrEvent)
     {
-        eventDatabase.SaveOwnEvents(new OwnEvent(nostrEvent));
+        eventDatabase.SaveOwnEvents(nostrEvent);
         lock (clientByRelay)
         {
             foreach (var (relay, client) in clientByRelay)

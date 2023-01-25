@@ -11,7 +11,6 @@ public class AccountService
 {
 	private readonly EventDatabase eventDatabase;
 	private readonly RelayService relayService;
-	private readonly Nip05Service nip05Service;
 	private SubscriptionFilter[]? mainFilters;
 
 	public event EventHandler? MainAccountChanged;
@@ -21,11 +20,10 @@ public class AccountService
 
 	public SubscriptionFilter? MainAccountMentionsFilter { get; private set; }
 
-	public AccountService(EventDatabase eventDatabase, RelayService relayService, Nip05Service nip05Service)
+	public AccountService(EventDatabase eventDatabase, RelayService relayService)
 	{
 		this.eventDatabase = eventDatabase;
 		this.relayService = relayService;
-		this.nip05Service = nip05Service;
 		relayService.ReceivedEvents += (_, data) =>
 		{
 			if (data.filterId != MainAccountMentionsFilter?.Id)
@@ -100,10 +98,10 @@ public class AccountService
 		return knownSigners.ContainsKey(pubkey);
 	}
 
-	public void SetLastRead(DateTimeOffset lastRead)
+	public void SetLastRead(DateTime lastRead)
 	{
 		mainAccount.LastNotificationRead = lastRead;
-		eventDatabase.SaveAccount(mainAccount);
+		eventDatabase.SetAccountLastRead(mainAccount.Id, lastRead);
 		MentionsUpdated?.Invoke(this, EventArgs.Empty);
 	}
 
@@ -166,68 +164,54 @@ public class AccountService
 	// NIP-01: https://github.com/nostr-protocol/nips/blob/master/01.md
 	public void HandleKind0(Event eventToProcess)
 	{
-		Account accountChanged = null;
 		lock (eventDatabase)
 		{
 			if (!string.IsNullOrEmpty(eventToProcess.Content))
 			{
-				try
-				{
-					var accountDetails = JsonSerializer.Deserialize<AccountDetails>(eventToProcess.Content);
-					if (accountDetails != null)
-					{
-						var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
+				AccountDetails? accountDetailsReceived = null;
 
-						if (!eventToProcess.CreatedAt.HasValue || !account.DetailsLastUpdate.HasValue ||
-							eventToProcess.CreatedAt.Value > account.DetailsLastUpdate.Value)
-						{
-							if (string.IsNullOrEmpty(accountDetails.Nip05Id))
-							{
-								accountDetails.Nip05Data = null;
-							}
-							account.Details = accountDetails;
-							account.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
-							eventDatabase.SaveAccount(account);
-							accountChanged = account;
-						}
-					}
-				}
-				catch (Exception ex)
+                try
 				{
-				}
-			}
+					accountDetailsReceived = JsonSerializer.Deserialize<AccountDetails>(eventToProcess.Content);
+                }
+                catch (Exception ex)
+                {
+                }
 
-			eventToProcess.Processed = true;
-			eventDatabase.SaveEvent(eventToProcess);
-		}
-		if (accountChanged != null)
-		{
-			if (accountChanged.Id == mainAccount?.Id)
-			{
-				SetMainAccount(accountChanged);
-			}
-			if (string.IsNullOrEmpty(accountChanged.Details.Nip05Id))
-			{
-				AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
-			}
-			else
-			{
-				Task.Run(async () =>
+				if (accountDetailsReceived == null)
+					return;
+				
+				var accountDetails = eventDatabase.GetAccountDetails(eventToProcess.PublicKey);
+
+				if (!eventToProcess.CreatedAt.HasValue || eventToProcess.CreatedAt.Value > accountDetails.DetailsLastUpdate)
 				{
-					var details = accountChanged.Details;
-					if (await nip05Service.RefreshNip05(accountChanged.Id, details))
+					accountDetails.About = accountDetailsReceived.About;
+					accountDetails.Name = accountDetailsReceived.Name;
+					accountDetails.PictureUrl = accountDetailsReceived.PictureUrl;
+					accountDetails.Nip05Id = accountDetailsReceived.Nip05Id;
+					accountDetails.Lud16Id = accountDetailsReceived.Lud16Id;
+					accountDetails.Lud06Url = accountDetailsReceived.Lud06Url;
+					accountDetails.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTime.UtcNow;
+
+					eventDatabase.SaveAccountDetails(accountDetails);
+
+					if (eventToProcess.PublicKey == mainAccount?.Id)
 					{
-						// Refresh from DB just in case it changed
-						accountChanged = eventDatabase.GetAccount(accountChanged.Id);
-						accountChanged.Details = details;
-						eventDatabase.SaveAccount(accountChanged);
-						if (accountChanged.Id == mainAccount?.Id)
+                        mainAccount.Details = accountDetailsReceived;
+                        SetMainAccount(mainAccount);
+
+						Task.Run(async () =>
 						{
-							SetMainAccount(accountChanged);
-						}
-					}
-					AccountDetailsChanged?.Invoke(this, (accountChanged.Id, accountChanged.Details));
-				});
+                            accountDetails.Nip05Valid = await Nip05.RefreshNip05(mainAccount.Id, accountDetails.Nip05Id);
+                            eventDatabase.SetNip05Validity(mainAccount.Id, accountDetails.Nip05Valid);
+                            AccountDetailsChanged?.Invoke(this, (mainAccount.Id, accountDetails));
+						});
+
+
+                    }
+
+                }
+
 			}
 		}
 	}
@@ -239,7 +223,7 @@ public class AccountService
 
 		lock (eventDatabase)
 		{
-			var newFollowList = eventToProcess.Tags.Where(t => t.TagIdentifier == "p" && t.Data?.Count > 0).Select(t => t.Data[0]).Distinct().ToList();
+			var newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.DataCount > 1).Select(t => t.Data1).Distinct().ToList();
 			var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
 			if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
@@ -284,9 +268,6 @@ public class AccountService
 					accountChanged = account;
 				}
 			}
-
-			eventToProcess.Processed = true;
-			eventDatabase.SaveEvent(eventToProcess);
 		}
 
 		if (accountChanged != null)
@@ -300,10 +281,10 @@ public class AccountService
 
 	public AccountDetails GetAccountDetails(string accountId)
 	{
-		return eventDatabase.GetAccount(accountId)?.Details ?? new AccountDetails();
-	}
+        return eventDatabase.GetAccountDetails(accountId);
+    }
 
-	public Account GetAccount(string accountId)
+    public Account GetAccount(string accountId)
 	{
 		return eventDatabase.GetAccount(accountId);
 	}

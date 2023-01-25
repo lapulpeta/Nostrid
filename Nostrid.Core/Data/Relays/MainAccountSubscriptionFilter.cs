@@ -10,13 +10,13 @@ public class MainAccountSubscriptionFilter : SubscriptionFilter
 	public MainAccountSubscriptionFilter(string id)
     {
         ids = new[] { id };
-        ParamsId = Utils.HashWithSHA256($"masf:{nameof(MainAccountSubscriptionFilter)}:{id}");
     }
 
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Metadata, NostrKind.Contacts }, Limit = 1 },
+            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Metadata }, Limit = 1 },
+            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Contacts }, Limit = 1 },
             new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Deletion } }
         };
     }

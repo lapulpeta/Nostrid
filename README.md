@@ -1,7 +1,7 @@
 ﻿# Nostrid - Nostr Client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Contribute: LN](https://img.shields.io/badge/Contribute-LN-green)](https://legend.lnbits.com/tipjar/786)
+[![Donate: LN](https://img.shields.io/badge/Donate-LN-green)](https://legend.lnbits.com/tipjar/786)
 
 ---
 
@@ -76,17 +76,19 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 ![Nostrid Windows](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid2.jpg)
 ![Nostrid Windows](https://raw.githubusercontent.com/lapulpeta/Nostrid-media/main/nostrid3.jpg)
 
-### Technologies
+### Technologies & Frameworks
 
-* .NET 7.0
-* MAUI
-* Blazor Hybrid
-* Blazor Webassembly
+* [.NET 7.0](https://github.com/dotnet/runtime)
+* [MAUI](https://github.com/dotnet/maui)
+* [Blazor](https://github.com/dotnet/blazor)
 * [Bootstrap](https://getbootstrap.com/)
-* [LiteDB](https://github.com/mbdavid/LiteDB)
+* [Entity Framework](https://github.com/dotnet/efcore)
+* [SQLite-net](https://github.com/praeclarum/sqlite-net)
 * [NNostr](https://github.com/Kukks/NNostr)
 * [HtmlSanitizer](https://github.com/mganss/HtmlSanitizer)
 * [Jdenticon.Net](https://github.com/dmester/jdenticon-net)
+* [Markdig](https://github.com/xoofx/markdig)
+* [QRCoder](https://github.com/codebude/QRCoder)
 
 ### Contributing
 
@@ -134,4 +136,4 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE.md file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details

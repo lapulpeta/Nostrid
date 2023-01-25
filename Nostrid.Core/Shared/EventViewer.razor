@@ -40,7 +40,7 @@
             </a>
             <span class="text-secondary">
                 <span>·</span>
-                <span>@Utils.FormatDate(Event?.CreatedAtCurated ?? DateTimeOffset.MinValue)</span>
+                <span>@Utils.FormatDate(Event?.CreatedAtCurated ?? 0)</span>
                 @if (showDifficulty)
                 {
                     <span>&nbsp;·</span>
@@ -50,23 +50,23 @@
                         <span> 🏋️</span>
                     }
                 }
-                @if (ShowReplyingTo && Event?.NoteMetadata.ReplyToId != null)
+                @if (ShowReplyingTo && Event?.ReplyToId != null)
                 {
                     <span>&nbsp;·</span>
                     <span class="d-inline-block">
                         Replying to
-                        <a href="/note/@Event?.NoteMetadata.ReplyToId" @onclick:stopPropagation="true">
-                            @ByteTools.PubkeyToNote(Event?.NoteMetadata.ReplyToId ?? string.Empty, true)
+                        <a href="/note/@Event?.ReplyToId" @onclick:stopPropagation="true">
+                            @ByteTools.PubkeyToNote(Event?.ReplyToId ?? string.Empty, true)
                         </a>
                     </span>
                 }
-                @if (Event?.NoteMetadata.RepostEventId != null)
+                @if (Event?.RepostEventId != null)
                 {
                     <span>&nbsp;·</span>
                     <span class="d-inline-block">
                         Reposted
-                        <a href="/note/@Event.NoteMetadata.RepostEventId" @onclick:stopPropagation="true">
-                            @ByteTools.PubkeyToNote(Event.NoteMetadata.RepostEventId, true)
+                        <a href="/note/@Event.RepostEventId" @onclick:stopPropagation="true">
+                            @ByteTools.PubkeyToNote(Event.RepostEventId, true)
                         </a>
                     </span>
                 }
@@ -76,13 +76,13 @@
         {
             case NostrKind.Text:
                 <div class="text-break note-content">
-                    @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.NoteMetadata)
+                    @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
                 </div>
                 break;
             case NostrKind.Repost:
-                if (Event.NoteMetadata.RepostEventId != null)
+                if (Event.RepostEventId != null)
                 {
-                    var repostEvent = eventDatabase.GetEventOrNull(Event.NoteMetadata.RepostEventId);
+                    var repostEvent = eventDatabase.GetEventOrNull(Event.RepostEventId);
                     if (repostEvent != null)
                     {
                         <div role="button" class="border border-secondary rounded-2 p-2"
@@ -111,7 +111,7 @@
         accountService.AccountDetailsChanged += AccountDetailsChanged;
 
         accountDetails = accountService.GetAccountDetails(Event.PublicKey);
-        var repostEventId = Event.NoteMetadata?.RepostEventId;
+        var repostEventId = Event.RepostEventId;
         if (repostEventId != null)
         {
             relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
