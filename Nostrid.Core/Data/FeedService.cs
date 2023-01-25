@@ -82,10 +82,10 @@ public class FeedService
             if (Utils.IsValidNostrId(eventId))
             {
                 eventDatabase.MarkEventAsDeleted(eventId, eventToProcess.PublicKey);
+                var eventChanged = eventDatabase.GetEvent(eventId);
+                NoteUpdated?.Invoke(this, eventChanged);
             }
         }
-
-        NoteUpdated?.Invoke(this, eventToProcess);
     }
 
     private void HandleRelayRecommendation(string uri)

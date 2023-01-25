@@ -170,7 +170,6 @@
 
 @code {
     private bool likeClicked = false;
-    //private List<ReactionGroup> reactions;
     private bool likeSent => likeClicked || (accountService.MainAccount != null ? feedService.AccountReacted(Tree.Note.Id, accountService.MainAccount.Id) : false);
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private IJSObjectReference? jsModule;
@@ -179,7 +178,6 @@
 
     protected override void OnInitialized()
     {
-        //reactions = feedService.GetReactionGroups(Tree.Note.Id);
         accountService.AccountDetailsChanged += AccountDetailsChanged;
         feedService.NoteUpdated += NoteUpdated;
     }
@@ -263,8 +261,7 @@
         if (Tree.Note.Id != ev.Id)
             return;
 
-        Tree.Note = ev;
-        //reactions = feedService.GetReactionGroups(Tree.Note.Id);
+        Tree.Note.Deleted = ev.Deleted; // For now only the deleted status can be updated (reactions are loaded on the fly)
         InvokeAsync(() => StateHasChanged());
     }
 

@@ -118,7 +118,8 @@ namespace Nostrid.Data
                 .Where(e => e.Id == id && e.PublicKey == ownerId)
                 .ExecuteUpdate(e => e
                     .SetProperty(e => e.Deleted, true)
-                    .SetProperty(e => e.Kind, -1)
+                    .SetProperty(e => e.Broadcast, false)
+                    .SetProperty(e => e.CanEcho, false)
                     .SetProperty(e => e.Content, string.Empty));
         }
 
@@ -187,6 +188,7 @@ namespace Nostrid.Data
                 if (db.Events.Any(e => e.Id == ev.Id && e.CanEcho))
                 {
                     db.Events.Where(e => e.Id == ev.Id && e.CanEcho).ExecuteUpdate(e => e.SetProperty(e => e.CanEcho, false));
+                    ev.CreatedAtCurated = ((DateTimeOffset)ev.CreatedAt.Value).ToUnixTimeSeconds();
                     return true;
                 }
 
