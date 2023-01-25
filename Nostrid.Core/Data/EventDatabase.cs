@@ -420,18 +420,27 @@ namespace Nostrid.Data
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public List<Reaction> ListReactions(string eventId)
+        public List<ReactionGroup> ListReactionGroups(string eventId)
         {
             using var db = new Context(_dbfile);
 
             var reactions = db.TagDatas
                 .Where(d => d.Data0 == "e" && d.Data1 == eventId && d.Event.Kind == NostrKind.Reaction)
-                .Select(d => new Reaction()
+                .GroupBy(d => d.Event.Content)
+                .Select(g => new ReactionGroup()
                 {
-                    Content = d.Event.Content,
-                    ReactorId = d.Event.PublicKey,
+                    Reaction = g.Key,
+                    Count = g.Count(),
                 });
             return reactions.ToList();
+        }
+        
+        public bool AccountReacted(string eventId, string accountId)
+        {
+            using var db = new Context(_dbfile);
+
+            return db.TagDatas.Any(d => d.Data0 == "e" && d.Data1 == eventId && d.Event.Kind == NostrKind.Reaction &&
+                d.Event.PublicKey == accountId);
         }
 
         public void SetNip05Validity(string id, bool valid)

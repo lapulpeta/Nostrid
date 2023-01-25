@@ -453,9 +453,14 @@ public class FeedService
         return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
     }
 
-    public List<Reaction> GetReactions(string eventId)
+    public List<ReactionGroup> GetReactionGroups(string eventId)
     {
-        return eventDatabase.ListReactions(eventId);
+        return eventDatabase.ListReactionGroups(eventId);
+    }
+
+    public bool AccountReacted(string eventId, string accountId)
+    {
+        return eventDatabase.AccountReacted(eventId, accountId);
     }
 }
 

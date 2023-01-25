@@ -96,29 +96,32 @@
                 </LeftPlaceholder>
                 <BottomPlaceholder>
                     <div class="w-100 mt-1" style="margin-right:-1.5rem;">
-                        @if (reactions.Count > 0)
-                        {
-                            var groupedReactions = reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count());
-                            @foreach (var reaction in groupedReactions.Take(3))
+                        @{
+                            var reactions = feedService.GetReactionGroups(Tree.Note.Id);
+                            if (reactions.Count > 0)
                             {
-                                <span class="py-2 me-4">
-                                    <span class="d-inline-block">
-                                        <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
-                                            @NormalizedReaction(reaction.Key)
-                                        </a>
-                                    </span><span class="fs-7 fw-bold">@reaction.Count()</span>
-                                </span>
-                            }
-                            var remainingReactionCount = groupedReactions.Skip(3).Sum(reaction => reaction.Count());
-                            if (remainingReactionCount > 0)
-                            {
-                                <span class="py-2 me-4">
-                                    <span class="d-inline-block">
-                                        <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
-                                            <i class="bi bi-three-dots"></i>
-                                        </a>
-                                    </span><span class="fs-7 fw-bold">@remainingReactionCount</span>
-                                </span>
+                                var groupedReactions = reactions.OrderByDescending(r => r.Count);
+                                @foreach (var reaction in groupedReactions.Take(3))
+                                {
+                                    <span class="py-2 me-4">
+                                        <span class="d-inline-block">
+                                            <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
+                                                @NormalizedReaction(reaction.Reaction)
+                                            </a>
+                                        </span><span class="fs-7 fw-bold">@reaction.Count</span>
+                                    </span>
+                                }
+                                var remainingReactionCount = groupedReactions.Skip(3).Sum(reaction => reaction.Count);
+                                if (remainingReactionCount > 0)
+                                {
+                                    <span class="py-2 me-4">
+                                        <span class="d-inline-block">
+                                            <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
+                                                <i class="bi bi-three-dots"></i>
+                                            </a>
+                                        </span><span class="fs-7 fw-bold">@remainingReactionCount</span>
+                                    </span>
+                                }
                             }
                         }
                         <div class="d-inline-block">
@@ -167,8 +170,8 @@
 
 @code {
     private bool likeClicked = false;
-    private List<Reaction> reactions;
-    private bool likeSent => likeClicked || (reactions.Any(r => r.ReactorId == accountService?.MainAccount?.Id));
+    //private List<ReactionGroup> reactions;
+    private bool likeSent => likeClicked || (accountService.MainAccount != null ? feedService.AccountReacted(Tree.Note.Id, accountService.MainAccount.Id) : false);
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private IJSObjectReference? jsModule;
     private ElementReference? referenceElement;
@@ -176,7 +179,7 @@
 
     protected override void OnInitialized()
     {
-        reactions = feedService.GetReactions(Tree.Note.Id);
+        //reactions = feedService.GetReactionGroups(Tree.Note.Id);
         accountService.AccountDetailsChanged += AccountDetailsChanged;
         feedService.NoteUpdated += NoteUpdated;
     }
@@ -261,7 +264,7 @@
             return;
 
         Tree.Note = ev;
-        reactions = feedService.GetReactions(Tree.Note.Id);
+        //reactions = feedService.GetReactionGroups(Tree.Note.Id);
         InvokeAsync(() => StateHasChanged());
     }
 
