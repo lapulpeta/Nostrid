@@ -34,13 +34,11 @@ public class FeedService
             case NostrKind.Metadata:
                 accountService.HandleKind0(eventToProcess);
                 break;
-            case NostrKind.Text:
             case NostrKind.ChannelMessage:
+                channelService.MessageProcessed(eventToProcess);
+                goto case NostrKind.Text;
+            case NostrKind.Text:
                 HandleMessage(eventToProcess);
-                if (eventToProcess.Kind == NostrKind.ChannelMessage)
-                {
-                    channelService.MessageProcessed(eventToProcess);
-                }
                 break;
             case NostrKind.Relay:
                 HandleKind2(eventToProcess);

@@ -11,8 +11,8 @@ public class ChannelWithInfo : Channel
     public ChannelWithInfo(Channel channel)
     {
         Id = channel.Id;
-        Details= channel.Details;
-        DetailsLastUpdate = channel.DetailsLastUpdate;
+        Details = channel.Details;
+        CreatorId = channel.CreatorId;
     }
 }
 

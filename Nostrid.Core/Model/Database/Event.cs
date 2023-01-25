@@ -41,7 +41,7 @@ public class Event
         {
             _replyToId ??= new(() =>
                 {
-                    if (Kind == NostrKind.Text)
+                    if (Kind == NostrKind.Text || Kind == NostrKind.ChannelMessage)
                     {
                         var preferred = Tags
                             .Where(t => t.Data0 == "e" && t.Data3 == "reply")
@@ -89,6 +89,36 @@ public class Event
                 return null;
             });
             return _rootId.Value;
+        }
+    }
+
+    private Lazy<string?> _channelId = null;
+
+    [NotMapped]
+    public string? ChannelId
+    {
+        get
+        {
+            _channelId ??= new(() =>
+            {
+                if (Kind == NostrKind.ChannelMessage)
+                {
+                    var preferred = Tags
+                        .Where(t => t.Data0 == "e" && t.Data3 == "root")
+                        .Select(t => t.Data1)
+                        .FirstOrDefault();
+                    if (preferred != null)
+                    {
+                        return preferred;
+                    }
+                    return Tags
+                        .Where(t => t.Data0 == "e" && t.Data1 != null)
+                        .Select(t => t.Data1)
+                        .FirstOrDefault();
+                }
+                return null;
+            });
+            return _channelId.Value;
         }
     }
 

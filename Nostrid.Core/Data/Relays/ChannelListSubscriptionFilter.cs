@@ -10,7 +10,6 @@ public class ChannelListSubscriptionFilter : SubscriptionFilter
 {
 	public ChannelListSubscriptionFilter()
     {
-        ParamsId = Utils.HashWithSHA256($"clsf");
     }
 
     public override NostrSubscriptionFilter[] GetFilters()

@@ -14,8 +14,8 @@ public class ChannelService
 
     private readonly object channelLock = new();
 
-    public event EventHandler<(string channelId, ChannelDetails details)> ChannelDetailsChanged;
-    public event EventHandler<string> ChannelReceivedMessage;
+    public event EventHandler<(string channelId, ChannelDetails details)>? ChannelDetailsChanged;
+    public event EventHandler<string>? ChannelReceivedMessage;
 
     public ChannelService(EventDatabase eventDatabase)
     {
@@ -24,80 +24,57 @@ public class ChannelService
 
     public void MessageProcessed(Event e)
     {
-        if (!e.NoteMetadata.ChannelId.IsNullOrEmpty())
+        if (!e.ChannelId.IsNullOrEmpty())
         {
-            ChannelReceivedMessage?.Invoke(this, e.NoteMetadata.ChannelId);
+            ChannelReceivedMessage?.Invoke(this, e.ChannelId);
         }
     }
 
     public void HandleChannelCreationOrMetadata(Event eventToProcess)
     {
-        Channel? channelChanged = null;
         lock (channelLock)
         {
             var isUpdate = eventToProcess.Kind == NostrKind.ChannelMetadata;
             if (!string.IsNullOrEmpty(eventToProcess.Content))
             {
-                ChannelDetails? channelDetails = null;
+                ChannelDetails? channelDetailsReceived = null;
                 try
                 {
-                    channelDetails = JsonSerializer.Deserialize<ChannelDetails>(eventToProcess.Content);
+                    channelDetailsReceived = JsonSerializer.Deserialize<ChannelDetails>(eventToProcess.Content);
                 }
                 catch (Exception)
                 {
                 }
 
-                if (channelDetails != null)
+                if (channelDetailsReceived == null)
+                    return;
+
+                string? channelId = null;
+                if (isUpdate)
                 {
-                    string? channelId = null;
-                    if (isUpdate)
-                    {
-                        var tag = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "e" && t.Data.Count > 0);
-                        if (tag != null)
-                            channelId = tag.Data[0];
-                    }
-                    else
-                    {
-                        channelId = eventToProcess.Id;
-                    }
-                    if (!channelId.IsNullOrEmpty())
-                    {
-                        var channel = eventDatabase.GetChannel(channelId);
+                    var tag = eventToProcess.Tags.FirstOrDefault(t => t.Data0 == "e" && t.DataCount > 1);
+                    if (tag != null)
+                        channelId = tag.Data1;
+                }
+                else
+                {
+                    channelId = eventToProcess.Id;
+                }
 
-                        bool ok = true;
-                        if (channel.CreatorId.IsNullOrEmpty())
-                        {
-                            if (!isUpdate)
-                            {
-                                channel.CreatorId = eventToProcess.PublicKey; // Creator is whoever sent the creation message
-                            }
-                        }
-                        else if (isUpdate && channel.CreatorId != eventToProcess.PublicKey) // Ignore metadata from another account
-                        {
-                            ok = false;
-                        }
+                var channelDetails = eventDatabase.GetChannelDetails(channelId);
 
-                        if (ok)
-                        {
-                            if (!eventToProcess.CreatedAt.HasValue || !channel.DetailsLastUpdate.HasValue ||
-                                eventToProcess.CreatedAt.Value > channel.DetailsLastUpdate.Value)
-                            {
-                                channel.Details = channelDetails;
-                                channel.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
-                                eventDatabase.SaveChannel(channel);
-                                channelChanged = channel;
-                            }
-                        }
-                    }
+                if (!eventToProcess.CreatedAt.HasValue || eventToProcess.CreatedAt.Value > channelDetails.DetailsLastUpdate)
+                {
+                    channelDetails.About = channelDetailsReceived.About;
+                    channelDetails.Name = channelDetailsReceived.Name;
+                    channelDetails.PictureUrl = channelDetailsReceived.PictureUrl;
+                    channelDetails.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTime.UtcNow;
+
+                    eventDatabase.SaveChannelDetails(channelDetails);
+
+                    ChannelDetailsChanged?.Invoke(this, (channelDetails.Id, channelDetails));
                 }
             }
-
-            eventToProcess.Processed = true;
-            eventDatabase.SaveEvent(eventToProcess);
-        }
-        if (channelChanged != null)
-        {
-            ChannelDetailsChanged?.Invoke(this, (channelChanged.Id, channelChanged.Details));
         }
     }
 

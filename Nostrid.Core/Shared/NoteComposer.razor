@@ -158,7 +158,7 @@
         powCancelSource = new();
         if (!string.IsNullOrEmpty(textInput.Text))
         {
-            var mentions = ReplyTo?.NoteMetadata.AccountMentions.Values.Union(new[] { ReplyTo.PublicKey });
+            var mentions = ReplyTo?.GetMentions().Where(m => m.Type == 'p').Select(m => m.MentionId).Union(new[] { ReplyTo.PublicKey });
             var content = textInput.Text;
 
             textInput.Text = string.Empty;
@@ -170,7 +170,7 @@
             }
             else
             {
-                sendTask = feedService.SendNoteWithPow(content, false, ReplyTo?.Id, ReplyTo?.NoteMetadata?.ReplyToRootId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
+                sendTask = feedService.SendNoteWithPow(content, false, ReplyTo?.Id, ReplyTo?.ReplyToRootId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
             }
 
             files.Clear();

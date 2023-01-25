@@ -68,12 +68,10 @@
                 {
                     Id = data.channelId,
                     Details = data.details,
-                    DetailsLastUpdate = DateTimeOffset.UtcNow,
                 },
             (_, channel) =>
             {
                 channel.Details = data.details;
-                channel.DetailsLastUpdate = DateTimeOffset.UtcNow;
                 return channel;
             });
         InvokeAsync(() => StateHasChanged());

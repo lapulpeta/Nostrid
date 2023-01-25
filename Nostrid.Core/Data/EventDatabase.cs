@@ -612,48 +612,80 @@ namespace Nostrid.Data
 
         public Channel GetChannel(string id)
         {
-            return Channels.FindById(id) ?? new Channel() { Id = id };
+            using var db = new Context(_dbfile);
+            return db.Channels.Include(c => c.Details).FirstOrDefault(c => c.Id == id) ?? new Channel() { Id = id };
         }
 
-        public void CreateChannel(string id)
+        public ChannelDetails GetChannelDetails(string channelId)
         {
-            if (!Channels.Exists(c => c.Id == id))
+            using var db = new Context(_dbfile);
+            return db.ChannelDetails.FirstOrDefault(cd => cd.Channel.Id == channelId) ?? new ChannelDetails() { Id = channelId };
+        }
+
+        public void SaveChannelDetails(ChannelDetails channelDetails)
+        {
+            using var db = new Context(_dbfile);
+            if (db.ChannelDetails.Any(ad => ad.Id == channelDetails.Id))
             {
-                Channels.Upsert(new Channel() { Id = id });
+                db.Update(channelDetails);
             }
+            else
+            {
+                if (!db.Channels.Any(a => a.Id == channelDetails.Id))
+                {
+                    db.Add(new Channel() { Id = channelDetails.Id });
+                }
+                db.Add(channelDetails);
+            }
+            db.SaveChanges();
         }
 
         public void SaveChannel(Channel channel)
         {
-            Channels.Upsert(channel);
+            using var db = new Context(_dbfile);
+            if (db.Channels.Any(c => c.Id == channel.Id))
+            {
+                db.Update(channel);
+            }
+            else
+            {
+                db.Add(channel);
+            }
+            db.SaveChanges();
         }
 
         public List<Channel> ListChannels()
         {
-            return Channels.Query().ToList();
+            using var db = new Context(_dbfile);
+            return db.Channels.Include(c => c.Details).ToList();
         }
 
         public int GetChannelMessagesInDb(string channelId)
         {
-            return Events.Query().Where(e => e.Kind == NostrKind.ChannelMessage && e.NoteMetadata.ChannelId == channelId).Count();
+            using var db = new Context(_dbfile);
+            return db.Events.Count(e =>
+                e.Kind == NostrKind.ChannelMessage &&
+                e.Tags.Any(t => t.Data3 == "root" && t.Data1 == channelId)); // TODO: count replies as well
         }
 
         public List<ChannelWithInfo> ListChannelsWithInfo()
         {
-            // Get message count by channel
-            var channelsQ = Events.Query()
-                .Where(e => e.Kind == NostrKind.ChannelMessage && e.NoteMetadata.ChannelId != null)
-                .GroupBy($"{nameof(Event.NoteMetadata)}.{nameof(Event.NoteMetadata.ChannelId)}")
-                .Select($"{{_id:@key, {nameof(ChannelWithInfo.MessageCount)}:Count(*)}}");
-            var channelsMessageCount = channelsQ
-                .ToEnumerable()
-                .Select(c => BsonMapper.Global.Deserialize<ChannelWithInfo>(c))
+            using var db = new Context(_dbfile);
+
+            var channelsMessageCount = db.Events
+                .Where(e => e.Kind == NostrKind.ChannelMessage && e.Tags.Any(t => t.Data3 == "root"))
+                .GroupBy(e => e.Tags.First(t => t.Data3 == "root").Data1 ?? string.Empty)
+                .Select(g => new
+                {
+                    Id = g.Key,
+                    MessageCount = g.Count(),
+                })
                 .ToDictionary(c => c.Id);
 
             // Get all channels with details and populate with previous data
-            var channelsWithInfo = Channels
-                .Query()
-                .ToEnumerable()
+            var channelsWithInfo = db.Channels
+                .Include(c => c.Details)
+                .AsEnumerable()
                 .Select(c =>
                     new ChannelWithInfo(c)
                     {
