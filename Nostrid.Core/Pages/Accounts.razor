@@ -9,7 +9,6 @@
 @inject ConfigService configService
 @inject AccountService accountService
 @inject EventDatabase eventDatabase
-@inject Nip05Service nip05Service
 @inject Lud06Service lud06Service
 @implements IDisposable
 
@@ -259,7 +258,7 @@
         {
             accountDetails.Nip05Id = null;
         }
-        else if (!nip05Service.IsValidNip05(accountDetails.Nip05Id))
+        else if (!Nip05.IsValidNip05(accountDetails.Nip05Id))
         {
             saveError = "Nip05 ID is not valid";
             return;

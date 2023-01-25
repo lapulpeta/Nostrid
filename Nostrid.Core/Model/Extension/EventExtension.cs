@@ -1,4 +1,3 @@
-using LiteDB;
 using NNostr.Client;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -6,63 +5,74 @@ using System.Numerics;
 
 namespace Nostrid.Model;
 
-public class Event : NostrEvent
+public static class EventExtension
 {
-    public bool Processed { get; set; }
-
-    public DateTimeOffset CreatedAtCurated { get; set; }
-
-    public NoteMetadata NoteMetadata { get; set; } = new();
-
-    public int Difficulty { get; set; }
-
-    public bool HasPow { get; set; }
-
-    public Event()
+    public static Event FromNostrEvent(this NostrEvent ev)
     {
+        return new Event()
+        {
+            Content = ev.Content,
+            CreatedAt = ev.CreatedAt?.UtcDateTime,
+            Deleted = ev.Deleted,
+            Id = ev.Id,
+            Kind = ev.Kind,
+            PublicKey = ev.PublicKey,
+            Signature = ev.Signature,
+            Tags = ev.Tags
+            .Select((t, i) =>
+                new TagData()
+                {
+                    TagIndex = i,
+                    Data0 = t.TagIdentifier,
+                    DataCount = t.Data.Count + 1,
+                    Data1 = t.Data.Count > 0 ? t.Data[0] : null,
+                    Data2 = t.Data.Count > 1 ? t.Data[1] : null,
+                    Data3 = t.Data.Count > 2 ? t.Data[2] : null,
+                })
+            .ToList(),
+            Difficulty = CalculateDifficulty(ev.Id),
+            HasPow = ev.Tags.Any(t => t.TagIdentifier == "nonce"),
+        };
     }
 
-    public Event(NostrEvent ev)
+    public static NostrEvent ToNostrEvent(this Event ev)
     {
-        Content = ev.Content;
-        CreatedAt = ev.CreatedAt;
-        Deleted = ev.Deleted;
-        Id = ev.Id;
-        Kind = ev.Kind;
-        PublicKey = ev.PublicKey;
-        Signature = ev.Signature;
-        Tags = ev.Tags;
-
-        Difficulty = CalculateDifficulty(Id);
-        HasPow = Tags.Any(t => t.TagIdentifier == "nonce");
+        return new NostrEvent()
+        {
+            Content = ev.Content,
+            CreatedAt = ev.CreatedAt,
+            Deleted = ev.Deleted,
+            Id = ev.Id,
+            Kind = ev.Kind,
+            PublicKey = ev.PublicKey,
+            Signature = ev.Signature,
+            Tags = ev.Tags
+                .Select(t =>
+                    new NostrEventTag()
+                    {
+                        TagIdentifier = t.Data0,
+                        Data = new[] { t.Data1, t.Data2, t.Data3 }.Take(t.DataCount - 1).ToList(),
+                    })
+                .ToList()
+        };
     }
 
-    public override bool Equals(object obj)
-    {
-        return obj is Event @event &&
-               Id == @event.Id;
-    }
 
-    public override int GetHashCode()
+    public static bool CheckPowTarget(this Event ev, bool failIfTargetMissing)
     {
-        return HashCode.Combine(Id);
-    }
-
-    public bool CheckPowTarget(bool failIfTargetMissing)
-    {
-        var nonce = Tags.FirstOrDefault(t => t.TagIdentifier == "nonce");
+        var nonce = ev.Tags.FirstOrDefault(t => t.Data0 == "nonce");
         if (nonce == null)
             return false;
 
-        if (nonce.Data.Count < 2)
+        if (nonce.DataCount < 3)
             return !failIfTargetMissing;
 
-        if (!int.TryParse(nonce.Data[1], out var target))
+        if (!int.TryParse(nonce.Data2, out var target))
         {
             return !failIfTargetMissing;
         }
 
-        return Difficulty >= target;
+        return ev.Difficulty >= target;
     }
 
     public static int CalculateDifficulty(string id)
@@ -120,7 +130,7 @@ public class Event : NostrEvent
             },
             updateValueFactory: (_, old) =>
             {
-                var copy = !old.Processed && ev.Processed;
+                var copy = false; // !old.Processed && ev.Processed;
                 if (copy)
                     onCopy?.Invoke(ev);
                 return copy ? ev : old;

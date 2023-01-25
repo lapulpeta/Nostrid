@@ -1,9 +1,18 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace Nostrid.Model;
 
 public class AccountDetails
 {
+    [JsonIgnore]
+    [ForeignKey("Account")]
+    public string Id { get; set; }
+
+    [JsonIgnore]
+    public Account Account { get; set; }
+
+    #region Json
     [JsonPropertyName("name")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Name { get; set; }
@@ -27,8 +36,12 @@ public class AccountDetails
     [JsonPropertyName("lud06")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Lud06Url { get; set; }
+    #endregion
 
     [JsonIgnore]
-    public Nip05Data? Nip05Data { get; set; }
+    public bool Nip05Valid { get; set; }
+
+    [JsonIgnore]
+    public DateTime DetailsLastUpdate { get; set; }
 }
 

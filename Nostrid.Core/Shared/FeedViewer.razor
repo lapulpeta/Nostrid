@@ -60,7 +60,7 @@ else
 
     private void ShowNewPosts()
     {
-        Event.MergeAndClear(renderedN, newN);
+        EventExtension.MergeAndClear(renderedN, newN);
         TrimOlder();
     }
 
@@ -70,7 +70,7 @@ else
         var rawFilters = BaseFilter.GetFilters();
         foreach (var rawFilter in rawFilters)
             rawFilter.Kinds = MessageKinds;
-        Event.Merge(renderedN, feedService.GetNotesFeed(rawFilters, dbLimit));
+        EventExtension.Merge(renderedN, feedService.GetNotesFeed(rawFilters, dbLimit));
     }
 
     private async Task LoadMoreFromNoteAsync()
@@ -85,7 +85,7 @@ else
             return;
         }
 
-        oldFilter.limitFilterData.Until = noteViewer.Tree.Note.CreatedAtCurated;
+        oldFilter.limitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(noteViewer.Tree.Note.CreatedAtCurated);
         relayService.RefreshFilters(oldFilter);
 
         requestDisabled = true;
@@ -115,12 +115,12 @@ else
 
         if (data.filterId == oldFilter.Id)
         {
-            Event.Merge(renderedN, notes);
+            EventExtension.Merge(renderedN, notes);
             TrimOlder();
         }
         else
         {
-            Event.Merge(newN, notes, newEv => !renderedN.TryGetValue(newEv.Id, out var oldEv) ? true : (!oldEv.Processed && newEv.Processed));
+            EventExtension.Merge(newN, notes);
         }
     }
 
@@ -163,7 +163,6 @@ else
         LoadMore();
 
         feedService.ReceivedNotes += ReceivedNotes;
-        feedService.NoteUpdated += NoteUpdated;
         feedService.NoteReceivedChild += NoteReceivedChild;
 
         refreshPageTimer = new Timer(new TimerCallback(_ =>
@@ -173,15 +172,6 @@ else
                 StateHasChanged();
             });
         }), null, 0, 5000);
-    }
-
-    private void NoteUpdated(object? sender, Event ev)
-    {
-        if (!renderedN.ContainsKey(ev.Id))
-            return;
-
-        renderedN[ev.Id] = ev;
-        InvokeAsync(() => StateHasChanged());
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
@@ -226,7 +216,6 @@ else
     private void Cleanup()
     {
         feedService.ReceivedNotes -= ReceivedNotes;
-        feedService.NoteUpdated -= NoteUpdated;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
         relayService.DeleteFilters(detailsFiltersByAccountId.Values);

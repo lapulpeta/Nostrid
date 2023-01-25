@@ -96,9 +96,9 @@
                 </LeftPlaceholder>
                 <BottomPlaceholder>
                     <div class="w-100 mt-1" style="margin-right:-1.5rem;">
-                        @if (Tree.Note.NoteMetadata.Reactions.Count > 0)
+                        @if (reactions.Count > 0)
                         {
-                            var groupedReactions = Tree.Note.NoteMetadata.Reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count());
+                            var groupedReactions = reactions.GroupBy(r => NormalizedReaction(r.Content)).OrderByDescending(g => g.Count());
                             @foreach (var reaction in groupedReactions.Take(3))
                             {
                                 <span class="py-2 me-4">
@@ -167,7 +167,8 @@
 
 @code {
     private bool likeClicked = false;
-    private bool likeSent => likeClicked || (Tree.Note.NoteMetadata.Reactions.Any(r => r.ReactorId == accountService?.MainAccount?.Id));
+    private List<Reaction> reactions;
+    private bool likeSent => likeClicked || (reactions.Any(r => r.ReactorId == accountService?.MainAccount?.Id));
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private IJSObjectReference? jsModule;
     private ElementReference? referenceElement;
@@ -175,7 +176,9 @@
 
     protected override void OnInitialized()
     {
+        reactions = feedService.GetReactions(Tree.Note.Id);
         accountService.AccountDetailsChanged += AccountDetailsChanged;
+        feedService.NoteUpdated += NoteUpdated;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -252,6 +255,16 @@
         return (new NoteViewer[] { this }).Concat(NoteTreeViewerRef?.GetNoteViewers() ?? Enumerable.Empty<NoteViewer>());
     }
 
+    private void NoteUpdated(object? sender, Event ev)
+    {
+        if (Tree.Note.Id != ev.Id)
+            return;
+
+        Tree.Note = ev;
+        reactions = feedService.GetReactions(Tree.Note.Id);
+        InvokeAsync(() => StateHasChanged());
+    }
+
     #region Dispose
     private bool _disposed;
 
@@ -277,6 +290,7 @@
             OnComponentUnload(this);
         }
         accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        feedService.NoteUpdated -= NoteUpdated;
         if (jsModule is not null)
         {
             await jsModule.DisposeAsync();

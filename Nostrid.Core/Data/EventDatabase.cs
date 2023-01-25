@@ -1,192 +1,255 @@
-﻿using Nostrid.Model;
-using LinqKit;
-using LiteDB;
+﻿using LinqKit;
+using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
+using Nostrid.Data.Relays;
+using Nostrid.Model;
+using Nostrid.Pages;
+using SQLite;
 
 namespace Nostrid.Data
 {
     public class EventDatabase
     {
-        private LiteDatabase Database;
-        private ILiteCollection<Relay> Relays;
-        private ILiteCollection<Event> Events;
-        private ILiteCollection<Account> Accounts;
-        private ILiteCollection<FilterData> FilterDatas;
-        private ILiteCollection<OwnEvent> OwnEvents;
-        private ILiteCollection<FeedSource> FeedSources;
-        private ILiteCollection<Config> Configs;
-
-        public int EventsPending => Events.Query().Where(e => !e.Processed).Count();
+        private string _dbfile;
 
         public event EventHandler? DatabaseHasChanged;
 
-        public void InitDatabase(Stream storage)
-        {
-            InitDatabase(new LiteDatabase(storage));
-        }
 
-        public void InitDatabase(string filename)
+        public void InitDatabase(string dbfile)
         {
-            InitDatabase(new LiteDatabase(filename));
-        }
-
-        private void InitDatabase(LiteDatabase database)
-        {
-            Database = database;
-            Relays = Database.GetCollection<Relay>();
-            Events = Database.GetCollection<Event>();
-            Events.EnsureIndex(e => e.Processed);
-            Events.EnsureIndex(e => e.CreatedAtCurated);
-            Events.EnsureIndex(e => e.Kind);
-            Events.EnsureIndex(e => e.NoteMetadata.ReplyToId);
-            Events.EnsureIndex(e => e.NoteMetadata.HashTags);
-            Events.EnsureIndex(e => e.PublicKey);
-            Accounts = Database.GetCollection<Account>();
-            FilterDatas = Database.GetCollection<FilterData>();
-            OwnEvents = Database.GetCollection<OwnEvent>();
-            OwnEvents.EnsureIndex(e => e.SeenByRelay);
-            OwnEvents.EnsureIndex(e => e.Event.CreatedAt);
-            FeedSources = Database.GetCollection<FeedSource>();
-            FeedSources.EnsureIndex(e => e.OwnerId);
-            Configs = Database.GetCollection<Config>();
+            _dbfile = dbfile;
+            using var db = new Context(dbfile);
+            db.Database.Migrate();
         }
 
         public void SaveRelay(Relay relay)
         {
-            Relays.Upsert(relay);
+            using var db = new Context(_dbfile);
+            db.Add(relay);
+            db.SaveChanges();
         }
 
-        public void DeleteRelay(Relay relay)
+        public void DeleteRelay(long relayId)
         {
-            Relays.Delete(relay.Id);
+            using var db = new Context(_dbfile);
+            db.Relays.Where(r => r.Id == relayId).ExecuteDelete();
         }
 
         public List<Relay> ListRelays()
         {
-            return Relays.Query().ToList();
+            using var db = new Context(_dbfile);
+            return db.Relays.ToList();
         }
 
         public int GetRelayCount()
         {
-            return Relays.Query().Count();
+            using var db = new Context(_dbfile);
+            return db.Relays.Count();
         }
 
         public bool RelayExists(string uri)
         {
-            return Relays.Query().Where(r => r.Uri == uri).Count() > 0;
+            using var db = new Context(_dbfile);
+            return db.Relays.Any(r => r.Uri == uri);
         }
 
         public Account GetAccount(string id)
         {
-            return Accounts.FindById(id) ?? new Account() { Id = id };
+            using var db = new Context(_dbfile);
+            var account = db.Accounts
+                .Include(a => a.Details)
+                .FirstOrDefault(a => a.Id == id)
+                ?? new Account() { Id = id };
+            return account;
+        }
+
+        public AccountDetails GetAccountDetails(string accountId)
+        {
+            using var db = new Context(_dbfile);
+            return db.AccountDetails.FirstOrDefault(ad => ad.Account.Id == accountId) ?? new AccountDetails() { Id = accountId };
+        }
+
+        public void SetAccountLastRead(string accountId, DateTime lastRead)
+        {
+            using var db = new Context(_dbfile);
+            db.Accounts.Where(a => a.Id == accountId).ExecuteUpdate(a => a.SetProperty(a => a.LastNotificationRead, lastRead));
         }
 
         public void SaveAccount(Account account)
         {
-            Accounts.Upsert(account);
+            using var db = new Context(_dbfile);
+            if (db.Accounts.Any(a => a.Id == account.Id))
+            {
+                db.Update(account);
+            }
+            else
+            {
+                db.Add(account);
+            }
+            db.SaveChanges();
             if (!string.IsNullOrEmpty(account.PrivKey))
             {
                 DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
+        public void SaveAccountDetails(AccountDetails accountDetails)
+        {
+            using var db = new Context(_dbfile);
+            if (db.AccountDetails.Any(ad => ad.Id == accountDetails.Id))
+            {
+                db.Update(accountDetails);
+            }
+            else
+            {
+                if (!db.Accounts.Any(a => a.Id == accountDetails.Id))
+                {
+                    db.Add(new Account() { Id = accountDetails.Id });
+                }
+                db.Add(accountDetails);
+            }
+            db.SaveChanges();
+        }
+
+        public void MarkEventAsDeleted(string id, string ownerId)
+        {
+            using var db = new Context(_dbfile);
+            db.Events
+                .Where(e => e.Id == id && e.PublicKey == ownerId)
+                .ExecuteUpdate(e => e
+                    .SetProperty(e => e.Deleted, true)
+                    .SetProperty(e => e.Kind, -1)
+                    .SetProperty(e => e.Content, string.Empty));
+        }
+
         public void DeleteAccount(Account account)
         {
-            Accounts.Delete(account.Id);
-            Events.DeleteMany(e => e.PublicKey == account.Id);
-            OwnEvents.DeleteMany(e => e.Event.PublicKey == account.Id);
+            using var db = new Context(_dbfile);
+
+            db.Events.Where(e => e.PublicKey == account.Id).ExecuteDelete();
+            db.AccountDetails.Where(a => a.Id == account.Id).ExecuteDelete();
+            db.FeedSources.Where(f => f.OwnerId == account.Id).ExecuteDelete();
+            db.Accounts.Where(a => a.Id == account.Id).ExecuteDelete();
+
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public List<string> GetAccountIdsWithPk()
         {
-            return Accounts.Query().Where(a => !string.IsNullOrEmpty(a.PrivKey)).Select(a => a.Id).ToList();
+            using var db = new Context(_dbfile);
+            return db.Accounts.Where(a => !string.IsNullOrEmpty(a.PrivKey)).Select(a => a.Id).ToList();
         }
 
         public Event GetEvent(string id)
         {
-            return Events.FindById(id) ?? new Event() { Id = id };
+            return GetEventOrNull(id)
+                ?? new Event() { Id = id };
         }
 
-        public Event GetEventOrNull(string id)
+        public Event? GetEventOrNull(string id)
         {
-            return Events.FindById(id);
+            using var db = new Context(_dbfile);
+            return db.Events
+                .Include(e => e.Tags)
+                .FirstOrDefault(e => e.Id == id);
         }
 
         public bool IsEventDeleted(string id)
         {
-            return Events.Exists(e => e.Id == id && e.Deleted);
+            using var db = new Context(_dbfile);
+            return db.Events.Any(e => e.Id == id && e.Deleted);
         }
 
-        public void SaveEvent(Event ev)
+        public void SaveSeen(string eventId, long relayId, Context db)
         {
-            Events.Update(ev);
-        }
+            if (db.EventSeen.Any(es => es.EventId == eventId && es.RelayId == relayId))
+                return;
 
-        public Event? SaveNewEvent(Event ev, Relay relay)
-        {
-            var existingEvent = Events.FindById(ev.Id);
-            if (existingEvent != null)
+            db.Add(new EventSeen() { EventId = eventId, RelayId = relayId });
+            try
             {
-                if (!existingEvent.Deleted || existingEvent.PublicKey == ev.PublicKey)
-                {
-                    return !existingEvent.Processed ? existingEvent : null;
-                }
-                // This point can be reached only if event is marked as deleted but the recorded owner is not the real one,
-                // so we have to processed it again
+                db.SaveChanges();
             }
-
-            var now = DateTimeOffset.UtcNow;
-            ev.CreatedAtCurated = !ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value;
-            Events.Upsert(ev);
-
-            return !ev.Processed ? ev : null;
+            catch (DbUpdateException ex)
+            {
+            }
         }
 
-        public List<Event> ListUnprocessedEvents(int? count = null)
+        public bool SaveNewEvent(Event ev, Relay relay)
         {
-            var ret = Events.Query().Where(e => !e.Processed);
-            return (count.HasValue ? ret.Limit(count.Value) : ret).ToList();
+            using var db = new Context(_dbfile);
+
+            try
+            {
+                if (db.Events.Any(e => e.Id == ev.Id && !e.CanEcho))
+                    return false;
+
+                if (db.Events.Any(e => e.Id == ev.Id && e.CanEcho))
+                {
+                    db.Events.Where(e => e.Id == ev.Id && e.CanEcho).ExecuteUpdate(e => e.SetProperty(e => e.CanEcho, false));
+                    return true;
+                }
+
+                var now = DateTimeOffset.UtcNow;
+                ev.CreatedAtCurated = (!ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value).ToUnixTimeSeconds();
+                db.Add(ev);
+                db.SaveChanges();
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                return false;
+
+            }
+            finally
+            {
+                SaveSeen(ev.Id, relay.Id, db);
+            }
         }
 
         public List<Event> ListNoteTree(string rootEventId, int downlevels, out bool maxReached)
         {
-            var ret = ListAncestorNotesUntilRoot(rootEventId);
-            ret.AddRange(ListChildrenNotes(rootEventId, downlevels, out maxReached));
+            using var db = new Context(_dbfile);
+            var ret = ListAncestorNotesUntilRoot(rootEventId, db);
+            ret.AddRange(ListChildrenNotes(rootEventId, downlevels, out maxReached, db));
             return ret;
         }
 
         public List<Event> ListNotes(int count)
         {
-            return Events.Query().Where(e => e.Kind == 1).OrderByDescending(e => e.CreatedAtCurated).Limit(count).ToList();
+            using var db = new Context(_dbfile);
+            return db.Events.Where(e => e.Kind == 1).OrderByDescending(e => e.CreatedAtCurated).Take(count).ToList();
         }
 
         public List<Event> ListNotes(NostrSubscriptionFilter[] filters, int count)
         {
+            using var db = new Context(_dbfile);
             List<Event> notes = new();
             foreach (var filter in filters)
             {
-                notes.AddRange(ApplyFilter(Events.Query().OrderByDescending(n => n.CreatedAtCurated), filter).Limit(count).ToList());
+                notes.AddRange(ApplyFilter(db, db.Events.OrderByDescending(n => n.CreatedAtCurated), filter).Take(count).Include(e => e.Tags).ToList());
             }
             return notes;
         }
 
         public int GetNotesCount(NostrSubscriptionFilter[] filters)
         {
+            using var db = new Context(_dbfile);
             int count = 0;
             foreach (var filter in filters)
             {
-                count += ApplyFilter(Events.Query().Where(e => e.Kind == 1).OrderByDescending(n => n.CreatedAtCurated), filter).Count();
+                count += ApplyFilter(db, db.Events.Where(e => e.Kind == 1)/*.OrderByDescending(n => n.CreatedAtCurated)*/, filter).Count();
             }
             return count;
         }
 
-        private ILiteQueryable<Event> ApplyFilter(ILiteQueryable<Event> notes, NostrSubscriptionFilter filter)
+        private IQueryable<Event> ApplyFilter(Context db, IQueryable<Event> notes, NostrSubscriptionFilter filter)
         {
             if (filter.PublicKey != null)
             {
-                notes = notes.Where(filter.PublicKey.Aggregate(PredicateBuilder.New<Event>(),
-                        (current, temp) => current.Or(n => n.Tags.Where(t => t.TagIdentifier == "p" && t.Data[0] == temp).Any())));
+                var tags = db.TagDatas.Where(filter.PublicKey.Aggregate(PredicateBuilder.New<TagData>(),
+                    (current, temp) => current.Or(t => t.Data0 == "p" && t.Data1 == temp))).Select(t => t.Event.Id);
+                notes = notes.Where(n => tags.Contains(n.Id));
             }
             if (filter.Authors != null)
             {
@@ -198,22 +261,25 @@ namespace Nostrid.Data
             }
             if (filter.EventId != null)
             {
-                notes = notes.Where(e => filter.EventId.Contains(e.NoteMetadata.ReplyToId));
+                var tags = db.TagDatas.Where(filter.EventId.Aggregate(PredicateBuilder.New<TagData>(),
+                    (current, temp) => current.Or(t => t.Data0 == "e" && t.Data1 == temp))).Select(t => t.Event.Id);
+                notes = notes.Where(n => tags.Contains(n.Id));
             }
             if (filter.ExtensionData != null)
             {
                 var filterTags = filter.GetAdditionalTagFilters()["t"].Select(t => t.ToLower()).ToList();
-                notes = notes.Where(filterTags.Aggregate(PredicateBuilder.New<Event>(),
-                    (current, temp) => current.Or(n => n.NoteMetadata.HashTags.Contains(temp))));
+                var tags = db.TagDatas.Where(filterTags.Aggregate(PredicateBuilder.New<TagData>(),
+                    (current, temp) => current.Or(t => t.Data0 == "t" && t.Data1 == temp))).Select(t => t.Event.Id);
+                notes = notes.Where(n => tags.Contains(n.Id));
             }
             if (filter.Since.HasValue)
             {
-                var since = filter.Since.Value;
+                var since = filter.Since.Value.ToUnixTimeSeconds();
                 notes = notes.Where(n => n.CreatedAtCurated > since);
             }
             if (filter.Until.HasValue)
             {
-                var until = filter.Until.Value;
+                var until = filter.Until.Value.ToUnixTimeSeconds();
                 notes = notes.Where(n => n.CreatedAtCurated < until);
             }
             if (filter.Kinds != null)
@@ -223,31 +289,31 @@ namespace Nostrid.Data
             return notes.Where(e => !e.Deleted);
         }
 
-        private List<Event> ListAncestorNotesUntilRoot(string rootEventId) // That this tweet replies to
+        private List<Event> ListAncestorNotesUntilRoot(string rootEventId, Context db) // That this tweet replies to
         {
             var ret = new List<Event>();
             while (rootEventId != null)
             {
-                var tw = Events.Query().Where(tw => tw.Id == rootEventId).FirstOrDefault();
+                var tw = db.Events.Include(e => e.Tags).Where(tw => tw.Id == rootEventId).FirstOrDefault();
                 if (tw == null) break;
                 ret.Add(tw);
-                rootEventId = tw.NoteMetadata.ReplyToId;
+                rootEventId = tw.ReplyToId;
             }
             return ret;
         }
 
-        public string GetEventPubKey(string eventId)
-        {
-            return Events.FindById(eventId)?.PublicKey;
-        }
-
-        public List<Event> ListChildrenNotes(string rootEventId, int levels, out bool maxReached) // That reply to this tweet
+        private List<Event> ListChildrenNotes(string rootEventId, int levels, out bool maxReached, Context db) // That reply to this tweet
         {
             var ret = new List<Event>();
 
             maxReached = true;
             if (levels <= 0) return ret;
-            var children = Events.Query().Where(tw => tw.NoteMetadata.ReplyToId == rootEventId).ToList();
+            var children = db.Events
+                .Include(e => e.Tags)
+                .Where(e => e.Kind == NostrKind.Text && e.Tags.Any(t => t.Data0 == "e" && t.Data1 == rootEventId))
+                .ToList()
+                .Where(e => e.ReplyToId == rootEventId) // TODO: move this to DB query
+                .ToList();
             ret.AddRange(children);
             if (levels > 1)
             {
@@ -255,84 +321,123 @@ namespace Nostrid.Data
                 var childrenLevels = children.Count > 1 ? levels - 1 : levels; // Single replies are at level of parent
                 foreach (var tww in children)
                 {
-                    ret.AddRange(ListChildrenNotes(tww.Id, childrenLevels, out maxReached));
+                    ret.AddRange(ListChildrenNotes(tww.Id, childrenLevels, out maxReached, db));
                 }
             }
             return ret;
         }
 
-        public string GetAccountName(string accountId)
+        public string? GetAccountName(string accountId)
         {
-            return Accounts.Query().Where(a => a.Id == accountId).Select(a => a.Details.Name).FirstOrDefault();
+            using var db = new Context(_dbfile);
+            return db.Accounts.Where(a => a.Id == accountId).Select(a => a.Details.Name).FirstOrDefault();
         }
 
-        public void UpdateFilterData(string paramsId, long relayId, DateTimeOffset oldest)
+        public List<Event> ListOwnEvents(long relayId)
         {
-            FilterDatas.Upsert(new FilterData()
-            {
-                Id = $"{paramsId}-{relayId}",
-                OldestEvent = oldest,
-            });
+            using var db = new Context(_dbfile);
+            return db.Events
+                .Include(e => e.Tags)
+                .Where(e => e.Broadcast && !db.EventSeen.Any(es => es.EventId == e.Id && es.RelayId == relayId))
+                .ToList();
         }
 
-        public DateTimeOffset? GetFilterData(string paramsId, long relayId)
+        public void SaveOwnEvents(NostrEvent nostrEvent)
         {
-            var id = $"{paramsId}-{relayId}";
-            return FilterDatas.FindById(id)?.OldestEvent ?? null;
-        }
+            using var db = new Context(_dbfile);
 
-        public List<OwnEvent> ListOwnEvents(long relayId)
-        {
-            return OwnEvents.Query().Where(e => !e.SeenByRelay.Contains(relayId)).OrderBy(e => e.Event.CreatedAt).ToList();
-        }
+            var ev = EventExtension.FromNostrEvent(nostrEvent);
+            ev.Broadcast = true;
+            ev.CanEcho = true;
+            ev.CreatedAtCurated = nostrEvent.CreatedAt.Value.ToUnixTimeSeconds();
 
-        public void SaveOwnEvents(OwnEvent nostrEvent)
-        {
-            OwnEvents.Upsert(nostrEvent);
+            db.Add(ev);
+            db.SaveChanges();
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void AddSeenBy(string ownEventId, long relayId)
         {
-            var ev = OwnEvents.FindById(ownEventId);
-            if (!ev.SeenByRelay.Contains(relayId))
-            {
-                ev.SeenByRelay.Add(relayId);
-                OwnEvents.Update(ev);
-            }
+            using var db = new Context(_dbfile);
+
+            SaveSeen(ownEventId, relayId, db);
         }
 
-        public FeedSource GetFeedSource(long id)
+        public FeedSource? GetFeedSource(long id)
         {
-            return FeedSources.FindById(id);
+            using var db = new Context(_dbfile);
+
+            var feedSource = db.FeedSources.AsNoTracking().FirstOrDefault(f => f.Id == id);
+            return feedSource;
         }
 
         public void SaveFeedSource(FeedSource feedSource)
         {
-            FeedSources.Upsert(feedSource);
+            using var db = new Context(_dbfile);
+
+            if (db.FeedSources.Any(f => f.Id == feedSource.Id))
+            {
+                db.Update(feedSource);
+            }
+            else
+            {
+                db.Add(feedSource);
+            }
+            db.SaveChanges();
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void DeleteFeedSource(long id)
         {
-            FeedSources.Delete(id);
+            using var db = new Context(_dbfile);
+            db.FeedSources.Where(f => f.Id == id).ExecuteDelete();
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public List<FeedSource> ListFeedSources(string ownerId)
         {
-            return FeedSources.Query().Where(f => f.OwnerId == ownerId).ToList();
+            using var db = new Context(_dbfile);
+
+            var feedSources = db.FeedSources
+                .Where(f => f.OwnerId == ownerId)
+                .AsNoTracking()
+                .ToList();
+            return feedSources;
         }
 
         public Config GetConfig()
         {
-            return Configs.Query().FirstOrDefault() ?? new Config();
+            using var db = new Context(_dbfile);
+
+            return db.Configs.FirstOrDefault() ?? new Config();
         }
 
         public void SaveConfig(Config config)
         {
-            Configs.Upsert(config);
+            using var db = new Context(_dbfile);
+
+            db.Update(config);
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public List<Reaction> ListReactions(string eventId)
+        {
+            using var db = new Context(_dbfile);
+
+            var reactions = db.TagDatas
+                .Where(d => d.Data0 == "e" && d.Data1 == eventId && d.Event.Kind == NostrKind.Reaction)
+                .Select(d => new Reaction()
+                {
+                    Content = d.Event.Content,
+                    ReactorId = d.Event.PublicKey,
+                });
+            return reactions.ToList();
+        }
+
+        public void SetNip05Validity(string id, bool valid)
+        {
+            using var db = new Context(_dbfile);
+            db.AccountDetails.Where(ad => ad.Id == id).ExecuteUpdate(ad => ad.SetProperty(ad => ad.Nip05Valid, valid));
         }
     }
 }

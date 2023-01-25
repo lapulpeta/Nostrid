@@ -16,7 +16,8 @@ public class MainAccountSubscriptionFilter : SubscriptionFilter
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Metadata, NostrKind.Contacts }, Limit = 1 },
+            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Metadata }, Limit = 1 },
+            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Contacts }, Limit = 1 },
             new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Deletion } }
         };
     }

@@ -4,7 +4,7 @@ namespace Nostrid;
 
 public class DatabaseService
 {
-    public const string FileName = "/database/nostrid.db";
+    public const string FileName = "/database/nostrid.sqlite.db";
 #if RELEASE
     private readonly Lazy<Task<IJSObjectReference>> _moduleTask;
 #endif

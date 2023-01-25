@@ -21,13 +21,6 @@ public class FeedService
         this.relayService = relayService;
         this.accountService = accountService;
         this.relayService.ReceivedEvents += ReceivedEvents;
-        Task.Run(() => HandleEventsAsync(eventDatabase.ListUnprocessedEvents()));
-    }
-
-    private async Task HandleEventsAsync(IEnumerable<Event> events)
-    {
-        foreach (var ev in events)
-            _ = Task.Run(() => HandleEvent(ev));
     }
 
     private void HandleEvent(Event eventToProcess)
@@ -49,22 +42,16 @@ public class FeedService
             case NostrKind.Deletion:
                 HandleKind5(eventToProcess);
                 break;
-            case NostrKind.Repost:
-                HandleKind6(eventToProcess);
-                break;
             case NostrKind.Reaction:
                 HandleKind7(eventToProcess);
-                break;
-            default:
-                eventToProcess.Processed = true;
-                eventDatabase.SaveEvent(eventToProcess);
                 break;
         }
     }
 
     private void ReceivedEvents(object sender, (string filterId, IEnumerable<Event> events) data)
     {
-        Task.Run(() => HandleEventsAsync(data.events));
+        foreach (var ev in data.events)
+            HandleEvent(ev);
 
         var notes = data.events.Where(ev => !eventDatabase.IsEventDeleted(ev.Id));
         if (notes.Any())
@@ -75,151 +62,30 @@ public class FeedService
 
     public void HandleKind1(Event eventToProcess)
     {
-        var noteMetadata = eventToProcess.NoteMetadata = new NoteMetadata();
-
-        // NIP-10 https://github.com/nostr-protocol/nips/blob/master/10.md
-        string replyToId, rootId, relayReplay, relayRoot;
-        (replyToId, relayReplay) = eventToProcess.Tags
-            .Where(t => t.TagIdentifier == "e" && t.Data.Count == 3 && t.Data[2] == "reply")
-            .Select(t => (t.Data[0], t.Data[1]))
-            .FirstOrDefault();
-        (rootId, relayRoot) = eventToProcess.Tags
-            .Where(t => t.TagIdentifier == "e" && t.Data.Count == 3 && t.Data[2] == "root")
-            .Select(t => (t.Data[0], t.Data[1]))
-            .FirstOrDefault();
-        if (string.IsNullOrEmpty(replyToId))
+        if (eventToProcess.ReplyToId.IsNotNullOrEmpty())
         {
-            var e = eventToProcess.Tags.Where(t => t.TagIdentifier == "e").ToList();
-            switch (e.Count)
-            {
-                case 1:
-                    var edata = e.Last().Data;
-                    if (edata.Count > 0)
-                    {
-                        replyToId = edata[0];
-                        if (edata.Count > 1) relayReplay ??= edata[1];
-                    }
-                    break;
-                case > 1:
-                    replyToId = e.Last().Data[0];
-                    rootId ??= e.First().Data[0];
-                    break;
-            }
-        }
-        if (Utils.IsValidNostrId(replyToId))
-        {
-            noteMetadata.ReplyToId = replyToId;
-        }
-        if (Utils.IsValidNostrId(rootId))
-        {
-            noteMetadata.ReplyToRootId = rootId;
-        }
-        foreach (var relay in new[] { relayRoot, relayReplay })
-        {
-            if (!string.IsNullOrEmpty(relay))
-            {
-                HandleRelayRecommendation(relay);
-            }
-        }
-
-        // Mentions
-        // NIP-08: https://github.com/nostr-protocol/nips/blob/master/08.md
-        for (int index = 0; index < eventToProcess.Tags.Count; index++)
-        {
-            var tag = eventToProcess.Tags[index];
-            if (tag.Data.Count > 0)
-            {
-                switch (tag.TagIdentifier)
-                {
-                    case "p":
-                        noteMetadata.AccountMentions[index] = tag.Data[0].ToLower(); break;
-                    case "e":
-                        noteMetadata.EventMentions[index] = tag.Data[0].ToLower(); break;
-                    case "t":
-                        var hashtag = tag.Data[0].ToLower();
-                        if (!noteMetadata.HashTags.Contains(hashtag))
-                            noteMetadata.HashTags.Add(tag.Data[0].ToLower());
-                        break;
-                }
-            }
-        }
-
-        eventToProcess.Processed = true;
-        eventDatabase.SaveEvent(eventToProcess);
-
-        NoteUpdated?.Invoke(this, eventToProcess);
-        if (!string.IsNullOrEmpty(replyToId))
-        {
-            NoteReceivedChild?.Invoke(this, (replyToId, eventToProcess));
+            NoteReceivedChild?.Invoke(this, (eventToProcess.ReplyToId, eventToProcess));
         }
     }
 
     public void HandleKind2(Event eventToProcess)
     {
         HandleRelayRecommendation(eventToProcess.Content);
-        eventToProcess.Processed = true;
-        eventDatabase.SaveEvent(eventToProcess);
     }
 
     public void HandleKind5(Event eventToProcess)
     {
-        var e = eventToProcess.Tags.Where(t => t.TagIdentifier == "e" && t.Data.Count > 0).ToList();
+        var e = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.DataCount > 1).ToList();
         foreach (var tag in e)
         {
-            var eventId = tag.Data[0];
+            var eventId = tag.Data1;
             if (Utils.IsValidNostrId(eventId))
             {
-                var pubKey = eventDatabase.GetEventPubKey(eventId);
-                if (string.IsNullOrEmpty(pubKey))
-                    return; // If event doesn't exist then keep this event unprocessed and retry later
-
-                if (pubKey == eventToProcess.PublicKey)
-                {
-                    // A deleted empty event will replace the original event
-                    var ev = new Event()
-                    {
-                        Id = eventId,
-                        PublicKey = eventToProcess.PublicKey,
-                        Deleted = true,
-                        Kind = -1,
-                        Processed = true,
-                    };
-                    eventDatabase.SaveEvent(ev);
-                }
+                eventDatabase.MarkEventAsDeleted(eventId, eventToProcess.PublicKey);
             }
         }
-        eventToProcess.Processed = true;
-        eventDatabase.SaveEvent(eventToProcess);
 
         NoteUpdated?.Invoke(this, eventToProcess);
-    }
-
-    public void HandleKind6(Event eventToProcess)
-    {
-        // NIP-18: https://github.com/nostr-protocol/nips/blob/master/18.md
-        //if (string.IsNullOrEmpty(eventToProcess.Content)) // As per the NIP, content must be empty (disabled since many clients ignore this)
-        {
-            var e = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "e" && t.Data.Count > 0);
-
-            if (e != null)
-            {
-                var noteMetadata = eventToProcess.NoteMetadata = new NoteMetadata();
-                noteMetadata.EventMentions[0] = noteMetadata.RepostEventId = e.Data[0].ToLower();
-
-                var p = eventToProcess.Tags.FirstOrDefault(t => t.TagIdentifier == "p" && t.Data.Count > 0);
-                if (p != null)
-                {
-                    noteMetadata.AccountMentions[1] = p.Data[0].ToLower();
-                }
-                if (e.Data.Count > 1 && !string.IsNullOrEmpty(e.Data[1]))
-                {
-                    HandleRelayRecommendation(e.Data[1]);
-                }
-            }
-        }
-
-        eventToProcess.Processed = true;
-        eventDatabase.SaveEvent(eventToProcess);
     }
 
     private void HandleRelayRecommendation(string uri)
@@ -232,44 +98,14 @@ public class FeedService
 
     public void HandleKind7(Event eventToProcess)
     {
-        Event? eventUpdated = null;
-
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
-        string? e = null;
-        var etag = eventToProcess.Tags.Where(t => t.TagIdentifier == "e").LastOrDefault();
-        if (etag != null)
+        var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
+        if (Utils.IsValidNostrId(etag.Data1))
         {
-            e = etag.Data[0];
+            var reactedNote = eventDatabase.GetEventOrNull(etag.Data1);
+            if (reactedNote != null)
+                NoteUpdated?.Invoke(this, reactedNote);
         }
-        if (Utils.IsValidNostrId(e))
-        {
-            var reaction = eventToProcess.Content;
-            // According to NIP-25 the content should be either +, - or an emoji, but some clients send an empty content, so let's disable this check
-            //if (!string.IsNullOrEmpty(reaction) && reaction.Length == 1)
-            {
-                var reactedNote = eventDatabase.GetEventOrNull(e);
-                if (reactedNote == null || !reactedNote.Processed)
-                    return; // If event doesn't exist/not processed then keep this event unprocessed and retry later
-
-                // Only save if note is not deleted and reaction has not been recorded already
-                if (!reactedNote.Deleted && !reactedNote.NoteMetadata.Reactions.Any(r => r.ReactorId == eventToProcess.PublicKey))
-                {
-                    reactedNote.NoteMetadata.Reactions.Add(
-                        new Reaction()
-                        {
-                            ReactorId = eventToProcess.PublicKey,
-                            Content = reaction,
-                        });
-                    eventDatabase.SaveEvent(reactedNote);
-                    eventUpdated = reactedNote;
-                }
-            }
-        }
-        eventToProcess.Processed = true;
-        eventDatabase.SaveEvent(eventToProcess);
-
-        if (eventUpdated != null)
-            NoteUpdated?.Invoke(this, eventUpdated);
     }
 
     public List<Event> GetGlobalFeed(int count)
@@ -294,7 +130,7 @@ public class FeedService
         foreach (var tw in tws.ToList())
         {
             if (rootTrees.Exists(tw.Id)) continue;
-            var root = rootTrees.Find(tw.NoteMetadata.ReplyToId);
+            var root = rootTrees.Find(tw.ReplyToId);
             var newTree = new NoteTree(tw);
             newTree.Details = accountService.GetAccountDetails(tw.PublicKey);
             if (root != null)
@@ -310,7 +146,7 @@ public class FeedService
         for (int i = rootTrees.Count - 1; i >= 0; i--)
         {
             var rootTree = rootTrees[i];
-            var subtree = rootTrees.Find(rootTree.Note.NoteMetadata.ReplyToId);
+            var subtree = rootTrees.Find(rootTree.Note.ReplyToId);
             if (subtree != null)
             {
                 rootTrees.Remove(rootTree);
@@ -358,7 +194,7 @@ public class FeedService
                             .Replace(nonceMarker, nonce.ToString())
                             .Replace(createdMarker, created.ToUnixTimeSeconds().ToString());
                         var id = eventJsonWithNonce.ComputeEventId();
-                        if (Event.CalculateDifficulty(id) >= diff)
+                        if (EventExtension.CalculateDifficulty(id) >= diff)
                         {
                             foundNonce = nonce;
                             foundCreated = created;
@@ -445,7 +281,7 @@ public class FeedService
         {
             // Use preferred method as per NIP-10 https://github.com/nostr-protocol/nips/blob/master/10.md
             var replyToId = replyTo.Id;
-            var rootId = replyTo.NoteMetadata.ReplyToRootId;
+            var rootId = replyTo.ReplyToRootId;
             if (string.IsNullOrEmpty(rootId))
             {
                 // RootId missing maybe because of a faulty/deprecated client. Let's try to find the rootId
@@ -458,16 +294,16 @@ public class FeedService
                         rootId = null;
                         break;
                     }
-                    if (!string.IsNullOrEmpty(ev.NoteMetadata.ReplyToRootId))
+                    if (!string.IsNullOrEmpty(ev.ReplyToRootId))
                     {
-                        rootId = ev.NoteMetadata.ReplyToRootId;
+                        rootId = ev.ReplyToRootId;
                         break;
                     }
-                    if (string.IsNullOrEmpty(ev.NoteMetadata.ReplyToId))
+                    if (string.IsNullOrEmpty(ev.ReplyToId))
                     {
                         break;
                     }
-                    rootId = ev.NoteMetadata.ReplyToId;
+                    rootId = ev.ReplyToId;
                 }
             }
             if (string.IsNullOrEmpty(rootId) || replyToId == rootId)
@@ -482,7 +318,7 @@ public class FeedService
             }
 
             // When replying to a text event E the reply event's "p" tags should contain all of E's "p" tags as well as the "pubkey" of the event being replied to.
-            foreach (var mention in replyTo.NoteMetadata.AccountMentions.Values.Union(new[] { replyTo.PublicKey }))
+            foreach (var mention in replyTo.GetMentions().Where(m => m.Type == 'p').Select(m => m.MentionId).Union(new[] { replyTo.PublicKey }))
             {
                 if (!ps.Contains(mention) && !prs.Contains(mention))
                     prs.Add(mention);
@@ -535,14 +371,14 @@ public class FeedService
             Tags = new(),
         };
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { reactTo.Id }.ToList() });
-        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { eventDatabase.GetEventPubKey(reactTo.Id) }.ToList() });
+        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { reactTo.PublicKey }.ToList() });
         if (!await accountService.MainAccountSigner.Sign(nostrEvent))
             return false;
         relayService.SendEvent(nostrEvent);
         return true;
     }
 
-    public async Task<bool> DeleteNote(Event eventToDelete, string reason = null)
+    public async Task<bool> DeleteNote(Event eventToDelete, string? reason = null)
     {
         // NIP-09: https://github.com/nostr-protocol/nips/blob/master/09.md
         var nostrEvent = new NostrEvent()
@@ -563,8 +399,7 @@ public class FeedService
             return false;
         relayService.SendEvent(nostrEvent);
 
-        eventToDelete.Deleted = true;
-        eventDatabase.SaveEvent(eventToDelete);
+        eventDatabase.MarkEventAsDeleted(eventToDelete.Id, accountService.MainAccount.Id);
 
         return true;
     }
@@ -616,6 +451,11 @@ public class FeedService
         var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
         mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
         return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
+    }
+
+    public List<Reaction> GetReactions(string eventId)
+    {
+        return eventDatabase.ListReactions(eventId);
     }
 }
 

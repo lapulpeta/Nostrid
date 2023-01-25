@@ -4,6 +4,7 @@ using Jdenticon;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Nostrid.Misc
 {
@@ -57,10 +58,15 @@ namespace Nostrid.Misc
             return noteMentionBech32Regex.Matches(content).Select(m => m.Groups[1].Value.ToLower()).Distinct();
         }
 
-        public static bool IsValidNostrId(string id)
+        public static bool IsValidNostrId([NotNullWhen(true)] string? id)
         {
             const string ValidChars = "0123456789abcdef";
             return !string.IsNullOrEmpty(id) && id.Length == 64 && id.All(c => ValidChars.IndexOf(c) != -1);
+        }
+
+        public static string FormatDate(long dateUtc)
+        {
+            return FormatDate(DateTimeOffset.FromUnixTimeSeconds(dateUtc));
         }
 
         public static string FormatDate(DateTimeOffset dateUtc)

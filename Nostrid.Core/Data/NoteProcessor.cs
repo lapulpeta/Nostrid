@@ -36,7 +36,7 @@ namespace Nostrid.Data
             pipeline = builder.Build();
         }
 
-        public RenderFragment GetContent(string content, NoteMetadata? metadata)
+        public RenderFragment GetContent(string content, List<Mention>? mentions)
         {
             var html = Markdown.Parse(content.Replace("\n", "\u0020\u0020\n"), pipeline).ToHtml(pipeline);
             
@@ -45,10 +45,10 @@ namespace Nostrid.Data
             var document = new HtmlDocument();
             document.LoadHtml(html);
 
-            return new RenderFragment(builder => InsertElements(0, builder, document.DocumentNode.ChildNodes, metadata));
+            return new RenderFragment(builder => InsertElements(0, builder, document.DocumentNode.ChildNodes, mentions));
         }
 
-        private int InsertElements(int sequence, RenderTreeBuilder builder, HtmlNodeCollection nodes, NoteMetadata? metadata)
+        private int InsertElements(int sequence, RenderTreeBuilder builder, HtmlNodeCollection nodes, List<Mention>? mentions)
         {
             foreach (HtmlNode node in nodes)
             {
@@ -65,7 +65,7 @@ namespace Nostrid.Data
                             builder.AddAttribute(
                                 sequence++,
                                 "ChildContent",
-                                new RenderFragment(b => sequence = InsertElements(sequence, b, node.ChildNodes, metadata)));
+                                new RenderFragment(b => sequence = InsertElements(sequence, b, node.ChildNodes, mentions)));
                         }
                         builder.CloseComponent();
                     }
@@ -76,19 +76,19 @@ namespace Nostrid.Data
                         {
                             builder.AddAttribute(sequence++, attribute.Name, attribute.Value);
                         }
-                        sequence = InsertElements(sequence, builder, node.ChildNodes, metadata);
+                        sequence = InsertElements(sequence, builder, node.ChildNodes, mentions);
                         builder.CloseElement();
                     }
                 }
                 else if (node.NodeType == HtmlNodeType.Text)
                 {
-                    sequence = InsertElements(sequence, builder, node.InnerHtml, metadata);
+                    sequence = InsertElements(sequence, builder, node.InnerHtml, mentions);
                 }
             }
             return sequence;
         }
 
-        private int InsertElements(int sequence, RenderTreeBuilder builder, string content, NoteMetadata? metadata)
+        private int InsertElements(int sequence, RenderTreeBuilder builder, string content, List<Mention>? mentions)
         {
             foreach (var part in partsRegex.Split(content))
             {
@@ -100,23 +100,26 @@ namespace Nostrid.Data
                 if (match.Success)
                 {
                     var index = int.Parse(match.Groups[1].Value);
-                    if (metadata?.EventMentions?.ContainsKey(index) ?? false)
+                    var value = mentions.FirstOrDefault(m => m.Type == 'e' && m.Index == index);
+                    if (value != null)
                     {
-                        var value = metadata.EventMentions[index];
                         sequence = InsertLink(
-                            sequence, builder, $"/note/{value}",
-                            ByteTools.PubkeyToNote(value, true));
-                    }
-                    else if (metadata?.AccountMentions?.ContainsKey(index) ?? false)
-                    {
-                        var value = metadata.AccountMentions[index];
-                        sequence = InsertLink(
-                            sequence, builder, $"/account/{value}",
-                            HttpUtility.HtmlEncode(accountService.GetAccountName(value)));
+                            sequence, builder, $"/note/{value.MentionId}",
+                            ByteTools.PubkeyToNote(value.MentionId, true));
                     }
                     else
                     {
-                        builder.AddMarkupContent(sequence++, part);
+                        value = mentions.FirstOrDefault(m => m.Type == 'p' && m.Index == index);
+                        if (value != null)
+                        {
+                            sequence = InsertLink(
+                                sequence, builder, $"/account/{value.MentionId}",
+                                HttpUtility.HtmlEncode(accountService.GetAccountName(value.MentionId)));
+                        }
+                        else
+                        {
+                            builder.AddMarkupContent(sequence++, part);
+                        }
                     }
                 }
                 else

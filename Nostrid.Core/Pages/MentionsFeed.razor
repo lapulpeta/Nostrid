@@ -25,7 +25,7 @@
         var notesFeed = feedService.GetNotesFeed(filter.GetFilters(), 1);
         if (notesFeed.Any())
         {
-            var newestNoteDate = notesFeed.Max(n => n.CreatedAtCurated);
+            var newestNoteDate = DateTimeOffset.FromUnixTimeSeconds(notesFeed.Max(n => n.CreatedAtCurated)).UtcDateTime;
             accountService.SetLastRead(newestNoteDate);
         }
     }

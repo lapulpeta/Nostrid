@@ -14,14 +14,15 @@
 @using Nostrid.Model;
 
 <span class="text-break">
-    @if (Details?.Nip05Data != null)
+    @if (Details != null && Details.Nip05Id.IsNotNullOrEmpty() && Details.Nip05Valid &&
+        Nip05.DecodeNip05(Details.Nip05Id, out var domain, out var username))
     {
-        if (Details.Nip05Data.Username != "_")
+        if (username != "_")
         {
-            @Details.Nip05Data.Username
+            @username
         }
         <span class="d-inline-block">
-            @(Details.Nip05Data.Username != "_" ? "@" : "")@Details.Nip05Data.Domain
+            @(username != "_" ? "@" : "")@domain
         </span>
         @if (!OnlyText)
         {
