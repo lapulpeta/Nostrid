@@ -418,7 +418,15 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
 
-            db.Update(config);
+            if (db.Configs.Any(c => c.Id == config.Id))
+            {
+                db.Update(config);
+            }
+            else
+            {
+                db.Add(config);
+            }
+            db.SaveChanges();
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
