@@ -11,8 +11,8 @@ using Nostrid.Model;
 namespace Nostrid.Migrations
 {
     [DbContext(typeof(Context))]
-    [Migration("20230124212342_v2")]
-    partial class v2
+    [Migration("20230125083742_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

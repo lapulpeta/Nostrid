@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Nostrid.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -59,7 +59,8 @@ namespace Nostrid.Migrations
                     CreatedAtCurated = table.Column<long>(type: "INTEGER", nullable: false),
                     Difficulty = table.Column<int>(type: "INTEGER", nullable: false),
                     HasPow = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Broadcast = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Broadcast = table.Column<bool>(type: "INTEGER", nullable: false),
+                    CanEcho = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -167,6 +168,11 @@ namespace Nostrid.Migrations
                 name: "IX_Accounts_Id",
                 table: "Accounts",
                 column: "Id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Events_CreatedAtCurated",
+                table: "Events",
+                column: "CreatedAtCurated");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Events_Id",
