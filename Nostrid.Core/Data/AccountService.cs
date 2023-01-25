@@ -199,17 +199,14 @@ public class AccountService
 					{
                         mainAccount.Details = accountDetailsReceived;
                         SetMainAccount(mainAccount);
-
-						Task.Run(async () =>
-						{
-                            accountDetails.Nip05Valid = await Nip05.RefreshNip05(mainAccount.Id, accountDetails.Nip05Id);
-                            eventDatabase.SetNip05Validity(mainAccount.Id, accountDetails.Nip05Valid);
-                            AccountDetailsChanged?.Invoke(this, (mainAccount.Id, accountDetails));
-						});
-
-
                     }
 
+                    Task.Run(async () =>
+                    {
+                        accountDetails.Nip05Valid = accountDetails.Nip05Id.IsNotNullOrEmpty() && await Nip05.RefreshNip05(mainAccount.Id, accountDetails.Nip05Id);
+                        eventDatabase.SetNip05Validity(accountDetails.Id, accountDetails.Nip05Valid);
+                        AccountDetailsChanged?.Invoke(this, (accountDetails.Id, accountDetails));
+                    });
                 }
 
 			}
