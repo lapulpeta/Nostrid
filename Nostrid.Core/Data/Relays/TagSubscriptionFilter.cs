@@ -16,7 +16,6 @@ public class TagSubscriptionFilter : SubscriptionFilter
     public TagSubscriptionFilter(string[] tags)
     {
         this.tags = tags;
-        ParamsId = Utils.HashWithSHA256("tsf:" + tags.OrderBy(x => x).Aggregate((a, b) => $"{a}:{b}"));
     }
 
     public override NostrSubscriptionFilter[] GetFilters()

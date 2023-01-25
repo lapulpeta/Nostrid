@@ -168,10 +168,6 @@ public class RelayService
         }
         if (filterBySubscriptionId.TryGetValue(subscriptionId, out var filter))
         {
-            if (filter.PreserveOldest)
-            {
-                //eventDatabase.UpdateFilterData(filter.ParamsId, relay.Id, oldest);
-            }
             if (newEvents.Count > 0)
             {
                 ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
@@ -428,12 +424,6 @@ public class RelayService
                 if (!subs.Any(s => s.Filter == f))
                 {
                     var sub = new Subscription(client, f);
-                    if (f.PreserveOldest)
-                    {
-                        //DateTimeOffset? oldest = eventDatabase.GetFilterData(f.ParamsId, relay.Id);
-                        //if (oldest.HasValue)
-                        //    f.limitFilterData.Until = oldest.Value;
-                    }
                     filterBySubscriptionId[sub.SubscriptionId] = f;
                     sub.Subscribe();
                     subs.Add(sub);

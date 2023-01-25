@@ -7,7 +7,6 @@ public class AllSubscriptionFilter : SubscriptionFilter
 {
 	public AllSubscriptionFilter()
     {
-        ParamsId = Utils.HashWithSHA256($"aasf");
     }
 
     public override NostrSubscriptionFilter[] GetFilters()

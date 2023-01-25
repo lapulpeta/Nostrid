@@ -10,7 +10,6 @@ public class MainAccountSubscriptionFilter : SubscriptionFilter
 	public MainAccountSubscriptionFilter(string id)
     {
         ids = new[] { id };
-        ParamsId = Utils.HashWithSHA256($"masf:{nameof(MainAccountSubscriptionFilter)}:{id}");
     }
 
     public override NostrSubscriptionFilter[] GetFilters()

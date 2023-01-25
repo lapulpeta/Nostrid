@@ -15,7 +15,6 @@ public class AccountDetailsSubscriptionFilter : SubscriptionFilter
     public AccountDetailsSubscriptionFilter(string[] ids)
     {
         this.ids = ids;
-        ParamsId = Utils.HashWithSHA256("adsf:" + ids.OrderBy(x => x).Aggregate((a, b) => $"{a}:{b}"));
     }
 
     public override NostrSubscriptionFilter[] GetFilters()
