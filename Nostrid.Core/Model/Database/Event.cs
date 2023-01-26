@@ -116,6 +116,11 @@ public class Event
 
     private Lazy<List<Mention>>? _mentions = null;
 
+    public List<string> GetMentionsIds(char type)
+    {
+        return GetMentions().Where(m => m.Type == type).Select(m => m.MentionId).ToList();
+    }
+
     public List<Mention> GetMentions()
     {
         _mentions ??= new(() =>

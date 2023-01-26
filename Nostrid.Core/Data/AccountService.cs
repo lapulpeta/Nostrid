@@ -12,13 +12,20 @@ public class AccountService
 	private readonly EventDatabase eventDatabase;
 	private readonly RelayService relayService;
 	private SubscriptionFilter[]? mainFilters;
+    private Account? mainAccount;
+    private bool running;
+    private CancellationTokenSource clientThreadsCancellationTokenSource;
 
-	public event EventHandler? MainAccountChanged;
+    private readonly ConcurrentDictionary<string, ISigner> knownSigners = new();
+    private readonly List<string> detailsNeededIds = new();
+
+    public event EventHandler? MainAccountChanged;
 	public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
 	public event EventHandler<(string accountId, List<string> follows)>? AccountFollowsChanged;
 	public event EventHandler? MentionsUpdated;
 
-	public SubscriptionFilter? MainAccountMentionsFilter { get; private set; }
+
+    public SubscriptionFilter? MainAccountMentionsFilter { get; private set; }
 
 	public AccountService(EventDatabase eventDatabase, RelayService relayService)
 	{
@@ -31,13 +38,26 @@ public class AccountService
 
 			MentionsUpdated?.Invoke(this, EventArgs.Empty);
 		};
-	}
+		StartDetailsUpdater();
+    }
 
-	private Account? mainAccount;
+    public void StartDetailsUpdater()
+    {
+        if (running)
+            return;
 
-	private ConcurrentDictionary<string, ISigner> knownSigners = new();
+        running = true;
+        clientThreadsCancellationTokenSource = new CancellationTokenSource();
+        Task.Run(async () => await QueryDetails(clientThreadsCancellationTokenSource.Token));
+    }
 
-	public void SetMainAccount(Account? mainAccount, ISigner? signer = null)
+    public void StopDetailsUpdater()
+    {
+        running = false;
+        clientThreadsCancellationTokenSource.Cancel();
+    }
+
+    public void SetMainAccount(Account? mainAccount, ISigner? signer = null)
 	{
 		this.mainAccount = mainAccount;
 
@@ -192,6 +212,7 @@ public class AccountService
 					accountDetails.Lud16Id = accountDetailsReceived.Lud16Id;
 					accountDetails.Lud06Url = accountDetailsReceived.Lud06Url;
 					accountDetails.DetailsLastUpdate = eventToProcess.CreatedAt ?? DateTime.UtcNow;
+					accountDetails.DetailsLastReceived = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
 					eventDatabase.SaveAccountDetails(accountDetails);
 
@@ -286,7 +307,7 @@ public class AccountService
 		return eventDatabase.GetAccount(accountId);
 	}
 
-	public async Task<bool> SaveAccountDetails(AccountDetails details)
+    public async Task<bool> SaveAccountDetails(AccountDetails details)
 	{
 		var account = eventDatabase.GetAccount(mainAccount.Id);
 		account.Details = details;
@@ -305,6 +326,46 @@ public class AccountService
 			return false;
 		relayService.SendEvent(nostrEvent);
 		return true;
+	}
+
+	public void AddDetailsNeeded(string accountId)
+	{
+        lock (detailsNeededIds)
+            detailsNeededIds.Add(accountId);
+    }
+
+    public void AddDetailsNeeded(IEnumerable<string> accountIds)
+    {
+        lock (detailsNeededIds)
+            detailsNeededIds.AddRange(accountIds);
+    }
+
+    private const int SecondsForDetailsFilters = 5;
+    private const int DetailsValidityMinutes = 30;
+    public async Task QueryDetails(CancellationToken cancellationToken)
+	{
+		List<string> willQuery;
+
+		while (!cancellationToken.IsCancellationRequested)
+		{
+			lock (detailsNeededIds)
+			{
+                willQuery = eventDatabase.GetAccountIdsThatRequireUpdate(detailsNeededIds, TimeSpan.FromMinutes(DetailsValidityMinutes));
+				detailsNeededIds.Clear();
+			}
+
+			if (willQuery.Count > 0)
+			{
+				var filters = AccountDetailsSubscriptionFilter.CreateInBatch(willQuery.ToArray(), destroyOnEose: true);
+				relayService.AddFilters(filters);
+				await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
+				relayService.DeleteFilters(filters);
+			}
+			else
+			{
+                await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
+            }
+        }
 	}
 }
 

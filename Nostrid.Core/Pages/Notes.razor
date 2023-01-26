@@ -63,11 +63,8 @@ else
     private ConcurrentDictionary<string, Event> renderedN = new();
     private List<NoteTree> noteTrees = new();
     private Timer? refreshTimer;
-    private ConcurrentDictionary<string, SubscriptionFilter> detailsFiltersByAccountId = new();
     private SubscriptionFilter? eventFilter;
     private bool maxReached;
-    
-    private const int SecondsForDetailsFilters = 30;
 
     protected override void OnParametersSet()
     {
@@ -89,7 +86,6 @@ else
 
             if (copied.Any())
             {
-                UpdateDetailFilters(copied);
                 UpdateEventFilters();
                 mustRefresh = true;
             }
@@ -103,26 +99,6 @@ else
                 });
             }
         }), null, 0, 3000);
-    }
-
-    private void UpdateDetailFilters(IEnumerable<Event> newEvents)
-    {
-        var accountIds = newEvents
-            .SelectMany(n => new[] { n.PublicKey }.Union(n.GetMentions().Where(n => n.Type == 'p').Select(n => n.MentionId)))
-            .Where(n => !detailsFiltersByAccountId.ContainsKey(n));
-        foreach (var accountId in accountIds)
-        {
-            var filter = new AccountDetailsSubscriptionFilter(accountId)
-            {
-                DestroyOnEose = true,
-                DestroyOnFirstEvent = true,
-                DestroyOn = DateTimeOffset.UtcNow.AddSeconds(SecondsForDetailsFilters)
-            };
-            if (detailsFiltersByAccountId.GetOrAdd(accountId, filter) == filter)
-            {
-                relayService.AddFilter(filter);
-            };
-        }
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
@@ -171,7 +147,6 @@ else
         feedService.NoteReceivedChild -= NoteReceivedChild;
         refreshTimer?.Dispose();
         if (eventFilter != null) relayService.DeleteFilter(eventFilter);
-        relayService.DeleteFilters(detailsFiltersByAccountId.Values);
     }
     #endregion
 

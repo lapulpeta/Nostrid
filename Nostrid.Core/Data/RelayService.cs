@@ -136,7 +136,8 @@ public class RelayService
 
     private void NoticeReceived(Relay relay, string message)
     {
-        if (message.Contains("rate limit", StringComparison.CurrentCultureIgnoreCase))
+        if (message.Contains("rate limit", StringComparison.CurrentCultureIgnoreCase) ||
+            message.Contains("maximum concurrent", StringComparison.CurrentCultureIgnoreCase))
         {
             relayRateLimited[relay.Id] = DateTimeOffset.UtcNow.AddMinutes(1);
         }
@@ -193,13 +194,18 @@ public class RelayService
         UpdateSubscriptions();
     }
 
-    public void AddFilters(params SubscriptionFilter[] fls)
+    public void AddFilters(IEnumerable<SubscriptionFilter> fls)
     {
         lock (filters)
         {
             filters.AddRange(fls);
         }
         UpdateSubscriptions();
+    }
+
+    public void AddFilters(params SubscriptionFilter[] fls)
+    {
+        AddFilters((IEnumerable<SubscriptionFilter>)fls);
     }
 
     public void RefreshFilters(params SubscriptionFilter[] fls)
@@ -225,12 +231,12 @@ public class RelayService
         UpdateSubscriptions();
     }
 
-    public void DeleteFilters(params SubscriptionFilter[] fls)
+    public void DeleteFilters(params SubscriptionFilter?[] fls)
     {
-        DeleteFilters((IEnumerable<SubscriptionFilter>)fls);
+        DeleteFilters((IEnumerable<SubscriptionFilter?>)fls);
     }
 
-    public void DeleteFilters(IEnumerable<SubscriptionFilter> fls)
+    public void DeleteFilters(IEnumerable<SubscriptionFilter?> fls)
     {
         lock (filters)
         {

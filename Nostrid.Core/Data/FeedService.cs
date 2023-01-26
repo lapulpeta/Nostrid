@@ -318,7 +318,7 @@ public class FeedService
             }
 
             // When replying to a text event E the reply event's "p" tags should contain all of E's "p" tags as well as the "pubkey" of the event being replied to.
-            foreach (var mention in replyTo.GetMentions().Where(m => m.Type == 'p').Select(m => m.MentionId).Union(new[] { replyTo.PublicKey }))
+            foreach (var mention in replyTo.GetMentionsIds('p').Union(new[] { replyTo.PublicKey }))
             {
                 if (!ps.Contains(mention) && !prs.Contains(mention))
                     prs.Add(mention);

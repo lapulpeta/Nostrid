@@ -49,6 +49,7 @@ public class Context : DbContext
         builder.Entity<Event>().HasIndex(e => e.CreatedAtCurated);
         builder.Entity<Account>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => e.Id);
+        builder.Entity<AccountDetails>().HasIndex(e => new { e.Id, e.DetailsLastReceived });
         builder.Entity<EventSeen>().HasIndex(e => new { e.EventId, e.RelayId }).IsUnique();
     }
 

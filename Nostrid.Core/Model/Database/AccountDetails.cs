@@ -43,5 +43,8 @@ public class AccountDetails
 
     [JsonIgnore]
     public DateTime DetailsLastUpdate { get; set; }
+
+    [JsonIgnore]
+    public long DetailsLastReceived { get; set; }
 }
 

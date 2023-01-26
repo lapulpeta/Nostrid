@@ -24,14 +24,18 @@ public class AccountDetailsSubscriptionFilter : SubscriptionFilter
         };
     }
 
-    public static List<AccountDetailsSubscriptionFilter> CreateInBatch(string[] ids, int batchSize = 150)
+    public static List<AccountDetailsSubscriptionFilter> CreateInBatch(string[] ids, int batchSize = 150, bool destroyOnEose = false, DateTimeOffset? destroyOn = null)
     {
         int index = 0;
         var segment = new ArraySegment<string>(ids);
         var ret = new List<AccountDetailsSubscriptionFilter>();
         while (index < ids.Length)
         {
-            ret.Add(new AccountDetailsSubscriptionFilter(segment.Slice(index, Math.Min(batchSize, ids.Length - index)).ToArray()));
+            ret.Add(new AccountDetailsSubscriptionFilter(segment.Slice(index, Math.Min(batchSize, ids.Length - index)).ToArray())
+            {
+                DestroyOnEose = destroyOnEose,
+                DestroyOn = destroyOn,
+            });
             index += batchSize;
         }
         return ret;

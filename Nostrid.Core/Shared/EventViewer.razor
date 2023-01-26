@@ -116,12 +116,21 @@
         {
             relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
         }
+
+        if (Event != null)
+        {
+            var accountIds = Event.GetMentionsIds('p').Union(new[] { Event.PublicKey });
+            accountService.AddDetailsNeeded(accountIds);
+        }
     }
 
     private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
     {
-        if (data.accountId != Event?.PublicKey) return;
-        accountDetails = data.details;
+        // Will refresh if details match event author or any mention
+        if (data.accountId == Event?.PublicKey)
+            accountDetails = data.details;
+        else if (!Event?.GetMentionsIds('p').Contains(data.accountId) ?? true)
+            return;
         InvokeAsync(() => StateHasChanged());
     }
 

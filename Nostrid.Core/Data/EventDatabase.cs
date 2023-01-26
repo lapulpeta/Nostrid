@@ -458,5 +458,19 @@ namespace Nostrid.Data
             using var db = new Context(_dbfile);
             db.AccountDetails.Where(ad => ad.Id == id).ExecuteUpdate(ad => ad.SetProperty(ad => ad.Nip05Valid, valid));
         }
+
+        public List<string> GetAccountIdsThatRequireUpdate(IEnumerable<string> sourceList, TimeSpan validity)
+        {
+            using var db = new Context(_dbfile);
+            var expireOn = DateTimeOffset.UtcNow.Subtract(validity).ToUnixTimeSeconds();
+
+            var updatedAccountsQuery = db.AccountDetails
+                .Where(ad => sourceList.Contains(ad.Id) && ad.DetailsLastReceived >= expireOn)
+                .Select(ad => ad.Id);
+
+            var inter = sourceList.Except(updatedAccountsQuery);
+
+            return inter.ToList();
+        }
     }
 }
