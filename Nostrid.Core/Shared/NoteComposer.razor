@@ -9,7 +9,7 @@
 @inject AccountService accountService
 @inject FeedService feedService
 @inject ConfigService configService
-@inject IMediaService mediaService
+@inject MediaServiceProvider mediaServiceProvider
 
 @code{
     [Parameter]
@@ -131,6 +131,9 @@
 
     private async Task LoadFile(InputFileChangeEventArgs e)
     {
+        var mediaService = mediaServiceProvider.GetMediaServices().FirstOrDefault();
+        if (mediaService == null)
+            return;
         var file = e.File;
         using var stream = file.OpenReadStream(5 * 1024 * 1024);
         using var memory = new MemoryStream();

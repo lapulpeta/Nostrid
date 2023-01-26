@@ -27,7 +27,7 @@ builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
 builder.Services.AddSingleton<ConfigService>();
 builder.Services.AddSingleton<DatabaseService>();
 builder.Services.AddSingleton<IClipboardService, ClipboardService>();
-builder.Services.AddSingleton<IMediaService, VoidCatMediaService>();
+builder.Services.AddSingleton<MediaServiceProvider>();
 
 var host = builder.Build();
 

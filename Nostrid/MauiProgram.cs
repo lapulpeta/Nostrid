@@ -39,6 +39,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
         builder.Services.AddSingleton<ConfigService>();
         builder.Services.AddSingleton<IClipboardService, ClipboardService>();
+        builder.Services.AddSingleton<MediaServiceProvider>();
+        builder.Services.AddSingleton<IMediaService, NostrBuildMediaService>();
         builder.Services.AddSingleton<IMediaService, VoidCatMediaService>();
 
 		var app = builder.Build();
