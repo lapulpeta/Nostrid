@@ -2,6 +2,10 @@
 {
     public interface IMediaService
     {
-        public Task<Uri?> UploadFile(byte[] data, string filename, string mimeType);
+        public string Name { get; }
+
+        public int MaxSize { get; }
+
+        public Task<Uri?> UploadFile(Stream data, string filename, string mimeType);
     }
 }

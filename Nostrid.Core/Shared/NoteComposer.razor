@@ -11,7 +11,7 @@
 @inject ConfigService configService
 @inject MediaServiceProvider mediaServiceProvider
 
-@code{
+@code {
     [Parameter]
     public Event? ReplyTo { get; set; }
 
@@ -48,18 +48,18 @@
                 <DataAnnotationsValidator />
                 <ValidationSummary />
                 <textarea value="@textInput.Text" @oninput="@((args) => { textInput.Text = args.Value as string ?? string.Empty; })"
-                          rows="4" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
+                      rows="4" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
                 @if (sending)
                 {
                     <div class="d-flex flex-row align-items-center flex-wrap mt-2">
-                    <button class="btn btn-secondary me-2" @onclick="@CancelPow">
-                        <i class="bi bi-x"></i>
-                        Cancel PoW
-                    </button>
-                    <span class="d-inline-block my-2">
-                        <span>Sending with pow @configService.MainConfig.TargetDiffOutgoing.</span>
-                        <span class="d-inline-block">If you leave this page it will be aborted.</span>
-                    </span>
+                        <button class="btn btn-secondary me-2" @onclick="@CancelPow">
+                            <i class="bi bi-x"></i>
+                            Cancel PoW
+                        </button>
+                        <span class="d-inline-block my-2">
+                            <span>Sending with pow @configService.MainConfig.TargetDiffOutgoing.</span>
+                            <span class="d-inline-block">If you leave this page it will be aborted.</span>
+                        </span>
                     </div>
                 }
                 else
@@ -67,7 +67,23 @@
                     <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary mt-2">
                         @(ReplyTo != null ? "Reply" : "Send note")
                     </button>
-                    <InputFile class="form-control" OnChange="@LoadFile" />
+                    @if (mediaServiceProvider.GetMediaServices().Count() > 0)
+                    {
+                        <div class="btn-group ms-2">
+                            <label class="btn btn-outline-secondary mt-2">
+                                Upload file <InputFile class="d-none" OnChange="@LoadFile" />
+                            </label>
+                            <button type="button" class="btn btn-outline-secondary mt-2 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                @foreach (var service in mediaServiceProvider.GetMediaServices())
+                                {
+                                    <li><a role="button" class="dropdown-item @(selectedService == service ? "active" : "")" @onclick="@(() => selectedService = service)">@service.Name</a></li>
+                                }
+                            </ul>
+                        </div>
+                    }
                 }
             </EditForm>
         </div>
@@ -81,7 +97,7 @@
     private bool sending;
 
     private CancellationTokenSource? powCancelSource;
-
+    private IMediaService? selectedService;
 
     private void CancelPow()
     {
@@ -119,6 +135,7 @@
     protected override void OnInitialized()
     {
         accountService.MainAccountChanged += MainAccountChanged;
+        selectedService = mediaServiceProvider.GetMediaServices().FirstOrDefault();
     }
 
     private void MainAccountChanged(object? sender, EventArgs args)
@@ -131,14 +148,15 @@
 
     private async Task LoadFile(InputFileChangeEventArgs e)
     {
-        var mediaService = mediaServiceProvider.GetMediaServices().FirstOrDefault();
-        if (mediaService == null)
-            return;
+        if (selectedService == null) return;
+        
         var file = e.File;
-        using var stream = file.OpenReadStream(5 * 1024 * 1024);
+        using var stream = file.OpenReadStream(selectedService.MaxSize);
         using var memory = new MemoryStream();
         await stream.CopyToAsync(memory);
-        var uri = await mediaService.UploadFile(memory.ToArray(), file.Name, file.ContentType);
+        memory.Position = 0;
+        
+        var uri = await selectedService.UploadFile(memory, file.Name, file.ContentType);
         if (uri != null)
         {
             textInput.Text += uri.ToString();

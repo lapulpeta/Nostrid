@@ -7,13 +7,17 @@ namespace Nostrid.Externals
     {
         private static Regex _linkRegex = LinkRegex();
 
-        public async Task<Uri?> UploadFile(byte[] data, string filename, string mimeType)
+        public string Name => "nostr.build";
+        
+        public int MaxSize { get => 50 * 1024 * 1024; }
+
+        public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType)
         {
             try
             {
                 using var httpClient = new HttpClient();
                 using var httpContent = new MultipartFormDataContent();
-                using var fileContent = new ByteArrayContent(data);
+                using var fileContent = new StreamContent(data);
                 fileContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
                 httpContent.Add(fileContent, "fileToUpload", filename);
                 httpContent.Add(new StringContent("Upload Image"), "submit");
