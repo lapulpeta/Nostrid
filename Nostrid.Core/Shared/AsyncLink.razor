@@ -52,6 +52,8 @@ else
         Audio = 3
     }
 
+    private static string[] WellKnownHosts = new[]{ "https://void.cat" };
+
     private MediaType mediaType = AsyncLink.MediaType.Other;
     private string mediaTypeHeader = string.Empty;
 
@@ -70,7 +72,8 @@ else
             {
                 try
                 {
-                    using (var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, Url)))
+                    var method = WellKnownHosts.Any(s => Url.StartsWith(s)) ? HttpMethod.Get : HttpMethod.Head;
+                    using (var response = await client.SendAsync(new HttpRequestMessage(method, Url), HttpCompletionOption.ResponseHeadersRead))
                     {
                         if (!response.IsSuccessStatusCode)
                         {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Nostrid;
 using Nostrid.Data;
+using Nostrid.Externals;
 using Nostrid.Interfaces;
 using Nostrid.Web;
 using Nostrid.Web.Services;
@@ -26,6 +27,7 @@ builder.Services.AddSingleton<INotificationCounter, NotificationCounter>();
 builder.Services.AddSingleton<ConfigService>();
 builder.Services.AddSingleton<DatabaseService>();
 builder.Services.AddSingleton<IClipboardService, ClipboardService>();
+builder.Services.AddSingleton<IMediaService, VoidCatMediaService>();
 
 var host = builder.Build();
 
