@@ -72,10 +72,6 @@
                 }
             </span>
         </p>
-        @if ((Event?.NoteMetadata.ChannelId).IsNotNullOrEmpty())
-        {
-            <p class="mb-1" style="font-size:0.5rem">Channel ID: @Event.NoteMetadata.ChannelId</p>
-        }
         @switch (Event?.Kind)
         {
             case NostrKind.ChannelMessage:

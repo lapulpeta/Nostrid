@@ -51,6 +51,10 @@ public class Event
                         {
                             return preferred;
                         }
+                        if (Kind == NostrKind.ChannelMessage && Tags.Count(t => t.Data0 == "e") <= 1)
+                        {
+                            return null;
+                        }
                         return Tags
                             .Where(t => t.Data0 == "e" && t.Data1 != null)
                             .Select(t => t.Data1)

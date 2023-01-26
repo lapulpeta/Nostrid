@@ -155,7 +155,7 @@ public class FeedService
 
     public List<NoteTree> GetTreesFromNotesNoGrouping(IEnumerable<Event> evs)
     {
-        return evs.Select(ev => new NoteTree(ev) { Details = accountService.GetAccountDetails(ev.PublicKey) }).ToList();
+        return evs.Select(ev => new NoteTree(ev)).ToList();
     }
 
     public List<NoteTree> GetTreesFromNotes(IEnumerable<Event> tws, List<NoteTree>? rootTrees = null)
