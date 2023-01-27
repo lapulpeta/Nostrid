@@ -149,9 +149,19 @@
                                     <i class="bi bi-lightning-charge"></i>
                                 </a>
                             }
-                            <a role="button" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty, false)))" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                <i class="bi bi-files"></i>
-                            </a>
+
+                            <div class="btn-group ms-2">
+                                <button @onclick:stopPropagation="true" type="button" class="btn d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary bg-primary-opacity-10-hover dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Note ID</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Note Hex</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </BottomPlaceholder>
