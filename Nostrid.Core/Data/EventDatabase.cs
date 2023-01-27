@@ -472,5 +472,22 @@ namespace Nostrid.Data
 
             return inter.ToList();
         }
+
+        public bool TryDetermineHexType(string id, out IdType type)
+        {
+            using var db = new Context(_dbfile);
+            if (db.Events.Any(e => e.Id == id))
+            {
+                type = IdType.Event;
+                return true;
+            }
+            if (db.Accounts.Any(a => a.Id == id) || db.AccountDetails.Any(a => a.Id == id))
+            {
+                type = IdType.Account;
+                return true;
+            }
+            type = IdType.Unknown;
+            return false;
+        }
     }
 }
