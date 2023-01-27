@@ -15,10 +15,10 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] NIP-07 extensions, e.g. nos2x (Web/PWA version only)
 - [x] NIP-05 profiles
 - [x] Lightning Network (pay button and profile setup)
-- [x] Read and send notes with support for markdown
+- [x] Text notes with support for markdown (receive and send)
 - [x] Delete notes
-- [x] NIP-13 PoW
-- [x] Read and send reactions
+- [x] NIP-13 PoW (receive/filter and send)
+- [x] Reactions (receive and send)
 - [x] Hashtags (send and search)
 - [x] Customizable feeds based on hashtags
 - [x] Username and profile images (read and update)
@@ -33,7 +33,6 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [ ] Direct messages - SOON
 - [ ] Channels - SOON
 - [ ] Manual/advanced relay management - SOON
-- [ ] Lightning Network payments - SOON
 
 ## Supported NIPs
 
@@ -89,6 +88,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 * [Jdenticon.Net](https://github.com/dmester/jdenticon-net)
 * [Markdig](https://github.com/xoofx/markdig)
 * [QRCoder](https://github.com/codebude/QRCoder)
+* [Popper](https://popper.js.org/)
 
 ### Contributing
 
