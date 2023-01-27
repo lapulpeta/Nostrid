@@ -17,6 +17,9 @@
 
     [Parameter]
     public Action? OnSend { get; set; }
+
+    [CascadingParameter]
+    public Alert? Alert { get; set; }
 }
 
 @if (accountService.MainAccount != null)
@@ -49,50 +52,64 @@
                 <ValidationSummary />
                 <textarea value="@textInput.Text" @oninput="@((args) => { textInput.Text = args.Value as string ?? string.Empty; })"
                       rows="4" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
-                @if (sending)
-                {
-                    <div class="d-flex flex-row align-items-center flex-wrap mt-2">
-                        <button class="btn btn-secondary me-2" @onclick="@CancelPow">
+                <div class="d-flex flex-row align-items-center flex-wrap mt-2" style="margin-bottom: -.5rem; margin-right: -.5rem;">
+                    @if (sending)
+                    {
+                        <button class="btn btn-secondary me-2 mb-2" @onclick="@CancelPow">
                             <i class="bi bi-x"></i>
                             Cancel PoW
                         </button>
-                        <span class="d-inline-block my-2">
+                        <span class="d-inline-block mb-2">
                             <span>Sending with pow @configService.MainConfig.TargetDiffOutgoing.</span>
                             <span class="d-inline-block">If you leave this page it will be aborted.</span>
                         </span>
-                    </div>
-                }
-                else
-                {
-                    <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary mt-2">
-                        @(ReplyTo != null ? "Reply" : "Send note")
-                    </button>
-                    @if (mediaServiceProvider.GetMediaServices().Count() > 0)
+                    }
+                    else
                     {
-                        <div class="btn-group ms-2">
-                            <label class="btn btn-outline-secondary mt-2">
-                                Upload file <InputFile class="d-none" OnChange="@LoadFile" />
-                            </label>
-                            <button type="button" class="btn btn-outline-secondary mt-2 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="visually-hidden">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                @foreach (var service in mediaServiceProvider.GetMediaServices())
-                                {
-                                    <li><a role="button" class="dropdown-item @(selectedService == service ? "active" : "")" @onclick="@(() => selectedService = service)">@service.Name</a></li>
-                                }
-                            </ul>
-                        </div>
-                        @if (uploading)
+                        <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary me-2 mb-2">
+                            @(ReplyTo != null ? "Reply" : "Send note")
+                        </button>
+                        @if (mediaServiceProvider.GetMediaServices().Count() > 0)
                         {
-                            <span>@uploadProgress% uploaded</span>
-                        }
-                        @if (uploadError.IsNotNullOrEmpty())
-                        {
-                            <span class="text-danger">@uploadError</span>
+                            <div class="btn-group me-2 mb-2">
+                                <label class="btn btn-outline-secondary">
+                                    Upload file <InputFile class="d-none" OnChange="@LoadFile" />
+                                </label>
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    @foreach (var service in mediaServiceProvider.GetMediaServices())
+                                    {
+                                        <li><a role="button" class="dropdown-item @(selectedService == service ? "active" : "")" @onclick="@(() => selectedService = service)">@service.Name</a></li>
+                                    }
+                                </ul>
+                            </div>
+                            @foreach (var file in files)
+                            {
+                                <div class="me-2 mb-2 d-flex flex-row rounded border overflow-hidden" style="height: 33px"
+                                        role="button" @onclick="@(() => InsertAttachmentUrl(file.Url))" @onclick:stopPropagation="true">
+                                    @if (!string.IsNullOrEmpty(file.Url))
+                                    {
+                                        <img style="max-height: 36px; max-width: 36px; object-fit: cover;" src="@file.Url">
+                                    }
+                                    <div class="d-flex flex-column px-2 align-self-center">
+                                        <div class="d-flex flex-row">
+                                            <span class="flex-grow-1 me-2 fs-7 overflow-hidden"
+                                                   style="max-width: 150px; white-space:nowrap; text-overflow: ellipsis;">
+                                                @file.Name
+                                            </span>
+                                            <span class="fw-bold fs-7">@file.Progress%</span>
+                                        </div>
+                                        <div class="progress" style="height: 0.3rem;" role="progressbar" aria-valuenow="@file.Progress" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar" style="width: @file.Progress%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                         }
                     }
-                }
+                </div>
             </EditForm>
         </div>
     </div>
@@ -102,11 +119,22 @@
 
     private TextInput textInput = new();
     private bool sending;
-    private bool uploading;
     private CancellationTokenSource? powCancelSource;
+
     private IMediaService? selectedService;
-    private int uploadProgress;
-    private string? uploadError;
+    private List<Attachment> files = new();
+
+    private class Attachment
+    {
+        public Attachment(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; set; }
+        public int Progress { get; set; }
+        public string? Url { get; set; }
+    }
 
     private void CancelPow()
     {
@@ -125,6 +153,7 @@
         {
             var content = textInput.Text;
             textInput.Text = string.Empty;
+            files.Clear();
             sending = true;
             feedService
                 .SendNoteWithPow(content, ReplyTo, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token)
@@ -149,54 +178,53 @@
 
     private void MainAccountChanged(object? sender, EventArgs args)
     {
-        InvokeAsync(() =>
-        {
-            StateHasChanged();
-        });
-    }
-
-    private void SetUploadProgress(object? sender, float f)
-    {
-        uploadProgress = (int)(f * 100);
         InvokeAsync(() => StateHasChanged());
     }
 
     private async Task LoadFile(InputFileChangeEventArgs e)
     {
         if (selectedService == null) return;
+        var attachment = new Attachment(e.File.Name);
 
         try
         {
-            uploading = true;
-            uploadProgress = 0;
-            uploadError = string.Empty;
-            selectedService.UpdateProgress += SetUploadProgress;
             var file = e.File;
+            files.Add(attachment);
+
             using var stream = file.OpenReadStream(selectedService.MaxSize);
             using var memory = new MemoryStream();
             await stream.CopyToAsync(memory);
             memory.Position = 0;
 
-            var uri = await selectedService.UploadFile(memory, file.Name, file.ContentType);
+            var uri = await selectedService.UploadFile(memory, file.Name, file.ContentType, (progress) => SetUploadProgress(attachment, progress));
             if (uri != null)
             {
-                textInput.Text += uri.ToString();
-                uploadError = string.Empty;
+                attachment.Url = uri.ToString();
+                InsertAttachmentUrl(attachment.Url);
             }
             else
             {
-                uploadError = "Upload failed";
+                files.Remove(attachment);
+                Alert?.Show("Upload failed", Alert.Type.Danger);
             }
         }
         catch (Exception ex)
         {
-            uploadError = ex.Message;
+            files.Remove(attachment);
+            Alert?.Show(ex.Message, Alert.Type.Danger);
         }
-        finally
-        {
-            uploading = false;
-            selectedService.UpdateProgress -= SetUploadProgress;
-        }
+    }
+
+    private void SetUploadProgress(Attachment attachment, float f)
+    {
+        attachment.Progress = (int)(f * 100);
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void InsertAttachmentUrl(string? url)
+    {
+        if (string.IsNullOrEmpty(url)) return;
+        textInput.Text += (!string.IsNullOrEmpty(textInput.Text) ? "\n" : string.Empty) + url;
     }
 
     #region Dispose

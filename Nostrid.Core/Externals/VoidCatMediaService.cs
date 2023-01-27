@@ -14,16 +14,14 @@ namespace Nostrid.Externals
 
         public int MaxSize { get => 50 * 1024 * 1024; }
 
-        public event EventHandler<float>? UpdateProgress;
-
-        public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType)
+        public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType, Action<float> progress)
         {
             var sha256 = Convert.ToHexString(SHA256.HashData(data));
             data.Position = 0;
 
             using var httpClient = new HttpClient();
             using var progressStream = new ProgressStream(data);
-            progressStream.UpdateProgress += UpdateProgress;
+            progressStream.UpdateProgress += (s, e) => progress(e);
             using var fileContent = new StreamContent(progressStream);
             fileContent.Headers.Add("V-Full-Digest", sha256);
             fileContent.Headers.Add("V-Filename", filename);

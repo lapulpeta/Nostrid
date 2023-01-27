@@ -12,13 +12,11 @@ namespace Nostrid.Externals
         
         public int MaxSize { get => 50 * 1024 * 1024; }
 
-        public event EventHandler<float>? UpdateProgress;
-
-        public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType)
+        public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType, Action<float> progress)
         {
             using var httpClient = new HttpClient();
             using var progressStream = new ProgressStream(data);
-            progressStream.UpdateProgress += UpdateProgress;
+            progressStream.UpdateProgress += (s, e) => progress(e);
             using var httpContent = new MultipartFormDataContent();
             using var fileContent = new StreamContent(progressStream);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
