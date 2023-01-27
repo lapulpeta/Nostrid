@@ -83,6 +83,14 @@
                                 }
                             </ul>
                         </div>
+                        @if (uploading)
+                        {
+                            <span>@uploadProgress% uploaded</span>
+                        }
+                        @if (uploadError.IsNotNullOrEmpty())
+                        {
+                            <span class="text-danger">@uploadError</span>
+                        }
                     }
                 }
             </EditForm>
@@ -93,11 +101,12 @@
 @code {
 
     private TextInput textInput = new();
-
     private bool sending;
-
+    private bool uploading;
     private CancellationTokenSource? powCancelSource;
     private IMediaService? selectedService;
+    private int uploadProgress;
+    private string? uploadError;
 
     private void CancelPow()
     {
@@ -146,20 +155,47 @@
         });
     }
 
+    private void SetUploadProgress(object? sender, float f)
+    {
+        uploadProgress = (int)(f * 100);
+        InvokeAsync(() => StateHasChanged());
+    }
+
     private async Task LoadFile(InputFileChangeEventArgs e)
     {
         if (selectedService == null) return;
-        
-        var file = e.File;
-        using var stream = file.OpenReadStream(selectedService.MaxSize);
-        using var memory = new MemoryStream();
-        await stream.CopyToAsync(memory);
-        memory.Position = 0;
-        
-        var uri = await selectedService.UploadFile(memory, file.Name, file.ContentType);
-        if (uri != null)
+
+        try
         {
-            textInput.Text += uri.ToString();
+            uploading = true;
+            uploadProgress = 0;
+            uploadError = string.Empty;
+            selectedService.UpdateProgress += SetUploadProgress;
+            var file = e.File;
+            using var stream = file.OpenReadStream(selectedService.MaxSize);
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory);
+            memory.Position = 0;
+
+            var uri = await selectedService.UploadFile(memory, file.Name, file.ContentType);
+            if (uri != null)
+            {
+                textInput.Text += uri.ToString();
+                uploadError = string.Empty;
+            }
+            else
+            {
+                uploadError = "Upload failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadError = ex.Message;
+        }
+        finally
+        {
+            uploading = false;
+            selectedService.UpdateProgress -= SetUploadProgress;
         }
     }
 

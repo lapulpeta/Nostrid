@@ -7,5 +7,7 @@
         public int MaxSize { get; }
 
         public Task<Uri?> UploadFile(Stream data, string filename, string mimeType);
+
+        public event EventHandler<float>? UpdateProgress;
     }
 }
