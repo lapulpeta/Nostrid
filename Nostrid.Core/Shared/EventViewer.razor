@@ -119,7 +119,7 @@
 
         if (Event != null)
         {
-            var accountIds = Event.GetMentionsIds('p').Union(new[] { Event.PublicKey });
+            var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
             accountService.AddDetailsNeeded(accountIds);
         }
     }
@@ -129,7 +129,7 @@
         // Will refresh if details match event author or any mention
         if (data.accountId == Event?.PublicKey)
             accountDetails = data.details;
-        else if (!Event?.GetMentionsIds('p').Contains(data.accountId) ?? true)
+        else if (!Event?.GetMentionsIdsPresentInContent('p').Contains(data.accountId) ?? true)
             return;
         InvokeAsync(() => StateHasChanged());
     }
