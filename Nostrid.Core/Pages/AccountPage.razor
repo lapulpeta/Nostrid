@@ -23,10 +23,10 @@
     <div class="fs-4 fw-bolder"><AccountName Details="@account.Details" Id="@account.Id" /></div>
     <div class="fs-7 text-body-tertiary text-break mb-3">
         @ByteTools.PubkeyToNpub(PubKey)
-        <div class="btn-group ms-2">
-            <button @onclick:stopPropagation="true" type="button" class="btn d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary bg-primary-opacity-10-hover dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
-            </button>
+        <div class="btn-group">
+            <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+            </a>
             <ul class="dropdown-menu">
                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(PubKey)))" @onclick:stopPropagation="true">Copy Npub</a></li>
                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(PubKey))" @onclick:stopPropagation="true">Copy Hex</a></li>
