@@ -60,6 +60,16 @@
 
         public class Button
         {
+            public static Button CreateButton(string label, Action? action = null, string? css = null)
+            {
+                return new Button()
+                    {
+                        Text = label,
+                        Action = action,
+                        Css = css
+                    };
+            }
+
             public static Button CreateNoButton(string? css = null)
             {
                 return new Button()
