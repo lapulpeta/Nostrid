@@ -1,0 +1,69 @@
+﻿@implements IDisposable
+
+<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-0 main-margin">
+	@foreach (var alert in alerts)
+	{
+		<div class="toast show align-items-center border-0 @alert.Item2 mb-3" role="alert" aria-live="assertive" aria-atomic="true">
+			<div class="d-flex">
+				<div class="toast-body">
+					@alert.Item1
+				</div>
+				<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+			</div>
+		</div>
+	}
+</div>
+
+@code {
+	private List<(string, string, DateTime)> alerts = new();
+	private Timer? timer;
+
+	public enum Type
+	{
+		Primary,
+		Secondary,
+		Success,
+		Warning,
+		Danger,
+		Info
+	}
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+		timer = new Timer(new TimerCallback((_) =>
+		{
+			var count = alerts.RemoveAll(m => m.Item3 < DateTime.UtcNow);
+			if (count > 0)
+			{
+				InvokeAsync(() => StateHasChanged());
+			}
+		}), null, 0, 1000);
+	}
+
+	public void Show(string text, Type type = Type.Info, int expiringSeconds = 5)
+	{
+		var message = (text, $"text-bg-{type.ToString().ToLower()}", DateTime.UtcNow.AddSeconds(expiringSeconds));
+		alerts.Add(message);
+		InvokeAsync(() => StateHasChanged());
+	}
+
+	#region Dispose
+	private bool _disposed;
+
+	public void Dispose() => Dispose(true);
+
+	protected virtual void Dispose(bool disposing)
+	{
+		if (!_disposed)
+		{
+			if (disposing)
+			{
+				timer?.Dispose();
+			}
+
+			_disposed = true;
+		}
+	}
+	#endregion
+}

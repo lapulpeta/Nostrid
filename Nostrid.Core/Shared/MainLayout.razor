@@ -12,7 +12,9 @@
 
 	<main class="flex-grow-1 main-margin">
 		<article class="p-3">
-			@Body
+			<CascadingValue Value="@alert">
+				@Body
+			</CascadingValue>
 		</article>
 	</main>
 
@@ -38,10 +40,12 @@
 
 </div>
 
+<Alert @ref="alert"></Alert>
 <Scripts @ref="scripts" OnAfterFirstRender="@SetTheme" />
 
 @code{
 	private Scripts? scripts;
+	private Alert? alert;
 
 	protected override void OnInitialized()
 	{
@@ -59,6 +63,14 @@
 			{
 				accountService.SetMainAccount(account, signer);
 			}
+		}
+	}
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (firstRender)
+		{
+			StateHasChanged();
 		}
 	}
 
