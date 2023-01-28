@@ -31,6 +31,8 @@ namespace Nostrid.Data
             }
             else
             {
+                if (db.Relays.Any(r => r.Uri == relay.Uri))
+                    return;
                 db.Add(relay);
             }
             db.SaveChanges();
@@ -52,12 +54,6 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
             return db.Relays.Count();
-        }
-
-        public bool RelayExists(string uri)
-        {
-            using var db = new Context(_dbfile);
-            return db.Relays.Any(r => r.Uri == uri);
         }
 
         public Account GetAccount(string id)
@@ -351,12 +347,12 @@ namespace Nostrid.Data
                 .ToList();
         }
 
-        public void SaveOwnEvents(NostrEvent nostrEvent)
+        public void SaveOwnEvents(NostrEvent nostrEvent, bool broadcast)
         {
             using var db = new Context(_dbfile);
 
             var ev = EventExtension.FromNostrEvent(nostrEvent);
-            ev.Broadcast = true;
+            ev.Broadcast = broadcast;
             ev.CanEcho = true;
             ev.CreatedAtCurated = nostrEvent.CreatedAt.Value.ToUnixTimeSeconds();
 

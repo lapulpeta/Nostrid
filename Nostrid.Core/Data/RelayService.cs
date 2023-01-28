@@ -6,6 +6,24 @@ using System.Collections.Concurrent;
 
 namespace Nostrid.Data;
 
+public class RelaysMonitor
+{
+    private readonly Func<int> _pendingRelaysGetter;
+    private readonly Func<int> _maxRelaysGetter;
+    private readonly Func<bool> _isAutoGetter;
+
+    public RelaysMonitor(Func<int> pendingRelaysGetter, Func<int> maxRelaysGetter, Func<bool> isAutoGetter)
+    {
+        _pendingRelaysGetter = pendingRelaysGetter;
+        _maxRelaysGetter = maxRelaysGetter;
+        _isAutoGetter = isAutoGetter;
+    }
+
+    public int PendingRelays => _pendingRelaysGetter();
+    public int MaxRelays => _maxRelaysGetter();
+    public bool IsAuto => _isAutoGetter();
+}
+
 public class RelayService
 {
     private readonly string[] DefaultHighPriorityRelays = new[] { "wss://relay.damus.io", "wss://relay.nostr.info", "wss://nostr-pub.wellorder.net", "wss://nostr.onsats.org", "wss://nostr-pub.semisol.dev", "wss://nostr.walletofsatoshi", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://nostr.zebedee.cloud", "wss://relay.nostr.ch", "wss://relay.nostr-latam.link" };
@@ -30,10 +48,12 @@ public class RelayService
     private List<Task> runningTasks = new();
 
     public int ConnectedRelays => connectedClients;
-    public int PendingRelays => pendingRelaysByPriority.SelectMany(a => a).Count();
     public int RateLimitedRelays => relayRateLimited.Count;
-    public int MaxRelays => Math.Max(MinRelays, Environment.ProcessorCount);
     public int FiltersCount => filters.Count;
+
+    public bool Restarting => clientThreadsCancellationTokenSource.IsCancellationRequested;
+
+	public RelaysMonitor RelaysMonitor { get; private set; }
 
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
 
@@ -46,15 +66,6 @@ public class RelayService
         this.eventDatabase = eventDatabase;
         this.configService = configService;
         InitRelays();
-        foreach (var index in Enumerable.Range(PriorityLowerBound, PriorityHigherBound - PriorityLowerBound + 1))
-        {
-            pendingRelaysByPriority[index] = new();
-        }
-
-        foreach (var relay in eventDatabase.ListRelays().OrderBy(r => Random.Shared.Next()))
-        {
-            pendingRelaysByPriority[relay.Priority].Add(relay);
-        }
         StartNostrClients();
     }
 
@@ -67,9 +78,38 @@ public class RelayService
         _ = Task.Run(() =>
         {
             clientThreadsCancellationTokenSource = new CancellationTokenSource();
-            for (int i = 0; i < MaxRelays; i++)
+            if (configService.MainConfig.ManualRelayManagement)
             {
-                runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
+                var relaysToUse = eventDatabase.ListRelays().Where(r => r.Read || r.Write).ToList();
+                RelaysMonitor = new RelaysMonitor(
+                    () => 0,
+                    () => relaysToUse.Count,
+                    () => false);
+                foreach (var relay in relaysToUse)
+                {
+
+                    runningTasks.Add(RunSpecificNostrClient(relay, clientThreadsCancellationTokenSource.Token));
+                }
+            }
+            else
+            {
+                foreach (var index in Enumerable.Range(PriorityLowerBound, PriorityHigherBound - PriorityLowerBound + 1))
+                {
+                    pendingRelaysByPriority[index] = new();
+                }
+                foreach (var relay in eventDatabase.ListRelays().OrderBy(r => Random.Shared.Next()))
+                {
+                    pendingRelaysByPriority[relay.Priority].Add(relay);
+                }
+                var maxRelays = Math.Max(MinRelays, Environment.ProcessorCount);
+                RelaysMonitor = new RelaysMonitor(
+                    () => pendingRelaysByPriority.SelectMany(a => a).Count(),
+                    () => maxRelays,
+                    () => true);
+                foreach (var index in Enumerable.Range(0, maxRelays))
+                {
+                    runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
+                }
             }
         });
     }
@@ -253,15 +293,12 @@ public class RelayService
 
     public void AddNewRelayIfUnknown(string uri)
     {
-        if (!eventDatabase.RelayExists(uri))
+        SaveRelay(new Relay()
         {
-            SaveRelay(new Relay()
-            {
-                Uri = uri,
-                Read = true,
-                Write = true
-            });
-        }
+            Uri = uri,
+            Read = true,
+            Write = true
+        });
     }
 
     public void SaveRelay(Relay relay)
@@ -270,7 +307,6 @@ public class RelayService
             throw new Exception($"Priority should be between {PriorityLowerBound} and {PriorityHigherBound}");
 
         eventDatabase.SaveRelay(relay);
-        pendingRelaysByPriority[relay.Priority].Add(relay);
     }
 
     public List<Relay> GetRelays()
@@ -280,14 +316,44 @@ public class RelayService
 
     private async Task EventDispatcher(Relay relay)
     {
+        if (!RelaysMonitor.IsAuto)
+            return;
+
         if (!clientByRelay.TryGetValue(relay, out var client))
             return;
 
         foreach (var ev in eventDatabase.ListOwnEvents(relay.Id))
         {
-            ev.Content ??= string.Empty; // TODO: LiteDb stores string.Empty as null
+            ev.Content ??= string.Empty;
             await client.PublishEvent(ev.ToNostrEvent());
             eventDatabase.AddSeenBy(ev.Id, relay.Id);
+        }
+    }
+
+    private async Task RunSpecificNostrClient(Relay relay, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                await RunNostrClient(relay, cancellationToken);
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 
@@ -299,11 +365,6 @@ public class RelayService
             try
             {
                 BlockingCollection<Relay>.TakeFromAny(pendingRelaysByPriority, out relay, cancellationToken);
-
-                if (!eventDatabase.RelayExists(relay.Uri))
-                {
-                    continue;
-                }
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -333,10 +394,6 @@ public class RelayService
             {
                 break;
             }
-        }
-        if (relay != null)
-        {
-            pendingRelaysByPriority[relay.Priority].Add(relay); // Put back in queue
         }
     }
 
@@ -396,10 +453,9 @@ public class RelayService
         }
     }
 
-    public void DeleteRelay(Relay relay)
+    public void DeleteRelay(long relayId)
     {
-        CleanupRelay(relay);
-        eventDatabase.DeleteRelay(relay.Id);
+        eventDatabase.DeleteRelay(relayId);
     }
 
     private void UpdateSubscriptions()
@@ -415,6 +471,9 @@ public class RelayService
 
     private void UpdateSubscriptions(Relay relay)
     {
+        if (!RelaysMonitor.IsAuto && !relay.Read)
+            return;
+
         var client = clientByRelay[relay];
         var subs = subscriptionsByClient.GetOrAdd(client, _ => new());
 
@@ -458,18 +517,21 @@ public class RelayService
 
     public void SendEvent(NostrEvent nostrEvent)
     {
-        eventDatabase.SaveOwnEvents(nostrEvent);
+        eventDatabase.SaveOwnEvents(nostrEvent, RelaysMonitor.IsAuto);
         lock (clientByRelay)
         {
             foreach (var (relay, client) in clientByRelay)
             {
-                try
+                if (RelaysMonitor.IsAuto || relay.Write)
                 {
-                    _ = client.PublishEvent(nostrEvent);
-                    eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
-                }
-                catch
-                {
+                    try
+                    {
+                        _ = client.PublishEvent(nostrEvent);
+                        eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
+                    }
+                    catch
+                    {
+                    }
                 }
             }
         }

@@ -135,6 +135,7 @@
                                 checked="@relay.Write"
                                 @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
                         </div>
+                        <button class="btn bi bi-x-circle" @onclick="() => DeleteRelay(relay)" />
                     </div>
                 </li>
             }
@@ -175,5 +176,10 @@
     private void SaveRelay(Relay relay)
     {
         relayService.SaveRelay(relay);
+    }
+
+    private void DeleteRelay(Relay relay)
+    {
+        relayService.DeleteRelay(relay.Id);
     }
 }
