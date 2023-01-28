@@ -3,6 +3,7 @@
 @using Nostrid.Model;
 
 @inject ConfigService configService
+@inject RelayService relayService
 
 <h2 class="mb-4">Options</h2>
 
@@ -96,6 +97,51 @@
     </ul>
 </div>
 
+<div class="mt-4 card shadow">
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <h5 class="my-2">Relays</h5>
+        </li>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-6" for="manualRelayManagement">
+                    Manual relay management
+                </label>
+                <div class="col-6 text-right">
+                    <div class="form-check form-switch m-0 p-0 fs-4">
+                        <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="manualRelayManagement"
+                               checked="@configModel.ManualRelayManagement"
+                               @onchange="@(args => { configModel.ManualRelayManagement = args.Value as bool? ?? false; Save(); })" />
+                    </div>
+                </div>
+            </div>
+        </li>
+        @if (configModel.ManualRelayManagement)
+        {
+            @foreach (var relay in relayService.GetRelays())
+            {
+                <li class="list-group-item">
+                    <div class="row align-items-center">
+                        <label class="col-6" for="relay@(relay.Id)">
+                            @relay.Uri
+                        </label>
+                        <div class="form-check form-switch m-0 p-0 fs-4">
+                            <input type="checkbox" class="form-check-input m-0 float-end" role="switch"
+                                checked="@relay.Read"
+                                @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                        </div>
+                        <div class="form-check form-switch m-0 p-0 fs-4">
+                            <input type="checkbox" class="form-check-input m-0 float-end" role="switch"
+                                checked="@relay.Write"
+                                @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                        </div>
+                    </div>
+                </li>
+            }
+        }
+    </ul>
+</div>
+
 <Scripts @ref="scripts" />
 
 @code {
@@ -118,11 +164,16 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        configModel = configService.MainConfig.Clone();
+        configModel = configService.MainConfig;
     }
 
     private void Save()
     {
         configService.MainConfig = configModel;
+    }
+
+    private void SaveRelay(Relay relay)
+    {
+        relayService.SaveRelay(relay);
     }
 }

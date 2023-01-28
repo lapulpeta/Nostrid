@@ -224,14 +224,14 @@
         else if (accountService.HasSigner(account.Id))
         {
             accountService.SetMainAccount(account);
-            var config = configService.MainConfig.Clone();
+            var config = configService.MainConfig;
             config.MainAccountId = account?.Id;
             configService.MainConfig = config;
         }
         else if (LocalSigner.TryFromPrivKey(account.PrivKey, out var signer))
         {
             accountService.SetMainAccount(account, signer);
-            var config = configService.MainConfig.Clone();
+            var config = configService.MainConfig;
             config.MainAccountId = account?.Id;
             configService.MainConfig = config;
         }

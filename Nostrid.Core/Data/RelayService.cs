@@ -255,20 +255,27 @@ public class RelayService
     {
         if (!eventDatabase.RelayExists(uri))
         {
-            AddRelay(new Relay()
+            SaveRelay(new Relay()
             {
                 Uri = uri,
+                Read = true,
+                Write = true
             });
         }
     }
 
-    public void AddRelay(Relay relay)
+    public void SaveRelay(Relay relay)
     {
         if (relay.Priority < PriorityLowerBound || relay.Priority > PriorityHigherBound)
             throw new Exception($"Priority should be between {PriorityLowerBound} and {PriorityHigherBound}");
 
         eventDatabase.SaveRelay(relay);
         pendingRelaysByPriority[relay.Priority].Add(relay);
+    }
+
+    public List<Relay> GetRelays()
+    {
+        return eventDatabase.ListRelays();
     }
 
     private async Task EventDispatcher(Relay relay)
@@ -284,7 +291,6 @@ public class RelayService
         }
     }
 
-    private static readonly object atomicSorting = new();
     private async Task RunAnyNostrClient(CancellationToken cancellationToken)
     {
         Relay? relay = null;

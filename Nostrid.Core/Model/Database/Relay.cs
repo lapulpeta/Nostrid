@@ -8,16 +8,19 @@ public class Relay
 
     public int Priority { get; set; }
 
+    public bool Read { get; set; }
+
+    public bool Write { get; set; }
+
     public override bool Equals(object obj)
     {
         return obj is Relay relay &&
-               Id == relay.Id &&
-               Uri == relay.Uri;
+               Id == relay.Id;
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Id, Uri);
+        return HashCode.Combine(Id);
     }
 }
 

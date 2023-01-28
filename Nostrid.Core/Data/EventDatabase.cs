@@ -25,7 +25,14 @@ namespace Nostrid.Data
         public void SaveRelay(Relay relay)
         {
             using var db = new Context(_dbfile);
-            db.Add(relay);
+            if (db.Relays.Any(r => r.Id == relay.Id))
+            {
+                db.Update(relay);
+            }
+            else
+            {
+                db.Add(relay);
+            }
             db.SaveChanges();
         }
 
