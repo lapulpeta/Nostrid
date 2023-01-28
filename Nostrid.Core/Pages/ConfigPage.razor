@@ -118,24 +118,30 @@
         </li>
         @if (configModel.ManualRelayManagement)
         {
-            @foreach (var relay in relayService.GetRelays())
+            foreach (var relay in relayService.GetRelays())
             {
                 <li class="list-group-item">
-                    <div class="row align-items-center">
-                        <label class="col-6" for="relay@(relay.Id)">
+                    <div class="row g-2 align-items-center">
+                        <label class="col-sm-6">
                             @relay.Uri
                         </label>
-                        <div class="form-check form-switch m-0 p-0 fs-4">
-                            <input type="checkbox" class="form-check-input m-0 float-end" role="switch"
-                                checked="@relay.Read"
-                                @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                        <div class="col-sm-6 d-flex flex-row justify-content-sm-end justify-content-md-end">
+                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                       checked="@relay.Read" id="relayRead@(relay.Id)"
+                                       @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
+                            </div>
+                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                       checked="@relay.Write" id="relayWrite@(relay.Id)"
+                                       @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
+                            </div>
+                            <div class="d-flex flex-row flex-grow-1 flex-sm-grow-0 justify-content-end">
+                                <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
+                            </div>
                         </div>
-                        <div class="form-check form-switch m-0 p-0 fs-4">
-                            <input type="checkbox" class="form-check-input m-0 float-end" role="switch"
-                                checked="@relay.Write"
-                                @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
-                        </div>
-                        <button class="btn bi bi-x-circle" @onclick="() => DeleteRelay(relay)" />
                     </div>
                 </li>
             }
