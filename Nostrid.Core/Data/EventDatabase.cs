@@ -49,6 +49,12 @@ namespace Nostrid.Data
             return db.Relays.ToList();
         }
 
+        public void ClearRelays()
+        {
+            using var db = new Context(_dbfile);
+            db.Relays.ExecuteDelete();
+        }
+
         public int GetRelayCount()
         {
             using var db = new Context(_dbfile);

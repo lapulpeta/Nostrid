@@ -26,8 +26,7 @@ public class RelaysMonitor
 
 public class RelayService
 {
-    private readonly string[] DefaultHighPriorityRelays = new[] { "wss://relay.damus.io", "wss://relay.nostr.info", "wss://nostr-pub.wellorder.net", "wss://nostr.onsats.org", "wss://nostr-pub.semisol.dev", "wss://nostr.walletofsatoshi", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://nostr.zebedee.cloud", "wss://relay.nostr.ch", "wss://relay.nostr-latam.link" };
-    private readonly string[] DefaultLowPriorityRelays = new[] { "wss://nostr.openchain.fr", "wss://nostr.sandwich.farm", "wss://nostr.ono.re", "wss://nostr.rocks", "wss://nostr-relay.untethr.me", "wss://nostr.mom", "wss://relayer.fiatjaf.com", "wss://expensive-relay.fiatjaf.com", "wss://freedom-relay.herokuapp.com/ws", "wss://nostr-relay.freeberty.net", "wss://nostr.zaprite.io", "wss://nostr.delo.software", "wss://nostr-relay.untethr.me", "wss://nostr.semisol.dev", "wss://nostr-verified.wellorder.net", "wss://nostr.drss.io", "wss://nostr.unknown.place", "wss://nostr.oxtr.dev", "wss://relay.grunch.dev", "wss://relay.cynsar.foundation", "wss://nostr-2.zebedee.cloud", "wss://nostr-relay.digitalmob.ro", "wss://no.str.cr" };
+    private readonly string[] DefaultRelays = new[] { "wss://nostr-pub.wellorder.net", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://relay.damus.io", "wss://nostr.zebedee.cloud", "wss://relay.nostr.info", "wss://nostr-pub.semisol.dev", "wss://nostr.walletofsatoshi.com", "wss://nostr.swiss-enigma.ch", "wss://nostr.cercatrova.me", "wss://relayer.fiatjaf.com", "wss://nostr.rocks", "wss://rsslay.fiatjaf.com", "wss://nostr-2.zebedee.cloud", "wss://expensive-relay.fiatjaf.com", "wss://freedom-relay.herokuapp.com/ws", "wss://nostr-relay.freeberty.net", "wss://nostr.onsats.org", "wss://nostr-relay.untethr.me", "wss://nostr.semisol.dev", "wss://nostr-verified.wellorder.net", "wss://nostr.drss.io", "wss://nostr.unknown.place", "wss://nostr.openchain.fr", "wss://nostr.delo.software", "wss://relay.minds.com/nostr/v1/ws", "wss://nostr.zaprite.io", "wss://nostr.oxtr.dev", "wss://nostr.ono.re", "wss://relay.grunch.dev", "wss://relay.cynsar.foundation", "wss://nostr.sandwich.farm", "wss://relay.nostr.ch", "wss://nostr.mom", "wss://nostr-relay.alekberg.net", "wss://nostr.developer.li" };
     private const int MinRelays = 8;
     private const int PriorityLowerBound = 0;
     private const int PriorityHigherBound = 10;
@@ -133,24 +132,24 @@ public class RelayService
         });
     }
 
+    public void ResetRelays()
+    {
+        eventDatabase.ClearRelays();
+        InitRelays();
+    }
+
     private void InitRelays()
     {
         if (eventDatabase.GetRelayCount() == 0)
         {
-            foreach (var relay in DefaultHighPriorityRelays)
+            foreach (var relay in DefaultRelays)
             {
                 eventDatabase.SaveRelay(new Relay()
                 {
                     Uri = relay,
-                    Priority = PriorityHigherBound // Max priority
-                });
-            }
-            foreach (var relay in DefaultLowPriorityRelays)
-            {
-                eventDatabase.SaveRelay(new Relay()
-                {
-                    Uri = relay,
-                    Priority = (PriorityHigherBound + PriorityLowerBound) / 2 // Middle
+                    Priority = (PriorityHigherBound + PriorityLowerBound) / 2, // Middle
+                    Read = true,
+                    Write = true,
                 });
             }
         }
