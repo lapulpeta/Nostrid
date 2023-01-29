@@ -241,12 +241,11 @@ public class AccountService
     // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md
     public void HandleKind3(Event eventToProcess, string filterId)
     {
-        Account? accountChanged = null;
-        List<string>? newFollowList = null;
+        Action? update = null;
 
         lock (eventDatabase)
         {
-            newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1).Distinct().ToList();
+            var newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1).Distinct().ToList();
             var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
             if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
@@ -258,12 +257,16 @@ public class AccountService
                     if (newFollowList.Contains(requesterId) && !eventDatabase.IsFollowing(account.Id, requesterId))
                     {
                         eventDatabase.AddFollow(account.Id, requesterId);
+
+                        update = () =>
+                        {
+                            AccountFollowersChanged?.Invoke(this, requesterId);
+                        };
                     }
                 }
                 else
                 {
                     eventDatabase.SetFollows(account.Id, newFollowList);
-                    accountChanged = account;
 
                     account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
 
@@ -273,16 +276,18 @@ public class AccountService
                     {
                         SetMainAccount(account);
                     }
+
+                    update = () =>
+                    {
+                        AccountFollowsChanged?.Invoke(this, (account.Id, newFollowList));
+                        foreach (var follow in newFollowList)
+                            AccountFollowersChanged?.Invoke(this, follow);
+                    };
                 }
             }
         }
 
-        if (accountChanged != null)
-        {
-            AccountFollowsChanged?.Invoke(this, (accountChanged.Id, newFollowList));
-            //foreach (var follow in newFollowList)
-            //    AccountFollowersChanged?.Invoke(this, follow);
-        }
+        update?.Invoke();
     }
 
     public string GetAccountName(string accountId)
