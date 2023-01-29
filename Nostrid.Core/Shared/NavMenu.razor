@@ -78,7 +78,7 @@
 					</li>
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap" href="config" @onclick="HideOffCanvasMenu">
-							<span class="bi bi-gear" aria-hidden="true"></span> Options
+							<span class="bi bi-gear" aria-hidden="true"></span> Settings
 						</NavLink>
 					</li>
 					@if (accountService.MainAccount != null)
@@ -98,10 +98,19 @@
 			</nav>
 			<div class="fs-7 text-muted text-left">
 				<div>
-					Relays <br />
-					-Connected: @relayService.ConnectedRelays/@relayService.MaxRelays
-					<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button><br />
-					-Available: @relayService.PendingRelays <br />
+					Relays
+					@if (relayService.RelaysMonitor.IsAuto)
+					{
+						<span> (Auto)</span>
+					}
+					<br />
+					-Connected: @relayService.ConnectedRelays/@relayService.RelaysMonitor.MaxRelays
+					@if (!relayService.Restarting)
+					{
+						<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button>
+					}
+					<br />
+					-Available: @relayService.RelaysMonitor.PendingRelays <br />
 					-Rate Limited: @relayService.RateLimitedRelays <br />
 					Filters: @relayService.FiltersCount <br />
 					Version: @Utils.GetCurrentVersion()

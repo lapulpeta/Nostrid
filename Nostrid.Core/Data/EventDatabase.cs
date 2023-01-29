@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Model;
-using Nostrid.Pages;
-using SQLite;
 
 namespace Nostrid.Data
 {
@@ -22,11 +20,21 @@ namespace Nostrid.Data
             db.Database.Migrate();
         }
 
-        public void SaveRelay(Relay relay)
+        public bool SaveRelay(Relay relay)
         {
             using var db = new Context(_dbfile);
-            db.Add(relay);
+            if (db.Relays.Any(r => r.Id == relay.Id))
+            {
+                db.Update(relay);
+            }
+            else
+            {
+                if (db.Relays.Any(r => r.Uri == relay.Uri))
+                    return false;
+                db.Add(relay);
+            }
             db.SaveChanges();
+            return true;
         }
 
         public void DeleteRelay(long relayId)
@@ -41,16 +49,16 @@ namespace Nostrid.Data
             return db.Relays.ToList();
         }
 
+        public void ClearRelays()
+        {
+            using var db = new Context(_dbfile);
+            db.Relays.ExecuteDelete();
+        }
+
         public int GetRelayCount()
         {
             using var db = new Context(_dbfile);
             return db.Relays.Count();
-        }
-
-        public bool RelayExists(string uri)
-        {
-            using var db = new Context(_dbfile);
-            return db.Relays.Any(r => r.Uri == uri);
         }
 
         public Account GetAccount(string id)
@@ -344,12 +352,12 @@ namespace Nostrid.Data
                 .ToList();
         }
 
-        public void SaveOwnEvents(NostrEvent nostrEvent)
+        public void SaveOwnEvents(NostrEvent nostrEvent, bool broadcast)
         {
             using var db = new Context(_dbfile);
 
             var ev = EventExtension.FromNostrEvent(nostrEvent);
-            ev.Broadcast = true;
+            ev.Broadcast = broadcast;
             ev.CanEcho = true;
             ev.CreatedAtCurated = nostrEvent.CreatedAt.Value.ToUnixTimeSeconds();
 
@@ -444,7 +452,7 @@ namespace Nostrid.Data
                 });
             return reactions.ToList();
         }
-        
+
         public bool AccountReacted(string eventId, string accountId)
         {
             using var db = new Context(_dbfile);

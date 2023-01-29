@@ -3,6 +3,9 @@
 @using Nostrid.Model;
 
 @inject ConfigService configService
+@inject RelayService relayService
+
+@implements IDisposable
 
 <h2 class="mb-4">Options</h2>
 
@@ -96,11 +99,111 @@
     </ul>
 </div>
 
+<div class="mt-4 card shadow">
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <h5 class="my-2">Relays</h5>
+        </li>
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-8 align-self-center">
+                    @if (!relayService.Restarting)
+                    {
+                        <span class="fw-bold">You need to restart connections to apply any change here</span>
+                    }
+                    else
+                    {
+                        <span class="text-secondary">Restarting...</span>
+                    }
+                </div>
+                <div class="col-4 text-end">
+                    @if (!relayService.Restarting)
+                    {
+                        <button class="btn btn-primary py-1" @onclick="() => relayService.RestartNostrClients()">Restart connections</button>
+                    }
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-8 align-self-center">
+                    <span class="fw-bold">Reset to default list of relays and automatic mode</span>
+                </div>
+                <div class="col-4 text-end">
+                    <button class="btn btn-primary py-1" @onclick="@ResetRelays">Reset relays</button>
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
+            <div class="row align-items-center">
+                <label class="col-6" for="manualRelayManagement">
+                    Manual relay management
+                </label>
+                <div class="col-6 text-right">
+                    <div class="form-check form-switch m-0 p-0 fs-4">
+                        <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="manualRelayManagement"
+                               checked="@configModel.ManualRelayManagement"
+                               @onchange="@(args => { configModel.ManualRelayManagement = args.Value as bool? ?? false; Save(); })" />
+                    </div>
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
+            <div class="input-group">
+                <span class="align-self-center me-3">New Relay</span>
+                <InputText class="form-control" placeholder="Relay uri" @bind-Value="@newRelayUri" />
+                <button class="btn btn-sm py-1 btn-outline-secondary" type="button" @onclick="@AddNewRelay">Add</button>
+            </div>
+        </li>
+        @foreach (var relay in relays)
+        {
+            <li class="list-group-item">
+                <div class="row g-2 align-items-center">
+                    <label class="col-sm-6">
+                        @relay.Uri
+                    </label>
+                    <div class="col-sm-6 d-flex flex-row justify-content-sm-end justify-content-md-end">
+                        @if (configModel.ManualRelayManagement)
+                        {
+                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                        checked="@relay.Read" id="relayRead@(relay.Id)"
+                                        @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
+                            </div>
+                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                        checked="@relay.Write" id="relayWrite@(relay.Id)"
+                                        @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                <label class="form-check-label" for="relayPriority@(relay.Id)">Priority</label>
+                                <span class="me-3 badge text-bg-light">@relay.Priority</span>
+                                <input type="range"  min="0" max="10" step="1" id="relayPriority@(relay.Id)"
+                                    @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
+                            </div>
+                        }
+                        <div class="d-flex flex-row flex-grow-1 flex-sm-grow-0 justify-content-end">
+                            <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+</div>
+
 <Scripts @ref="scripts" />
 
 @code {
     private Scripts? scripts;
     private Config configModel = new();
+    private List<Relay> relays = new();
+    private string newRelayUri = string.Empty;
 
     public const string DARK_THEME = "dark";
     public const string LIGHT_THEME = "light";
@@ -118,11 +221,76 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        configModel = configService.MainConfig.Clone();
+        configModel = configService.MainConfig;
+        ReloadRelays();
+        relayService.ClientsStateChanged += ClientsStateChanged;
+    }
+
+    private void ReloadRelays()
+    {
+        relays = relayService.GetRelays().OrderByDescending(r => r.Id).ToList();
+    }
+
+    private void ClientsStateChanged(object? sender, EventArgs args)
+    {
+        InvokeAsync(() => StateHasChanged());
     }
 
     private void Save()
     {
         configService.MainConfig = configModel;
     }
+
+    private void SaveRelay(Relay relay)
+    {
+        relayService.SaveRelay(relay);
+    }
+
+    private void DeleteRelay(Relay relay)
+    {
+        relayService.DeleteRelay(relay.Id);
+        ReloadRelays();
+    }
+
+    private void AddNewRelay()
+    {
+        if (relayService.AddNewRelayIfUnknown(newRelayUri))
+        {
+            newRelayUri = string.Empty;
+            ReloadRelays();
+        }
+    }
+
+    private void ResetRelays()
+    {
+        relayService.ResetRelays();
+        ReloadRelays();
+        configModel.ManualRelayManagement = false;
+        Save();
+        relayService.RestartNostrClients();
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        relayService.ClientsStateChanged -= ClientsStateChanged;
+    }
+    #endregion
 }
