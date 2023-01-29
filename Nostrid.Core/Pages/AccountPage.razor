@@ -73,7 +73,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    @if (follows?.Count == 0)
+                    @if (follows == null)
+                    {
+                        <div class="text-center my-5"> 
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Waiting for feed...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (follows?.Count == 0)
                     {
                         <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <i class="fs-1 bi bi-person-x"></i>
@@ -107,7 +115,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    @if (followers?.Count == 0)
+                    @if (followers == null)
+                    {
+                        <div class="text-center my-5">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Waiting for feed...</span>
+                            </div>
+                        </div>
+                    }
+                    else if (followers?.Count == 0)
                     {
                         <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <i class="fs-1 bi bi-person-x"></i>
@@ -207,7 +223,10 @@
             && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
             return;
         follows = data.follows;
-        UpdateSubscriptionForDetails();
+        if (followsModal?.IsVisible() ?? false)
+        {
+            UpdateSubscriptionForDetails();
+        }
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -222,7 +241,10 @@
             && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
             return;
         followers = newFollowers;
-        UpdateSubscriptionForDetails();
+        if (followersModal?.IsVisible() ?? false)
+        {
+            UpdateSubscriptionForDetails();
+        }
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -232,7 +254,7 @@
         SubscriptionFilter[] addedFilters = { }, oldFilters;
         if ((follows?.Any() ?? false) || (followers?.Any() ?? false))
         {
-            var accountIds = (follows = new List<string>()).Union(followers ?? new List<string>());
+            var accountIds = (follows ?? new List<string>()).Union(followers ?? new List<string>());
             relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds.ToArray()).ToArray());
         }
         lock (atomicSwap)
@@ -249,27 +271,29 @@
 
     private void OpenFollowsModal()
     {
-        if (follows == null)
+        Task.Run(() =>
         {
-            Task.Run(() =>
+            if (follows == null)
             {
                 follows = eventDatabase.GetFollowIds(PubKey);
                 InvokeAsync(() => StateHasChanged());
-            });
-        }
+            }
+            UpdateSubscriptionForDetails();
+        });
         followsModal?.Show();
     }
 
     private void OpenFollowersModal()
     {
-        if (followers == null)
+        Task.Run(() =>
         {
-            Task.Run(() =>
+            if (followers == null)
             {
                 followers = eventDatabase.GetFollowerIds(PubKey);
                 InvokeAsync(() => StateHasChanged());
-            });
-        }
+            }
+            UpdateSubscriptionForDetails();
+        });
         followersModal?.Show();
     }
 

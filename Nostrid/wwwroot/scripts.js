@@ -34,3 +34,10 @@ export function hideModal(element) {
     if (!modal) return;
     modal.hide();
 }
+
+export function isModalShown(element) {
+    if (!bootstrap) return;
+    var modal = bootstrap.Modal.getOrCreateInstance(element.firstChild);
+    if (!modal) return;
+    return modal._isShown;
+}

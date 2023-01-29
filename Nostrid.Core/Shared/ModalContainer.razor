@@ -26,6 +26,11 @@
         scripts?.InvokeVoid("hideModal", container);
     }
 
+    public bool IsVisible()
+    {
+        return scripts?.Invoke<bool>("isModalShown", container) ?? false;
+    }
+
     #region Dispose
     private bool _disposed;
 
