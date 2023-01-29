@@ -18,7 +18,7 @@
 @inject EventDatabase eventDatabase
 
 <div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
-    
+
     <AccountPicture Details="@account.Details" Id="@account.Id" Size="128" />
 
     <div class="fs-4 fw-bolder"><AccountName Details="@account.Details" Id="@account.Id" /></div>
@@ -167,6 +167,8 @@
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
 
+        follows = null;
+        followers = null;
         followsInitialCount = eventDatabase.GetFollowCount(PubKey);
         followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
     }
@@ -187,13 +189,12 @@
         }
         else
         {
-            if (!follows.Contains(data.accountId))
+            if (!follows?.Contains(data.accountId) ?? false)
                 return;
             if (!accounts.TryGetValue(data.accountId, out Account followAccount))
                 return;
             followAccount.Details = data.details;
         }
-
     }
 
     private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
@@ -202,7 +203,8 @@
             return;
         if (data.accountId != PubKey)
             return;
-        if (Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
+        if (follows != null
+            && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
             return;
         follows = data.follows;
         UpdateSubscriptionForDetails();
@@ -216,7 +218,8 @@
         if (accountId != PubKey)
             return;
         var newFollowers = eventDatabase.GetFollowerIds(accountId);
-        if (Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
+        if (followers != null
+            && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
             return;
         followers = newFollowers;
         UpdateSubscriptionForDetails();
@@ -227,9 +230,9 @@
     private void UpdateSubscriptionForDetails()
     {
         SubscriptionFilter[] addedFilters = { }, oldFilters;
-        if (follows.Any() || followers.Any())
+        if ((follows?.Any() ?? false) || (followers?.Any() ?? false))
         {
-            var accountIds = follows.Union(followers);
+            var accountIds = (follows = new List<string>()).Union(followers ?? new List<string>());
             relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds.ToArray()).ToArray());
         }
         lock (atomicSwap)
@@ -246,13 +249,27 @@
 
     private void OpenFollowsModal()
     {
-        follows = eventDatabase.GetFollowIds(PubKey);
+        if (follows == null)
+        {
+            Task.Run(() =>
+            {
+                follows = eventDatabase.GetFollowIds(PubKey);
+                InvokeAsync(() => StateHasChanged());
+            });
+        }
         followsModal?.Show();
     }
 
     private void OpenFollowersModal()
     {
-        followers = eventDatabase.GetFollowerIds(PubKey);
+        if (followers == null)
+        {
+            Task.Run(() =>
+            {
+                followers = eventDatabase.GetFollowerIds(PubKey);
+                InvokeAsync(() => StateHasChanged());
+            });
+        }
         followersModal?.Show();
     }
 
