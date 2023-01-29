@@ -23,7 +23,7 @@ public class FeedService
         this.relayService.ReceivedEvents += ReceivedEvents;
     }
 
-    private void HandleEvent(Event eventToProcess)
+    private void HandleEvent(Event eventToProcess, string filterId)
     {
         switch (eventToProcess.Kind)
         {
@@ -37,7 +37,7 @@ public class FeedService
                 HandleKind2(eventToProcess);
                 break;
             case NostrKind.Contacts:
-                accountService.HandleKind3(eventToProcess);
+                accountService.HandleKind3(eventToProcess, filterId);
                 break;
             case NostrKind.Deletion:
                 HandleKind5(eventToProcess);
@@ -51,7 +51,7 @@ public class FeedService
     private void ReceivedEvents(object sender, (string filterId, IEnumerable<Event> events) data)
     {
         foreach (var ev in data.events)
-            HandleEvent(ev);
+            HandleEvent(ev, data.filterId);
 
         var notes = data.events.Where(ev => !eventDatabase.IsEventDeleted(ev.Id));
         if (notes.Any())

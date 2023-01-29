@@ -19,6 +19,7 @@ public class AccountService
 
     private readonly ConcurrentDictionary<string, ISigner> knownSigners = new();
     private readonly ConcurrentDictionary<string, DateTime> detailsNeededIds = new();
+    private readonly ConcurrentDictionary<string, string> followerRequestFilters = new();
 
     public event EventHandler? MainAccountChanged;
     public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
@@ -227,8 +228,18 @@ public class AccountService
         }
     }
 
+    public void RegisterFollowerRequestFilter(string filterId, string accountId)
+    {
+        followerRequestFilters[filterId] = accountId;
+    }
+
+    public void UnregisterFollowerRequestFilter(string filterId)
+    {
+        followerRequestFilters.TryRemove(filterId, out _);
+    }
+
     // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md
-    public void HandleKind3(Event eventToProcess)
+    public void HandleKind3(Event eventToProcess, string filterId)
     {
         Account? accountChanged = null;
         List<string>? newFollowList = null;
@@ -241,16 +252,27 @@ public class AccountService
             if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
                 eventToProcess.CreatedAt.Value > account.FollowsLastUpdate.Value)
             {
-                eventDatabase.SetFollows(account.Id, newFollowList);
-                accountChanged = account;
-
-                account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
-
-                eventDatabase.SaveAccount(account);
-
-                if (account.Id == mainAccount?.Id)
+                if (followerRequestFilters.TryGetValue(filterId, out var requesterId))
                 {
-                    SetMainAccount(account);
+                    // If we received this because someone is requesting his followers then we don't save all the list, just this single follow
+                    if (newFollowList.Contains(requesterId) && !eventDatabase.IsFollowing(account.Id, requesterId))
+                    {
+                        eventDatabase.AddFollow(account.Id, requesterId);
+                    }
+                }
+                else
+                {
+                    eventDatabase.SetFollows(account.Id, newFollowList);
+                    accountChanged = account;
+
+                    account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+
+                    eventDatabase.SaveAccount(account);
+
+                    if (account.Id == mainAccount?.Id)
+                    {
+                        SetMainAccount(account);
+                    }
                 }
             }
         }

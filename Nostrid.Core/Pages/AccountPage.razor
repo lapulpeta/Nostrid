@@ -163,6 +163,7 @@
         followers = eventDatabase.GetFollowerIds(PubKey);
         relayService.AddFilter(followsFilter = new FollowsSubscriptionFilter(PubKey));
         relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey));
+        accountService.RegisterFollowerRequestFilter(followersFilter.Id, PubKey);
         accountService.AccountDetailsChanged += AccountDetailsChanged;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
@@ -266,6 +267,8 @@
         accountService.AccountFollowersChanged -= AccountFollowersChanged;
         relayService.DeleteFilters(feedFilter, followsFilter, followersFilter);
         relayService.DeleteFilters(followsDetailsFilter);
+        if (followersFilter != null)
+            accountService.UnregisterFollowerRequestFilter(followersFilter.Id);
     }
     #endregion
 }
