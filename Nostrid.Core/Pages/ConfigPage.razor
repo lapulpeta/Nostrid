@@ -5,6 +5,8 @@
 @inject ConfigService configService
 @inject RelayService relayService
 
+@implements IDisposable
+
 <h2 class="mb-4">Options</h2>
 
 <div class="mt-4 card shadow">
@@ -116,35 +118,53 @@
                 </div>
             </div>
         </li>
-        @if (configModel.ManualRelayManagement)
+        @if (relayService.Restarting)
         {
-            foreach (var relay in relayService.GetRelays())
-            {
-                <li class="list-group-item">
-                    <div class="row g-2 align-items-center">
-                        <label class="col-sm-6">
-                            @relay.Uri
-                        </label>
-                        <div class="col-sm-6 d-flex flex-row justify-content-sm-end justify-content-md-end">
+            <p>Restarting...</p>
+        }
+        else
+        {
+            <button class="btn btn-primary" @onclick="() => relayService.RestartNostrClients()">Restart connections</button>
+            <p>You need to restart connections to apply any change here</p>
+        }
+        @foreach (var relay in relays)
+        {
+            <li class="list-group-item">
+                <div class="row g-2 align-items-center">
+                    <label class="col-sm-6">
+                        @relay.Uri
+                    </label>
+                    <div class="col-sm-6 d-flex flex-row justify-content-sm-end justify-content-md-end">
+                        @if (configModel.ManualRelayManagement)
+                        {
                             <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
                                 <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
-                                       checked="@relay.Read" id="relayRead@(relay.Id)"
-                                       @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                        checked="@relay.Read" id="relayRead@(relay.Id)"
+                                        @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
                                 <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
                             </div>
                             <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
                                 <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
-                                       checked="@relay.Write" id="relayWrite@(relay.Id)"
-                                       @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                        checked="@relay.Write" id="relayWrite@(relay.Id)"
+                                        @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
                                 <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
                             </div>
-                            <div class="d-flex flex-row flex-grow-1 flex-sm-grow-0 justify-content-end">
-                                <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
+                        }
+                        else
+                        {
+                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                <label class="form-check-label" for="relayPriority@(relay.Id)">Priority</label>
+                                <span class="me-3 badge text-bg-light">@relay.Priority</span>
+                                <input type="range"  min="0" max="10" step="1" id="relayPriority@(relay.Id)"
+                                    @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
                             </div>
+                        }
+                        <div class="d-flex flex-row flex-grow-1 flex-sm-grow-0 justify-content-end">
+                            <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
                         </div>
                     </div>
-                </li>
-            }
+                </div>
+            </li>
         }
     </ul>
 </div>
@@ -154,6 +174,7 @@
 @code {
     private Scripts? scripts;
     private Config configModel = new();
+    private List<Relay> relays = new();
 
     public const string DARK_THEME = "dark";
     public const string LIGHT_THEME = "light";
@@ -172,6 +193,13 @@
     {
         base.OnInitialized();
         configModel = configService.MainConfig;
+        relays = relayService.GetRelays();
+        relayService.ClientsStateChanged += ClientsStateChanged;
+    }
+
+    private void ClientsStateChanged(object? sender, EventArgs args)
+    {
+        InvokeAsync(() => StateHasChanged());
     }
 
     private void Save()
@@ -188,4 +216,28 @@
     {
         relayService.DeleteRelay(relay.Id);
     }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        relayService.ClientsStateChanged -= ClientsStateChanged;
+    }
+    #endregion
 }

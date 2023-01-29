@@ -56,8 +56,8 @@ public class RelayService
 	public RelaysMonitor RelaysMonitor { get; private set; }
 
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
+    public event EventHandler? ClientsStateChanged;
 
-    // This method starts one client per relay in a separate thread
     public RelayService(EventDatabase eventDatabase, ConfigService configService)
     {
         if (PriorityLowerBound > PriorityHigherBound)
@@ -75,7 +75,7 @@ public class RelayService
             return;
 
         running = true;
-        _ = Task.Run(() =>
+        Task.Run(() =>
         {
             clientThreadsCancellationTokenSource = new CancellationTokenSource();
             if (configService.MainConfig.ManualRelayManagement)
@@ -111,6 +111,7 @@ public class RelayService
                     runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
                 }
             }
+            ClientsStateChanged?.Invoke(this, EventArgs.Empty);
         });
     }
 
@@ -118,11 +119,12 @@ public class RelayService
     {
         running = false;
         clientThreadsCancellationTokenSource.Cancel();
+        ClientsStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void RestartNostrClients()
     {
-        _ = Task.Run(async () =>
+        Task.Run(async () =>
         {
             StopNostrClients();
             await Task.WhenAll(runningTasks);
