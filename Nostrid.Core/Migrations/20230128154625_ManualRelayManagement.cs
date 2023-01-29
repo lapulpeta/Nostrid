@@ -31,8 +31,8 @@ namespace Nostrid.Migrations
                 nullable: false,
                 defaultValue: false);
 
-            migrationBuilder.UpdateData("Relays", "Read", false, "Read", true); // Updates all read=false (default) to true
-            migrationBuilder.UpdateData("Relays", "Write", false, "Write", true); // Updates all write=false (default) to true
+            // Set all reads and writes to true, and switch priority (greater number is now higher priority)
+            migrationBuilder.Sql("UPDATE Relays SET Priority = 10 - Priority, Read = 1, Write = 1");
         }
 
         /// <inheritdoc />

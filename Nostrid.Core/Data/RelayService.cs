@@ -142,7 +142,7 @@ public class RelayService
                 eventDatabase.SaveRelay(new Relay()
                 {
                     Uri = relay,
-                    Priority = PriorityLowerBound // Max priority
+                    Priority = PriorityHigherBound // Max priority
                 });
             }
             foreach (var relay in DefaultLowPriorityRelays)
