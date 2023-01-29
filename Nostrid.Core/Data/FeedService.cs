@@ -70,7 +70,10 @@ public class FeedService
 
     public void HandleKind2(Event eventToProcess)
     {
-        HandleRelayRecommendation(eventToProcess.Content);
+        if (relayService.RelaysMonitor.IsAuto)
+        {
+            HandleRelayRecommendation(eventToProcess.Content);
+        }
     }
 
     public void HandleKind5(Event eventToProcess)
