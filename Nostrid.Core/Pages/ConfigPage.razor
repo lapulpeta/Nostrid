@@ -105,6 +105,26 @@
             <h5 class="my-2">Relays</h5>
         </li>
         <li class="list-group-item">
+            <div class="row">
+                <div class="col-8 align-self-center">
+                    @if (!relayService.Restarting)
+                    {
+                        <span class="fw-bold">You need to restart connections to apply any change here</span>
+                    }
+                    else
+                    {
+                        <span class="text-secondary">Restarting...</span>
+                    }
+                </div>
+                <div class="col-4 text-end">
+                    @if (!relayService.Restarting)
+                    {
+                        <button class="btn btn-primary py-1" @onclick="() => relayService.RestartNostrClients()">Restart connections</button>
+                    }
+                </div>
+            </div>
+        </li>
+        <li class="list-group-item">
             <div class="row align-items-center">
                 <label class="col-6" for="manualRelayManagement">
                     Manual relay management
@@ -118,20 +138,12 @@
                 </div>
             </div>
         </li>
-        <li>
-        @if (relayService.Restarting)
-        {
-            <p>Restarting...</p>
-        }
-        else
-        {
-            <button class="btn btn-primary" @onclick="() => relayService.RestartNostrClients()">Restart connections</button>
-            <p>You need to restart connections to apply any change here</p>
-        }
-        </li>
-        <li>
-            <InputText @bind-Value="@newRelayUri" />
-            <button class="btn btn-primary" @onclick="@AddNewRelay">Add new</button>
+        <li class="list-group-item">
+            <div class="input-group">
+                <span class="align-self-center me-3">New Relay</span>
+                <InputText class="form-control" placeholder="Relay uri" @bind-Value="@newRelayUri" />
+                <button class="btn btn-sm py-1 btn-outline-secondary" type="button" @onclick="@AddNewRelay">Add</button>
+            </div>
         </li>
         @foreach (var relay in relays)
         {
@@ -206,7 +218,7 @@
 
     private void ReloadRelays()
     {
-        relays = relayService.GetRelays();        
+        relays = relayService.GetRelays().OrderByDescending(r => r.Id).ToList();
     }
 
     private void ClientsStateChanged(object? sender, EventArgs args)
@@ -227,6 +239,7 @@
     private void DeleteRelay(Relay relay)
     {
         relayService.DeleteRelay(relay.Id);
+        ReloadRelays();
     }
 
     private void AddNewRelay()
