@@ -1,6 +1,7 @@
 ﻿@page "/config"
 @using Nostrid.Data;
 @using Nostrid.Model;
+@using System.Collections.Concurrent;
 
 @inject ConfigService configService
 @inject RelayService relayService
@@ -160,6 +161,7 @@
             <li class="list-group-item">
                 <div class="row g-2 align-items-center">
                     <label class="col-sm-6">
+                        <span class="bi bi-circle-fill @(IsRelayConnected(relay.Id) ? "text-success" : "text-danger")"></span>
                         @relay.Uri
                     </label>
                     <div class="col-sm-6 d-flex flex-row justify-content-sm-end justify-content-md-end">
@@ -204,6 +206,7 @@
     private Config configModel = new();
     private List<Relay> relays = new();
     private string newRelayUri = string.Empty;
+    private ConcurrentDictionary<long, bool> relayStatus = new();
 
     public const string DARK_THEME = "dark";
     public const string LIGHT_THEME = "light";
@@ -224,6 +227,7 @@
         configModel = configService.MainConfig;
         ReloadRelays();
         relayService.ClientsStateChanged += ClientsStateChanged;
+        relayService.ClientStatusChanged += ClientStatusChanged;
     }
 
     private void ReloadRelays()
@@ -233,6 +237,12 @@
 
     private void ClientsStateChanged(object? sender, EventArgs args)
     {
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void ClientStatusChanged(object? sender, (long relayId, bool connected) data)
+    {
+        relayStatus[data.relayId] = data.connected;
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -270,6 +280,11 @@
         relayService.RestartNostrClients();
     }
 
+    private bool IsRelayConnected(long relayId)
+    {
+        return relayStatus.GetOrAdd(relayId, (_) => relayService.IsRelayConnected(relayId));
+    }
+
     #region Dispose
     private bool _disposed;
 
@@ -291,6 +306,7 @@
     private void Cleanup()
     {
         relayService.ClientsStateChanged -= ClientsStateChanged;
+        relayService.ClientStatusChanged -= ClientStatusChanged;
     }
     #endregion
 }

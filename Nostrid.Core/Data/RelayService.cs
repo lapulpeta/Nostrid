@@ -39,14 +39,13 @@ public class RelayService
     private readonly ConcurrentDictionary<string, SubscriptionFilter> filterBySubscriptionId = new();
     private readonly BlockingCollection<Relay>[] pendingRelaysByPriority = new BlockingCollection<Relay>[PriorityHigherBound - PriorityLowerBound + 1];
     private readonly ConcurrentDictionary<long, DateTimeOffset> relayRateLimited = new();
+    private readonly ConcurrentDictionary<long, bool> connectedRelays = new();
+    private readonly List<Task> runningTasks = new();
 
     private CancellationTokenSource clientThreadsCancellationTokenSource;
-
     private bool running;
-    private int connectedClients;
-    private List<Task> runningTasks = new();
 
-    public int ConnectedRelays => connectedClients;
+    public int ConnectedRelays => connectedRelays.Count;
     public int RateLimitedRelays => relayRateLimited.Count;
     public int FiltersCount => filters.Count;
 
@@ -56,6 +55,7 @@ public class RelayService
 
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
     public event EventHandler? ClientsStateChanged;
+    public event EventHandler<(long relayId, bool connected)>? ClientStatusChanged;
 
     public RelayService(EventDatabase eventDatabase, ConfigService configService)
     {
@@ -94,11 +94,11 @@ public class RelayService
             {
                 foreach (var index in Enumerable.Range(PriorityLowerBound, PriorityHigherBound - PriorityLowerBound + 1))
                 {
-                    pendingRelaysByPriority[index] = new();
+                    pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - index] = new();
                 }
                 foreach (var relay in eventDatabase.ListRelays().OrderBy(r => Random.Shared.Next()))
                 {
-                    pendingRelaysByPriority[relay.Priority].Add(relay);
+                    pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - relay.Priority].Add(relay);
                 }
                 var maxRelays = Math.Max(MinRelays, Environment.ProcessorCount);
                 RelaysMonitor = new RelaysMonitor(
@@ -388,7 +388,7 @@ public class RelayService
                 {
                     // Requeue after 30 seconds
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    pendingRelaysByPriority[relayToRequeue.Priority].Add(relayToRequeue); // Put back in queue
+                    pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - relayToRequeue.Priority].Add(relayToRequeue); // Put back in queue
                 }, cancellationToken);
 
                 relay = null;
@@ -421,14 +421,24 @@ public class RelayService
             await client.ConnectAndWaitUntilConnected(cancellationToken);
             try
             {
-                Interlocked.Increment(ref connectedClients);
+                connectedRelays[relay.Id] = true;
+                try
+                {
+                    ClientStatusChanged?.Invoke(this, (relay.Id, true));
+                }
+                catch { }
                 UpdateSubscriptions(relay);
                 _ = EventDispatcher(relay);
                 await client.ListenForMessages();
             }
             finally
             {
-                Interlocked.Decrement(ref connectedClients);
+                connectedRelays.TryRemove(relay.Id, out _);
+                try
+                {
+                    ClientStatusChanged?.Invoke(this, (relay.Id, false));
+                }
+                catch { }
             }
         }
         catch (Exception ex)
@@ -444,6 +454,11 @@ public class RelayService
             {
             }
         }
+    }
+
+    public bool IsRelayConnected(long relayId)
+    {
+        return connectedRelays.ContainsKey(relayId);
     }
 
     private void CleanupRelay(Relay relay)
