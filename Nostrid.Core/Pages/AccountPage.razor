@@ -38,11 +38,11 @@
 
     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
         <div class="btn-group me-3 mb-3" role="group" aria-label="First group">
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#followingModal">
-                Following <span class="badge text-bg-secondary">@follows.Count</span>
+            <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowsModal">
+                Following <span class="badge text-bg-secondary">@(follows?.Count ?? followsInitialCount)</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#followerModal">
-                Followers <span class="badge text-bg-secondary">@followers.Count</span>
+            <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowersModal">
+                Followers <span class="badge text-bg-secondary">@(followers?.Count ?? followersInitialCount)</span>
             </button>
         </div>
         @if (IsMainAccountLoaded && !IsMainAccount)
@@ -64,8 +64,8 @@
     </div>
 </div>
 
-<ModalContainer @ref="followingModal">
-    <div class="modal fade" id="followingModal" tabindex="-1" aria-hidden="true">
+<ModalContainer @ref="followsModal">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
@@ -73,7 +73,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    @if (follows.Count == 0)
+                    @if (follows?.Count == 0)
                     {
                         <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <i class="fs-1 bi bi-person-x"></i>
@@ -88,7 +88,7 @@
                             }
                         </div>
                     }
-                    @foreach (var following in follows)
+                    @foreach (var following in follows ?? new List<string>())
                     {
                         <FollowAccount Account="@(GetAccount(following))"></FollowAccount>
                     }
@@ -98,8 +98,8 @@
     </div>
 </ModalContainer>
 
-<ModalContainer @ref="followerModal">
-    <div class="modal fade" id="followerModal" tabindex="-1" aria-hidden="true">
+<ModalContainer @ref="followersModal">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
@@ -107,7 +107,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    @if (followers.Count == 0)
+                    @if (followers?.Count == 0)
                     {
                         <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <i class="fs-1 bi bi-person-x"></i>
@@ -122,7 +122,7 @@
                             }
                         </div>
                     }
-                    @foreach (var follower in followers)
+                    @foreach (var follower in followers ?? new List<string>())
                     {
                         <FollowAccount Account="@(GetAccount(follower))"></FollowAccount>
                     }
@@ -137,15 +137,14 @@
 <FeedViewer BaseFilter="@feedFilter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 
 @code {
-    private Account account;
+    private Account? account;
     private SubscriptionFilter? feedFilter, followsFilter, followersFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
-    private ConcurrentDictionary<string, Account> accounts;
-    private ModalContainer? followingModal;
-    private ModalContainer? followerModal;
+    private ConcurrentDictionary<string, Account> accounts = new();
     private PayModal? payModal;
-    private List<string> follows;
-    private List<string> followers;
+    private ModalContainer? followsModal, followersModal;
+    private List<string>? follows, followers;
+    private int followsInitialCount, followersInitialCount;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;
@@ -153,20 +152,23 @@
     protected override void OnParametersSet()
     {
         Cleanup();
-        followingModal?.Hide();
-        followerModal?.Hide();
+        followsModal?.Hide();
+        followersModal?.Hide();
 
         accounts = new();
         account = accountService.GetAccount(PubKey);
         feedFilter = new AuthorSubscriptionFilter(PubKey);
-        follows = eventDatabase.GetFollowIds(PubKey);
-        followers = eventDatabase.GetFollowerIds(PubKey);
+
         relayService.AddFilter(followsFilter = new FollowsSubscriptionFilter(PubKey));
         relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey));
         accountService.RegisterFollowerRequestFilter(followersFilter.Id, PubKey);
+
         accountService.AccountDetailsChanged += AccountDetailsChanged;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
+
+        followsInitialCount = eventDatabase.GetFollowCount(PubKey);
+        followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
     }
 
     private Account GetAccount(string accountId)
@@ -178,7 +180,7 @@
     {
         if (_disposed)
             return;
-        if (data.accountId == account.Id)
+        if (data.accountId == account?.Id)
         {
             account.Details = data.details;
             InvokeAsync(() => StateHasChanged());
@@ -240,6 +242,18 @@
     private async Task FollowUnfollow(string pubKey)
     {
         await accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
+    }
+
+    private void OpenFollowsModal()
+    {
+        follows = eventDatabase.GetFollowIds(PubKey);
+        followsModal?.Show();
+    }
+
+    private void OpenFollowersModal()
+    {
+        followers = eventDatabase.GetFollowerIds(PubKey);
+        followersModal?.Show();
     }
 
     #region Dispose
