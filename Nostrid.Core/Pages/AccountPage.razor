@@ -137,7 +137,7 @@
 
 @code {
     private Account account;
-    private SubscriptionFilter? feedFilter, followsFilter;
+    private SubscriptionFilter? feedFilter, followsFilter, followersFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
     private ConcurrentDictionary<string, Account> accounts;
     private ModalContainer? followingModal;
@@ -157,8 +157,10 @@
         account = accountService.GetAccount(PubKey);
         feedFilter = new AuthorSubscriptionFilter(PubKey);
         relayService.AddFilter(followsFilter = new FollowsSubscriptionFilter(PubKey));
+        relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey));
         accountService.AccountDetailsChanged += AccountDetailsChanged;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
+        accountService.AccountFollowersChanged += AccountFollowersChanged;
     }
 
     private Account GetAccount(string accountId)
@@ -204,13 +206,30 @@
         });
     }
 
+    private void AccountFollowersChanged(object? sender, (string accountId, List<string> followers) data)
+    {
+        if (_disposed)
+            return;
+        if (data.accountId != PubKey)
+            return;
+        if (Enumerable.SequenceEqual(data.followers.OrderBy(e => e), account.FollowList.OrderBy(e => e)))
+            return;
+        account.FollowerList = data.followers;
+        UpdateSubscriptionForDetails();
+        InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
+    }
+
     private static object atomicSwap = new object();
     private void UpdateSubscriptionForDetails()
     {
         SubscriptionFilter[] addedFilters = { }, oldFilters;
-        if (account.FollowList.Count != 0)
+        if (account.FollowList.Count + account.FollowerList.Count != 0)
         {
-            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(account.FollowList.ToArray()).ToArray());
+            var accountIds = account.FollowList.Union(account.FollowerList);
+            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds.ToArray()).ToArray());
         }
         lock (atomicSwap)
         {
@@ -246,7 +265,8 @@
     {
         accountService.AccountDetailsChanged -= AccountDetailsChanged;
         accountService.AccountFollowsChanged -= AccountFollowsChanged;
-        relayService.DeleteFilters(feedFilter, followsFilter);
+        accountService.AccountFollowsChanged -= AccountFollowersChanged;
+        relayService.DeleteFilters(feedFilter, followsFilter, followersFilter);
         relayService.DeleteFilters(followsDetailsFilter);
     }
     #endregion

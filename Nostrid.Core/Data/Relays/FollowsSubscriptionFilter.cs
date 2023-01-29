@@ -5,27 +5,23 @@ namespace Nostrid.Data.Relays;
 
 public class FollowsSubscriptionFilter : SubscriptionFilter
 {
-    private readonly string[] ids;
+    private readonly string id;
 
-	public FollowsSubscriptionFilter(string id) : this(new[] { id })
+	public FollowsSubscriptionFilter(string id)
     {
+        this.id = id;
 	}
-
-    public FollowsSubscriptionFilter(string[] ids)
-    {
-        this.ids = ids;
-    }
 
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { Authors = ids, Kinds = new[]{ NostrKind.Metadata, NostrKind.Contacts }, Limit = 1 } // Get the latest details
+            new NostrSubscriptionFilter() { Authors = new[] { id }, Kinds = new[]{ NostrKind.Metadata, NostrKind.Contacts }, Limit = 1 } // Get the latest details
         };
     }
 
     public override SubscriptionFilter Clone()
     {
-        return new FollowsSubscriptionFilter(ids);
+        return new FollowsSubscriptionFilter(id);
     }
 }
 

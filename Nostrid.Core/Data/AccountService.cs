@@ -23,6 +23,7 @@ public class AccountService
     public event EventHandler? MainAccountChanged;
     public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
     public event EventHandler<(string accountId, List<string> follows)>? AccountFollowsChanged;
+    public event EventHandler<(string accountId, List<string> followers)>? AccountFollowersChanged;
     public event EventHandler? MentionsUpdated;
 
 
@@ -228,7 +229,7 @@ public class AccountService
 
                     Task.Run(async () =>
                     {
-                        accountDetails.Nip05Valid = accountDetails.Nip05Id.IsNotNullOrEmpty() && await Nip05.RefreshNip05(mainAccount.Id, accountDetails.Nip05Id);
+                        accountDetails.Nip05Valid = accountDetails.Nip05Id.IsNotNullOrEmpty() && await Nip05.RefreshNip05(accountDetails.Id, accountDetails.Nip05Id);
                         eventDatabase.SetNip05Validity(accountDetails.Id, accountDetails.Nip05Valid);
                         AccountDetailsChanged?.Invoke(this, (accountDetails.Id, accountDetails));
                     });
@@ -241,7 +242,8 @@ public class AccountService
     // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md
     public void HandleKind3(Event eventToProcess)
     {
-        Account accountChanged = null;
+        Account? accountChanged = null;
+        Dictionary<string, List<string>> followersById = new();
 
         lock (eventDatabase)
         {
@@ -262,6 +264,7 @@ public class AccountService
                     var removedFollow = eventDatabase.GetAccount(removedFollowId);
                     removedFollow.FollowerList.RemoveAll(f => f == account.Id);
                     eventDatabase.SaveAccount(removedFollow);
+                    followersById[removedFollowId] = removedFollow.FollowerList;
                 }
 
                 // Add followed by
@@ -271,6 +274,7 @@ public class AccountService
                     if (!addedFollow.FollowerList.Contains(account.Id))
                         addedFollow.FollowerList.Add(account.Id);
                     eventDatabase.SaveAccount(addedFollow);
+                    followersById[addedFollowId] = addedFollow.FollowerList;
                 }
 
                 // Save new list
@@ -293,7 +297,11 @@ public class AccountService
         }
 
         if (accountChanged != null)
+        {
             AccountFollowsChanged?.Invoke(this, (accountChanged.Id, accountChanged.FollowList));
+            foreach (var (accountId, followerList) in followersById)
+                AccountFollowersChanged?.Invoke(this, (accountId, followerList));
+        }
     }
 
     public string GetAccountName(string accountId)
