@@ -23,7 +23,7 @@ public class AccountService
     public event EventHandler? MainAccountChanged;
     public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
     public event EventHandler<(string accountId, List<string> follows)>? AccountFollowsChanged;
-    public event EventHandler<(string accountId, List<string> followers)>? AccountFollowersChanged;
+    public event EventHandler<string>? AccountFollowersChanged;
     public event EventHandler? MentionsUpdated;
 
 
@@ -129,50 +129,38 @@ public class AccountService
 
     public bool IsFollowing(string accountToCheckId)
     {
-        return mainAccount.FollowList.Contains(accountToCheckId);
+        return eventDatabase.IsFollowing(MainAccount.Id, accountToCheckId);
     }
 
     public async Task FollowUnfollow(string otherAccountId, bool unfollow)
     {
         lock (eventDatabase)
         {
-            if ((unfollow && !mainAccount.FollowList.Contains(otherAccountId)) ||
-                (!unfollow && mainAccount.FollowList.Contains(otherAccountId)))
+            if ((unfollow && !IsFollowing(otherAccountId)) ||
+                (!unfollow && IsFollowing(otherAccountId)))
                 return;
 
             if (unfollow)
-                mainAccount.FollowList.Remove(otherAccountId);
+                eventDatabase.RemoveFollow(MainAccount.Id, otherAccountId);
             else
-                mainAccount.FollowList.Add(otherAccountId);
-            var otherAccount = eventDatabase.GetAccount(otherAccountId);
-            if (unfollow)
-            {
-                otherAccount.FollowerList.RemoveAll(f => f == mainAccount.Id);
-            }
-            else
-            {
-                if (!otherAccount.FollowerList.Contains(mainAccount.Id))
-                    otherAccount.FollowerList.Add(mainAccount.Id);
-            }
-
-            eventDatabase.SaveAccount(mainAccount);
-            eventDatabase.SaveAccount(otherAccount);
+                eventDatabase.AddFollow(MainAccount.Id, otherAccountId);
         }
-        await SendContactList(mainAccount);
+        await SendContactList();
     }
 
-    public async Task<bool> SendContactList(Account account)
+    public async Task<bool> SendContactList()
     {
+        var accountId = MainAccount.Id;
         var nostrEvent = new NostrEvent()
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = 3,
-            PublicKey = account.Id,
+            PublicKey = accountId,
             Tags = new(),
             Content = "{}",
         };
 
-        foreach (var follow in account.FollowList)
+        foreach (var follow in eventDatabase.GetFollowIds(accountId))
         {
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = { follow, relayService.GetRecommendedRelayUri(), "" } });
         }
@@ -243,42 +231,18 @@ public class AccountService
     public void HandleKind3(Event eventToProcess)
     {
         Account? accountChanged = null;
-        Dictionary<string, List<string>> followersById = new();
+        List<string>? newFollowList = null;
 
         lock (eventDatabase)
         {
-            var newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.DataCount > 1).Select(t => t.Data1).Distinct().ToList();
+            newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1).Distinct().ToList();
             var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
             if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
                 eventToProcess.CreatedAt.Value > account.FollowsLastUpdate.Value)
             {
-                var existingFollows = account.FollowList;
-
-                var removedFollows = existingFollows.Where(f => !newFollowList.Contains(f)).ToList();
-                var addedFollows = newFollowList.Where(f => !existingFollows.Contains(f)).ToList();
-
-                // Remove followed by
-                foreach (var removedFollowId in removedFollows)
-                {
-                    var removedFollow = eventDatabase.GetAccount(removedFollowId);
-                    removedFollow.FollowerList.RemoveAll(f => f == account.Id);
-                    eventDatabase.SaveAccount(removedFollow);
-                    followersById[removedFollowId] = removedFollow.FollowerList;
-                }
-
-                // Add followed by
-                foreach (var addedFollowId in addedFollows)
-                {
-                    var addedFollow = eventDatabase.GetAccount(addedFollowId);
-                    if (!addedFollow.FollowerList.Contains(account.Id))
-                        addedFollow.FollowerList.Add(account.Id);
-                    eventDatabase.SaveAccount(addedFollow);
-                    followersById[addedFollowId] = addedFollow.FollowerList;
-                }
-
-                // Save new list
-                account.FollowList = newFollowList;
+                eventDatabase.SetFollows(account.Id, newFollowList);
+                accountChanged = account;
 
                 account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
 
@@ -288,19 +252,14 @@ public class AccountService
                 {
                     SetMainAccount(account);
                 }
-
-                if (addedFollows.Any() || removedFollows.Any())
-                {
-                    accountChanged = account;
-                }
             }
         }
 
         if (accountChanged != null)
         {
-            AccountFollowsChanged?.Invoke(this, (accountChanged.Id, accountChanged.FollowList));
-            foreach (var (accountId, followerList) in followersById)
-                AccountFollowersChanged?.Invoke(this, (accountId, followerList));
+            AccountFollowsChanged?.Invoke(this, (accountChanged.Id, newFollowList));
+            //foreach (var follow in newFollowList)
+            //    AccountFollowersChanged?.Invoke(this, follow);
         }
     }
 

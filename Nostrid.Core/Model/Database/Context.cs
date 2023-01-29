@@ -7,6 +7,7 @@ public class Context : DbContext
 {
     public DbSet<Account> Accounts { get; set; }
     public DbSet<AccountDetails> AccountDetails { get; set; }
+    public DbSet<Follow> Follows { get; set; }
     public DbSet<Relay> Relays { get; set; }
     public DbSet<Config> Configs { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -27,15 +28,6 @@ public class Context : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.Entity<Account>().Property(p => p.FollowList)
-            .HasConversion(
-                v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<List<string>>(v));
-        builder.Entity<Account>().Property(p => p.FollowerList)
-            .HasConversion(
-                v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<List<string>>(v));
-
         builder.Entity<FeedSource>().Property(p => p.Hashtags)
             .HasConversion(
                 v => JsonConvert.SerializeObject(v),
@@ -51,6 +43,9 @@ public class Context : DbContext
         builder.Entity<AccountDetails>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => new { e.Id, e.DetailsLastReceived });
         builder.Entity<EventSeen>().HasIndex(e => new { e.EventId, e.RelayId }).IsUnique();
+        builder.Entity<Follow>().HasIndex(f => f.AccountId);
+        builder.Entity<Follow>().HasIndex(f => f.FollowId);
+        builder.Entity<Follow>().HasIndex(f => new { f.AccountId, f.FollowId });
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)

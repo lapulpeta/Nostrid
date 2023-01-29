@@ -489,5 +489,47 @@ namespace Nostrid.Data
             type = IdType.Unknown;
             return false;
         }
+
+        public void AddFollow(string accountId, string followId)
+        {
+            using var db = new Context(_dbfile);
+            db.Add(new Follow() { AccountId = accountId, FollowId = followId });
+            db.SaveChanges();
+        }
+
+        public void SetFollows(string accountId, List<string> followIds)
+        {
+            using var db = new Context(_dbfile);
+            db.Follows.Where(f => f.AccountId == accountId).ExecuteDelete();
+            foreach (string id in followIds)
+            {
+                db.Add(new Follow() { AccountId = accountId, FollowId = id });
+            }
+            db.SaveChanges();
+        }
+
+        public void RemoveFollow(string accountId, string followId)
+        {
+            using var db = new Context(_dbfile);
+            db.Follows.Where(f => f.AccountId == accountId && f.FollowId == followId).ExecuteDelete();
+        }
+
+        public List<string> GetFollowIds(string accountId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Follows.Where(f => f.AccountId == accountId).Select(f => f.FollowId).ToList();
+        }
+
+        public List<string> GetFollowerIds(string accountId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Follows.Where(f => f.FollowId == accountId).Select(f => f.AccountId).ToList();
+        }
+
+        public bool IsFollowing(string accountId, string followId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Follows.Any(f => f.AccountId == accountId && f.FollowId == followId);
+        }
     }
 }

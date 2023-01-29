@@ -15,6 +15,7 @@
 @inject AccountService accountService
 @inject RelayService relayService
 @inject IClipboardService clipboardService
+@inject EventDatabase eventDatabase
 
 <div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
     
@@ -38,10 +39,10 @@
     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
         <div class="btn-group me-3 mb-3" role="group" aria-label="First group">
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#followingModal">
-                Following <span class="badge text-bg-secondary">@account.FollowList.Count</span>
+                Following <span class="badge text-bg-secondary">@follows.Count</span>
             </button>
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#followerModal">
-                Followers <span class="badge text-bg-secondary">@account.FollowerList.Count</span>
+                Followers <span class="badge text-bg-secondary">@followers.Count</span>
             </button>
         </div>
         @if (IsMainAccountLoaded && !IsMainAccount)
@@ -72,7 +73,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    @if (account.FollowList.Count == 0)
+                    @if (follows.Count == 0)
                     {
                         <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <i class="fs-1 bi bi-person-x"></i>
@@ -87,7 +88,7 @@
                             }
                         </div>
                     }
-                    @foreach (var following in account.FollowList)
+                    @foreach (var following in follows)
                     {
                         <FollowAccount Account="@(GetAccount(following))"></FollowAccount>
                     }
@@ -106,7 +107,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0">
-                    @if (account.FollowerList.Count == 0)
+                    @if (followers.Count == 0)
                     {
                         <div class="p-3 h-100 d-flex flex-column align-items-center justify-content-center text-center">
                             <i class="fs-1 bi bi-person-x"></i>
@@ -121,7 +122,7 @@
                             }
                         </div>
                     }
-                    @foreach (var follower in account.FollowerList)
+                    @foreach (var follower in followers)
                     {
                         <FollowAccount Account="@(GetAccount(follower))"></FollowAccount>
                     }
@@ -143,6 +144,8 @@
     private ModalContainer? followingModal;
     private ModalContainer? followerModal;
     private PayModal? payModal;
+    private List<string> follows;
+    private List<string> followers;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;
@@ -156,6 +159,8 @@
         accounts = new();
         account = accountService.GetAccount(PubKey);
         feedFilter = new AuthorSubscriptionFilter(PubKey);
+        follows = eventDatabase.GetFollowIds(PubKey);
+        followers = eventDatabase.GetFollowerIds(PubKey);
         relayService.AddFilter(followsFilter = new FollowsSubscriptionFilter(PubKey));
         relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey));
         accountService.AccountDetailsChanged += AccountDetailsChanged;
@@ -175,19 +180,17 @@
         if (data.accountId == account.Id)
         {
             account.Details = data.details;
+            InvokeAsync(() => StateHasChanged());
         }
         else
         {
-            if (!account.FollowList.Contains(data.accountId))
+            if (!follows.Contains(data.accountId))
                 return;
             if (!accounts.TryGetValue(data.accountId, out Account followAccount))
                 return;
             followAccount.Details = data.details;
         }
-        InvokeAsync(() =>
-        {
-            StateHasChanged();
-        });
+
     }
 
     private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
@@ -196,39 +199,34 @@
             return;
         if (data.accountId != PubKey)
             return;
-        if (Enumerable.SequenceEqual(data.follows.OrderBy(e => e), account.FollowList.OrderBy(e => e)))
+        if (Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
             return;
-        account.FollowList = data.follows;
+        follows = data.follows;
         UpdateSubscriptionForDetails();
-        InvokeAsync(() =>
-        {
-            StateHasChanged();
-        });
+        InvokeAsync(() => StateHasChanged());
     }
 
-    private void AccountFollowersChanged(object? sender, (string accountId, List<string> followers) data)
+    private void AccountFollowersChanged(object? sender, string accountId)
     {
         if (_disposed)
             return;
-        if (data.accountId != PubKey)
+        if (accountId != PubKey)
             return;
-        if (Enumerable.SequenceEqual(data.followers.OrderBy(e => e), account.FollowList.OrderBy(e => e)))
+        var newFollowers = eventDatabase.GetFollowerIds(accountId);
+        if (Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
             return;
-        account.FollowerList = data.followers;
+        followers = newFollowers;
         UpdateSubscriptionForDetails();
-        InvokeAsync(() =>
-        {
-            StateHasChanged();
-        });
+        InvokeAsync(() => StateHasChanged());
     }
 
     private static object atomicSwap = new object();
     private void UpdateSubscriptionForDetails()
     {
         SubscriptionFilter[] addedFilters = { }, oldFilters;
-        if (account.FollowList.Count + account.FollowerList.Count != 0)
+        if (follows.Any() || followers.Any())
         {
-            var accountIds = account.FollowList.Union(account.FollowerList);
+            var accountIds = follows.Union(followers);
             relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds.ToArray()).ToArray());
         }
         lock (atomicSwap)
@@ -265,7 +263,7 @@
     {
         accountService.AccountDetailsChanged -= AccountDetailsChanged;
         accountService.AccountFollowsChanged -= AccountFollowsChanged;
-        accountService.AccountFollowsChanged -= AccountFollowersChanged;
+        accountService.AccountFollowersChanged -= AccountFollowersChanged;
         relayService.DeleteFilters(feedFilter, followsFilter, followersFilter);
         relayService.DeleteFilters(followsDetailsFilter);
     }

@@ -6,6 +6,7 @@
 @using Nostrid.Model;
 @using Nostrid.Misc;
 @inject AccountService accountService
+@inject EventDatabase eventDatabase
 
 <h2>Following Feed</h2>
 
@@ -13,7 +14,7 @@
     <NoteComposer />
 </div>
 
-@if (accountService.MainAccount?.FollowList.Count == 0)
+@if (follows.Count == 0)
 {
     <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center border-top px-2 py-3" style="margin: 0 -1rem;">
         <i class="fs-1 bi bi-person-x"></i>
@@ -28,6 +29,7 @@ else
 
 @code {
     private SubscriptionFilter? filter;
+    private List<string> follows = new();
 
     protected override void OnInitialized()
     {
@@ -43,14 +45,14 @@ else
 
     private void SetFilter()
     {
-        if (accountService.MainAccount == null
-            || accountService.MainAccount.FollowList.Count == 0)
+        follows = accountService.MainAccount == null ? new() : eventDatabase.GetFollowIds(accountService.MainAccount.Id);
+        if (follows.Count == 0)
         {
             filter = null;
         }
         else
         {
-            filter = new AccountSubscriptionFilter(accountService.MainAccount.FollowList.ToArray());
+            filter = new AccountSubscriptionFilter(follows.ToArray());
         }
     }
 
