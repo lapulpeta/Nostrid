@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Model;
-using Nostrid.Pages;
-using SQLite;
 
 namespace Nostrid.Data
 {
@@ -22,7 +20,7 @@ namespace Nostrid.Data
             db.Database.Migrate();
         }
 
-        public void SaveRelay(Relay relay)
+        public bool SaveRelay(Relay relay)
         {
             using var db = new Context(_dbfile);
             if (db.Relays.Any(r => r.Id == relay.Id))
@@ -32,10 +30,11 @@ namespace Nostrid.Data
             else
             {
                 if (db.Relays.Any(r => r.Uri == relay.Uri))
-                    return;
+                    return false;
                 db.Add(relay);
             }
             db.SaveChanges();
+            return true;
         }
 
         public void DeleteRelay(long relayId)
@@ -447,7 +446,7 @@ namespace Nostrid.Data
                 });
             return reactions.ToList();
         }
-        
+
         public bool AccountReacted(string eventId, string accountId)
         {
             using var db = new Context(_dbfile);

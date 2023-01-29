@@ -118,6 +118,7 @@
                 </div>
             </div>
         </li>
+        <li>
         @if (relayService.Restarting)
         {
             <p>Restarting...</p>
@@ -127,6 +128,11 @@
             <button class="btn btn-primary" @onclick="() => relayService.RestartNostrClients()">Restart connections</button>
             <p>You need to restart connections to apply any change here</p>
         }
+        </li>
+        <li>
+            <InputText @bind-Value="@newRelayUri" />
+            <button class="btn btn-primary" @onclick="@AddNewRelay">Add new</button>
+        </li>
         @foreach (var relay in relays)
         {
             <li class="list-group-item">
@@ -175,6 +181,7 @@
     private Scripts? scripts;
     private Config configModel = new();
     private List<Relay> relays = new();
+    private string newRelayUri = string.Empty;
 
     public const string DARK_THEME = "dark";
     public const string LIGHT_THEME = "light";
@@ -193,8 +200,13 @@
     {
         base.OnInitialized();
         configModel = configService.MainConfig;
-        relays = relayService.GetRelays();
+        ReloadRelays();
         relayService.ClientsStateChanged += ClientsStateChanged;
+    }
+
+    private void ReloadRelays()
+    {
+        relays = relayService.GetRelays();        
     }
 
     private void ClientsStateChanged(object? sender, EventArgs args)
@@ -215,6 +227,15 @@
     private void DeleteRelay(Relay relay)
     {
         relayService.DeleteRelay(relay.Id);
+    }
+
+    private void AddNewRelay()
+    {
+        if (relayService.AddNewRelayIfUnknown(newRelayUri))
+        {
+            newRelayUri = string.Empty;
+            ReloadRelays();
+        }
     }
 
     #region Dispose

@@ -293,22 +293,26 @@ public class RelayService
         return eventDatabase.ListRelays().FirstOrDefault()?.Uri;
     }
 
-    public void AddNewRelayIfUnknown(string uri)
+    public bool AddNewRelayIfUnknown(string uri)
     {
-        SaveRelay(new Relay()
+        if (Uri.IsWellFormedUriString(uri, UriKind.Absolute))
         {
-            Uri = uri,
-            Read = true,
-            Write = true
-        });
+            return SaveRelay(new Relay()
+            {
+                Uri = uri,
+                Read = true,
+                Write = true
+            });
+        }
+        return false;
     }
 
-    public void SaveRelay(Relay relay)
+    public bool SaveRelay(Relay relay)
     {
         if (relay.Priority < PriorityLowerBound || relay.Priority > PriorityHigherBound)
             throw new Exception($"Priority should be between {PriorityLowerBound} and {PriorityHigherBound}");
 
-        eventDatabase.SaveRelay(relay);
+        return eventDatabase.SaveRelay(relay);
     }
 
     public List<Relay> GetRelays()

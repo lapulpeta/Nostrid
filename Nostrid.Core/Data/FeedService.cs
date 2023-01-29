@@ -90,10 +90,7 @@ public class FeedService
 
     private void HandleRelayRecommendation(string uri)
     {
-        if (Uri.IsWellFormedUriString(uri, UriKind.Absolute))
-        {
-            relayService.AddNewRelayIfUnknown(uri.ToLower());
-        }
+        relayService.AddNewRelayIfUnknown(uri.ToLower());
     }
 
     public void HandleKind7(Event eventToProcess)
