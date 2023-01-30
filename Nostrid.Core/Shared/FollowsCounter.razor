@@ -1,0 +1,82 @@
+﻿@code{
+    [Parameter]
+    public string AccountId { get; set; }
+
+    [Parameter]
+    public bool CountFollowers { get; set; } /* If false then count follows */
+}
+
+@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject EventDatabase eventDatabase
+@inject AccountService accountService
+
+<span class="text-break">
+    @(CountFollowers ? eventDatabase.GetFollowerCount(AccountId) : eventDatabase.GetFollowCount(AccountId))
+</span>
+
+@code
+{
+    private DateTime refreshAfter = DateTime.MinValue;
+    private const int RefreshAfterSeconds = 5;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        accountService.AccountFollowsChanged += AccountFollowsChanged;
+        accountService.AccountFollowersChanged += AccountFollowersChanged;
+    }
+
+    private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
+    {
+        if (_disposed)
+            return;
+        var now = DateTime.UtcNow;
+        if (refreshAfter < now)
+        {
+            refreshAfter = now.AddSeconds(RefreshAfterSeconds);
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    private void AccountFollowersChanged(object? sender, string accountId)
+    {
+        if (_disposed)
+            return;
+        var now = DateTime.UtcNow;
+        if (refreshAfter < now)
+        {
+            refreshAfter = now.AddSeconds(RefreshAfterSeconds);
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        accountService.AccountFollowsChanged -= AccountFollowsChanged;
+        accountService.AccountFollowersChanged -= AccountFollowersChanged;
+    }
+    #endregion
+}

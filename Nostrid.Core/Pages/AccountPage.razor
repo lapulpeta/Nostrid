@@ -39,10 +39,10 @@
     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
         <div class="btn-group me-3 mb-3" role="group" aria-label="First group">
             <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowsModal">
-                Following <span class="badge text-bg-secondary">@(follows?.Count ?? followsInitialCount)</span>
+                Following <span class="badge text-bg-secondary"><FollowsCounter AccountId="@PubKey" /></span>
             </button>
             <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowersModal">
-                Followers <span class="badge text-bg-secondary">@(followers?.Count ?? followersInitialCount)</span>
+                Followers <span class="badge text-bg-secondary"><FollowsCounter AccountId="@PubKey" CountFollowers="true" /></span>
             </button>
         </div>
         @if (IsMainAccountLoaded && !IsMainAccount)
@@ -226,8 +226,8 @@
         if (followsModal?.IsVisible() ?? false)
         {
             UpdateSubscriptionForDetails();
+            InvokeAsync(() => StateHasChanged());
         }
-        InvokeAsync(() => StateHasChanged());
     }
 
     private void AccountFollowersChanged(object? sender, string accountId)
@@ -244,8 +244,8 @@
         if (followersModal?.IsVisible() ?? false)
         {
             UpdateSubscriptionForDetails();
+            InvokeAsync(() => StateHasChanged());
         }
-        InvokeAsync(() => StateHasChanged());
     }
 
     private static object atomicSwap = new object();
