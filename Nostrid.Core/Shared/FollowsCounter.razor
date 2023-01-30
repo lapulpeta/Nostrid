@@ -21,8 +21,8 @@
 
 @code
 {
-    private DateTime refreshAfter = DateTime.MinValue;
-    private const int RefreshAfterSeconds = 5;
+    private Task? updateAfterChange;
+    private const int StateHasChangedAfterSeconds = 3;
 
     protected override void OnParametersSet()
     {
@@ -33,15 +33,21 @@
         accountService.AccountFollowersChanged += AccountFollowersChanged;
     }
 
+    private static object lockobj = new();
+
     private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
     {
         if (_disposed)
             return;
-        var now = DateTime.UtcNow;
-        if (refreshAfter < now)
+        lock (lockobj)
         {
-            refreshAfter = now.AddSeconds(RefreshAfterSeconds);
-            InvokeAsync(() => StateHasChanged());
+            if (updateAfterChange != null)
+                return;
+            updateAfterChange = Task.Delay(TimeSpan.FromSeconds(StateHasChangedAfterSeconds)).ContinueWith((_) =>
+            {
+                updateAfterChange = null;
+                InvokeAsync(() => StateHasChanged());
+            });
         }
     }
 
@@ -49,11 +55,15 @@
     {
         if (_disposed)
             return;
-        var now = DateTime.UtcNow;
-        if (refreshAfter < now)
+        lock (lockobj)
         {
-            refreshAfter = now.AddSeconds(RefreshAfterSeconds);
-            InvokeAsync(() => StateHasChanged());
+            if (updateAfterChange != null)
+                return;
+            updateAfterChange = Task.Delay(TimeSpan.FromSeconds(StateHasChangedAfterSeconds)).ContinueWith((_) =>
+            {
+                updateAfterChange = null;
+                InvokeAsync(() => StateHasChanged());
+            });
         }
     }
 
