@@ -69,6 +69,26 @@ a, .btn-link {
     display: none;
 }
 
+.linear-progress {
+    background: silver;
+    width: 50vw;
+    margin: 20% auto;
+    height: 1rem;
+    border-radius: 10rem;
+    overflow: hidden;
+    position: relative;
+}
+
+    .linear-progress:after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: blue;
+        scale: var(--blazor-load-percentage, 0%) 100%;
+        transform-origin: left top;
+        transition: scale ease-out 0.5s;
+    }
+
 @supports (-webkit-touch-callout: none) {
     .status-bar-safe-area {
         display: flex;
