@@ -1,0 +1,93 @@
+﻿@implements IDisposable
+
+@using Nostrid.Data;
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+
+@inject NavigationManager navigationManager
+@inject NoteProcessor noteProcessor
+@inject EventDatabase eventDatabase
+@inject ConfigService configService
+@inject RelayService relayService
+
+@code{
+    [Parameter, EditorRequired]
+    public Event Event { get; set; } = null!;
+
+    [Parameter]
+    public bool ShowReplyTo { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? TopContent { get; set; }
+}
+
+<div>
+    <div class="d-flex mb-1">
+        <div class="flex-grow-1">
+            <a href="/account/@Event?.PublicKey" @onclick:stopPropagation="true" class="fw-bold text-decoration-none">
+                <AccountName Id="@Event.PublicKey"></AccountName>
+            </a>
+        </div>
+        @TopContent
+    </div>
+    @if (!string.IsNullOrEmpty(Event?.ReplyToId) && ShowReplyTo)
+    {
+        var replyEvent = eventDatabase.GetEventOrNull(Event.ReplyToId);
+        if (replyEvent != null)
+        {
+            <div class="mb-1 p-2 pt-1 bg-body bg-opacity-75 rounded border border-secondary border-4 border-top-0 border-bottom-0 border-end-0">
+                <MessageViewer Event="@replyEvent" ShowReplyTo="false" />
+            </div>
+        }
+    }
+    <div class="text-break note-content">
+        @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
+    </div>
+</div>
+
+@code {
+    private SubscriptionFilter? subscriptionFilter;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        
+        Cleanup();
+        
+        if (ShowReplyTo && !string.IsNullOrEmpty(Event.ReplyToId))
+        {
+            relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(Event.ReplyToId) 
+            { 
+                DestroyOnEose = true, 
+                DestroyOnFirstEvent = true 
+            });
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        if (subscriptionFilter != null)
+        {
+            relayService.DeleteFilter(subscriptionFilter);
+        }
+    }
+    #endregion
+}

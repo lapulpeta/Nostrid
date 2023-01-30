@@ -11,10 +11,12 @@
 
   <ItemGroup>
     <None Remove="Shared\EventViewer.razor.css" />
+    <None Remove="Shared\MessageWrapperViewer.razor.css" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="Shared\EventViewer.razor.css" />
+    <Content Include="Shared\MessageWrapperViewer.razor.css" />
   </ItemGroup>
 
   <ItemGroup>

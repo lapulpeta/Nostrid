@@ -41,3 +41,8 @@ export function isModalShown(element) {
     if (!modal) return;
     return modal._isShown;
 }
+
+export function isElementVisible(element) {
+    var position = element.getBoundingClientRect();
+    return position.bottom > 0 && window.innerHeight > position.top;
+}

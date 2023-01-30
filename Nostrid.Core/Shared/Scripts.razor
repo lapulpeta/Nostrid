@@ -36,6 +36,15 @@
         Task.Run(async () => await JSModule.InvokeVoidAsync(identifier, args));
     }
 
+    public async Task<T?> InvokeAsync<T>(string identifier, params object[] args)
+    {
+        if (JSModule == null)
+        {
+            return await Task.FromResult(default(T));
+        }
+        return await JSModule.InvokeAsync<T>(identifier, args);
+    }
+
     public T? Invoke<T>(string identifier, params object[] args)
     {
         if (JSModule == null)

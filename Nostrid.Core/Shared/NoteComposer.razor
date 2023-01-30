@@ -19,6 +19,9 @@
     public string? ChannelId { get; set; }
 
     [Parameter]
+    public int Rows { get; set; } = 4;
+
+    [Parameter]
     public Action? OnSend { get; set; }
 
     [CascadingParameter]
@@ -50,15 +53,11 @@
                     <AccountName Id="@accountService?.MainAccount?.Id" />
                 </a>
             </p>
-            @if (!string.IsNullOrEmpty(ChannelId))
-            {
-                <p class="mb-1" style="font-size:0.5rem">Channel ID: @ChannelId</p>
-            }
             <EditForm Model="@textInput" OnValidSubmit="@Send">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
                 <textarea value="@textInput.Text" @oninput="@((args) => { textInput.Text = args.Value as string ?? string.Empty; })"
-                      rows="4" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
+                      rows="@Rows" style="resize: none;" class="form-control" placeholder="Leave a comment here" id="floatingTextarea" />
                 <div class="d-flex flex-row align-items-center flex-wrap mt-2" style="margin-bottom: -.5rem; margin-right: -.5rem;">
                     @if (sending)
                     {
@@ -74,7 +73,9 @@
                     else
                     {
                         <button disabled="@string.IsNullOrEmpty(textInput.Text)" type="submit" class="btn btn-primary me-2 mb-2">
-                            @(ReplyTo != null ? "Reply" : "Send note")
+                            @(
+                        ReplyTo != null ? "Reply" : "Send note"
+                        )
                         </button>
                         @if (mediaServiceProvider.GetMediaServices().Count() > 0)
                         {

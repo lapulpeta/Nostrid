@@ -10,32 +10,37 @@
 @inject NavigationManager navigationManager
 
 <h4>Channels</h4>
-@foreach (var (channelId, channel) in channelsById.Where(m => m.Value.MessageCount > 0).OrderByDescending(m => m.Value.MessageCount))
-{
-    <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
-         @onclick="@(() => navigationManager.NavigateTo($"/channel/{channelId}"))"style="margin: 0 -1rem;">
-        <div class="flex-shrink-0">
-            <AccountPicture Id="@channel.Id" Url="@channel.Details?.PictureUrl" />
+<div style="margin-bottom: -1rem;">
+    @foreach (var (channelId, messageCount) in channelsById.OrderByDescending(m => m.Value).Take(50))
+    {
+        <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+            @onclick="@(() => navigationManager.NavigateTo($"/channel/{channelId}"))" style="margin: 0 -1rem;">
+            <div class="flex-shrink-0">
+                <ChannelPicture Id="@channelId" />
+            </div>
+            <div class="flex-grow-1 px-2 text-break">
+                <div class="fw-bold">
+                    <ChannelName Id="@channelId" />
+                </div>
+                <div class="fs-7 text-secondary">@channelId</div>
+            </div>
+            <div>
+                <span class="badge text-bg-primary rounded-pill">
+                    <ChannelMessageCount Id="@channelId" />
+                </span>
+            </div>
         </div>
-        <div class="flex-grow-1 px-2 text-break">
-            <div class="fw-bold">@channel.Details?.Name</div>
-            <div class="fs-7 text-secondary">@channelId</div>
-        </div>
-        <div>
-            <span class="badge text-bg-primary rounded-pill">@channel.MessageCount</span>
-        </div>
-    </div>
-}
+    }
+</div>
 
 @code {
-    private SubscriptionFilter messageFilter, detailsFilter;
-    private ConcurrentDictionary<string, ChannelWithInfo> channelsById = new();
+    private SubscriptionFilter? messageFilter, detailsFilter;
+    private ConcurrentDictionary<string, int> channelsById = new();
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        channelService.ChannelDetailsChanged += ChannelDetailsChanged;
         channelService.ChannelReceivedMessage += ChannelReceivedMessage;
 
         messageFilter = new ChannelSubscriptionFilter((string[])null);
@@ -43,37 +48,13 @@
         detailsFilter = new ChannelListSubscriptionFilter();
         relayService.AddFilters(messageFilter, detailsFilter);
 
-        channelsById = new ConcurrentDictionary<string, ChannelWithInfo>(channelService.GetChannelsWithInfo().ToDictionary(c => c.Id));
+        channelsById = new ConcurrentDictionary<string, int>(channelService.GetChannelsWithInfo().ToDictionary(c => c.Id, c => c.MessageCount));
     }
     private void ChannelReceivedMessage(object? sender, string channelId)
     {
         channelsById.AddOrUpdate(channelId,
-            (_) => new ChannelWithInfo()
-                {
-                    Id = channelId,
-                    MessageCount = channelService.GetChannelMessagesInDb(channelId)
-                },
-            (_, channel) =>
-            {
-                channel.MessageCount = channelService.GetChannelMessagesInDb(channelId);
-                return channel;
-            });
-        InvokeAsync(() => StateHasChanged());
-    }
-
-    private void ChannelDetailsChanged(object? sender, (string channelId, ChannelDetails details) data)
-    {
-        channelsById.AddOrUpdate(data.channelId,
-            (_) => new ChannelWithInfo()
-                {
-                    Id = data.channelId,
-                    Details = data.details,
-                },
-            (_, channel) =>
-            {
-                channel.Details = data.details;
-                return channel;
-            });
+            (_) => channelService.GetChannelMessagesInDb(channelId),
+            (_, channel) => channelService.GetChannelMessagesInDb(channelId));
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -97,7 +78,7 @@
 
     private void Cleanup()
     {
-        channelService.ChannelDetailsChanged -= ChannelDetailsChanged;
+        channelService.ChannelReceivedMessage -= ChannelReceivedMessage;
         relayService.DeleteFilters(messageFilter, detailsFilter);
     }
     #endregion

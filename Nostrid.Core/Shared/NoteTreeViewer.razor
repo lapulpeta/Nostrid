@@ -1,4 +1,5 @@
 ﻿@using Nostrid.Data;
+@using Nostrid.Interfaces;
 @using Nostrid.Model;
 
 @inject FeedService feedService
@@ -12,6 +13,9 @@
 
     [Parameter]
     public string? MainEventId { get; set; }
+
+    [Parameter]
+    public bool ShowAsMessage { get; set; }
 
     [Parameter]
     public int[] TreeLayout { get; set; } = new int[0];
@@ -47,6 +51,7 @@
         {
             treeLayout = treeLayout.Append(Trees.Count() - (i++)).ToArray();
         }
+
         if (tree is NoteTreeShowMore noteTreeShowMore)
         {
             <NoteViewerSeeMore NoteTreeShowMore="@noteTreeShowMore"
@@ -56,13 +61,25 @@
         }
         else if (tree is NoteTree noteTree)
         {
-            <NoteViewer Tree="@noteTree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
-                    OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent"
+            if (ShowAsMessage)
+            {
+                <MessageWrapperViewer Tree="@noteTree"
+                    OnComponentLoad="AddTreeItemComponent" OnComponentUnload="RemoveTreeItemComponent"
+                    OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
+                    OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
+                    OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
+                    OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)" />
+            }
+            else
+            {
+                <NoteViewer Tree="@noteTree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
+                    OnComponentLoad="AddTreeItemComponent" OnComponentUnload="RemoveTreeItemComponent"
                     OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
                     OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
                     OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
                     OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)"
                     ChildIndex="@ChildIndex" NotClickable="@NotClickable" />
+            }
         }
     }
     if (Root)
@@ -76,7 +93,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <NoteComposer ReplyTo="@replyingToEvent" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
+                            <NoteComposer ReplyTo="@replyingToEvent" ChannelId="@replyingToEvent?.ChannelId" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
                         </div>
                     </div>
                 </div>
@@ -88,34 +105,34 @@
 }
 
 @code{
-    private List<NoteViewer> noteViewerRefs = new List<NoteViewer>();
+    private List<ITreeItem> treeItemRefs = new List<ITreeItem>();
     private Event? replyingToEvent;
     private ModalContainer? composeModal;
     private ConfirmationModal? confirmationModal;
     private PayModal? payModal;
 
-    private void AddNoteViewerComponent(NoteViewer noteViewer)
+    private void AddTreeItemComponent(ITreeItem treeItem)
     {
-        noteViewerRefs.Add(noteViewer);
+        treeItemRefs.Add(treeItem);
     }
 
-    private void RemoveNoteViewerComponent(NoteViewer noteViewer)
+    private void RemoveTreeItemComponent(ITreeItem treeItem)
     {
-        noteViewerRefs.Remove(noteViewer);
+        treeItemRefs.Remove(treeItem);
     }
 
-    public IEnumerable<NoteViewer> GetNoteViewers()
+    public IEnumerable<ITreeItem> GetTreeItems()
     {
-        return noteViewerRefs.SelectMany(n => n.GetNoteViewers());
+        return treeItemRefs.SelectMany(n => n.GetTreeItems());        
     }
 
-    public async Task<NoteViewer?> GetFirstVisibleAsync()
+    public async Task<ITreeItem?> GetFirstVisibleAsync()
     {
-        return (await Task.WhenAll(GetNoteViewers().Select(async n => new
+        return (await Task.WhenAll(GetTreeItems().Select(async n => new
         {
             IsVisible = await n.IsVisibleAsync(),
-            NoteViewer = n
-        }))).FirstOrDefault(n => n.IsVisible)?.NoteViewer;
+            TreeItem = n
+        }))).FirstOrDefault(n => n.IsVisible)?.TreeItem;
     }
 
     private void Reply(Event _event)

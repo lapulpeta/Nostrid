@@ -21,14 +21,13 @@
 
 @if (newN.Count > 0)
 {
-    <div class="text-center border-top px-3" style="margin: 0 -1rem;">
+    <div class="text-center px-3 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
         <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
     </div>
 }
-
 @if (renderedN.Count == 0)
 {
-    <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
+    <div class="text-center px-3 py-2 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
         <div class="spinner-border mx-3 my-2" role="status">
             <span class="visually-hidden">Waiting for feed...</span>
         </div>
@@ -40,16 +39,18 @@ else
     // Root nodes are sorted newest on top
     trees.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
 
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" />
-    <div class="text-center border-top px-3" style="margin: 0 -1rem -1rem -1rem;">
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@inChannel" />
+    <div class="text-center @(!inChannel ? "border-top" : "") px-3" style="margin: 0 -1rem;">
         <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="@LoadMore">Load more</button>
-    </div>
+    </div>   
 }
 
-<div class="position-fixed main-margin p-3" style="right: 0; bottom: 0;">
-    <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4" style="height: 3rem; width: 3rem;">
-        <i class="bi bi-arrow-repeat"></i>
-    </button>
+<div class="position-absolute" style="bottom: 4rem; right: 4rem;">
+    <div class="position-fixed">
+        <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4">
+            <i class="bi bi-arrow-repeat"></i>
+        </button>
+    </div>
 </div>
 
 @code {
@@ -86,13 +87,13 @@ else
         {
             return;
         }
-        var noteViewer = await noteTreeViewer.GetFirstVisibleAsync();
-        if (noteViewer == null)
+        var treeItem = await noteTreeViewer.GetFirstVisibleAsync();
+        if (treeItem == null)
         {
             return;
         }
 
-        oldFilter.limitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(noteViewer.Tree.Note.CreatedAtCurated);
+        oldFilter.limitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(treeItem.Tree.Note.CreatedAtCurated);
         relayService.RefreshFilters(oldFilter);
 
         requestDisabled = true;
