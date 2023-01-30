@@ -1,4 +1,4 @@
-﻿# Nostrid - Nostr Client
+﻿# Nostrid - A Nostr client
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Donate: LN](https://img.shields.io/badge/Donate-LN-green)](https://legend.lnbits.com/tipjar/786)
@@ -23,8 +23,10 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Customizable feeds based on hashtags
 - [x] Username and profile images (read and update)
 - [x] Follows (read and update)
+- [x] Followers (read)
 - [x] Bech32 (`npub`, `note`, `nsec`)
 - [x] Automatic relay management (no user intervention is required)
+- [x] Manual relay management
 - [x] Local cache of events
 - [x] Notification of unread mentions
 - [x] Display embedded images, videos and audios
@@ -32,12 +34,9 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Embedded mentions of other accounts and notes - PARTIAL (only links, no previews)
 - [ ] Direct messages - SOON
 - [ ] Channels - SOON
-- [ ] Manual/advanced relay management - SOON
+- [ ] NIP-26 delegation - SOON
 
 ## Supported NIPs
-
-✅ = Supported
-✔️ = Partially-supported
 
 - NIP-01: Basic protocol flow description ✅
 - NIP-02: Contact List and Petnames ✅
@@ -46,10 +45,10 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - NIP-05: Mapping Nostr keys to DNS-based internet identifiers ✅
 - NIP-06: Basic key derivation from mnemonic seed phrase
 - NIP-07: window.nostr capability for web browsers ✅ (Web/PWA version only)
-- NIP-08: Handling Mentions ✔️
+- NIP-08: Handling Mentions ✅
 - NIP-09: Event Deletion ✅
 - NIP-10: Conventions for clients' use of e and p tags in text events. ✅
-- NIP-11: Relay Information Document
+- NIP-11: Relay Information Document ✅
 - NIP-12: Generic Tag Queries ✅
 - NIP-13: Proof of Work ✅
 - NIP-14: Subject tag in text events.
