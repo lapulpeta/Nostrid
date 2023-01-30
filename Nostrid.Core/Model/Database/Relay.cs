@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Nostrid.Model;
 
 public class Relay
@@ -11,6 +13,9 @@ public class Relay
     public bool Read { get; set; }
 
     public bool Write { get; set; }
+
+    [NotMapped]
+    public List<int> SupportedNips { get; set; } = new();
 
     public override bool Equals(object obj)
     {
