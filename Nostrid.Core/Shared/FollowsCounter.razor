@@ -28,7 +28,6 @@
     {
         base.OnParametersSet();
 
-        refreshAfter = DateTime.MinValue;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
     }
