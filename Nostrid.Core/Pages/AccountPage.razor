@@ -48,9 +48,7 @@
         @if (IsMainAccountLoaded && !IsMainAccount)
         {
             <div class="btn-group mb-3 me-3" role="group">
-                <button type="button" class="btn @(!accountService.IsFollowing(PubKey) ? "btn-primary" : "btn-danger")" @onclick="@(async () => await FollowUnfollow(PubKey))">
-                    @(!accountService.IsFollowing(PubKey) ? "Follow" : "Unfollow")
-                </button>
+                <FollowButton AccountId="@PubKey" />
             </div>
         }
         @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
@@ -250,11 +248,6 @@
             (followsDetailsFilter, oldFilters) = (addedFilters, followsDetailsFilter);
         }
         relayService.DeleteFilters(oldFilters);
-    }
-
-    private async Task FollowUnfollow(string pubKey)
-    {
-        await accountService.FollowUnfollow(pubKey, accountService.IsFollowing(pubKey));
     }
 
     private void OpenFollowsModal()
