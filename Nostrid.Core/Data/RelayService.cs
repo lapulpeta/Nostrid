@@ -1,8 +1,10 @@
 using LinqKit;
+using Newtonsoft.Json;
 using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Model;
 using System.Collections.Concurrent;
+using System.Net.Http.Headers;
 
 namespace Nostrid.Data;
 
@@ -51,7 +53,7 @@ public class RelayService
 
     public bool Restarting => clientThreadsCancellationTokenSource.IsCancellationRequested;
 
-	public RelaysMonitor RelaysMonitor { get; private set; }
+    public RelaysMonitor RelaysMonitor { get; private set; }
 
     public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
     public event EventHandler? ClientsStateChanged;
@@ -418,6 +420,11 @@ public class RelayService
 
         try
         {
+            var nip11 = await TryNip11(relay.Uri);
+            if (nip11 != null && nip11.SupportedNips != null)
+            {
+                relay.SupportedNips = nip11.SupportedNips;
+            }
             await client.ConnectAndWaitUntilConnected(cancellationToken);
             try
             {
@@ -510,7 +517,8 @@ public class RelayService
         //lock (clientByRelay)
         {
             // Add new filters
-            foreach (var f in filters)
+            var supportedFilters = filters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
+            foreach (var f in supportedFilters)
             {
                 if (!subs.Any(s => s.Filter == f))
                 {
@@ -555,6 +563,29 @@ public class RelayService
                 }
             }
         }
+    }
+
+    // NIP-11: https://github.com/nostr-protocol/nips/blob/master/11.md
+    private static async Task<Nip11Response?> TryNip11(string uri)
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/nostr+json"));
+            using var httpResponse = await httpClient.GetAsync(uri.Replace("wss://", "https://"));
+            if (httpResponse.IsSuccessStatusCode)
+            {
+                var response = await httpResponse.Content.ReadAsStringAsync();
+                if (response.IsNotNullOrEmpty())
+                {
+                    return JsonConvert.DeserializeObject<Nip11Response>(response);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+        return null;
     }
 }
 

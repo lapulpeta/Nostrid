@@ -13,7 +13,7 @@ public class TagSubscriptionFilter : SubscriptionFilter
     {
     }
 
-    public TagSubscriptionFilter(string[] tags)
+    public TagSubscriptionFilter(string[] tags) : base(12)
     {
         this.tags = tags;
     }
