@@ -154,14 +154,12 @@
     private Account? account;
     private SubscriptionFilter? feedFilter, followsFilter, followersFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
-    //private ConcurrentDictionary<string, Account> accounts = new();
     private PayModal? payModal;
     private ModalContainer? followsModal, followersModal;
     private List<string>? follows, followers;
     private int followsInitialCount, followersInitialCount;
-    private DateTime followsRefreshAfter = DateTime.MinValue;
-
-    private const int FollowsRefreshAfterSeconds = 5;
+    private Task? updateAfterChange;
+    private const int StateHasChangedAfterSeconds = 3;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;
@@ -188,6 +186,7 @@
         followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
     }
 
+    private static object lockobj = new();
 
     private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
     {
@@ -197,16 +196,20 @@
             return;
         if (followsModal != null && followsModal.IsVisible())
         {
-            var now = DateTime.UtcNow;
-            if (followsRefreshAfter < now)
+            lock (lockobj)
             {
-                followsRefreshAfter = now.AddSeconds(FollowsRefreshAfterSeconds);
-                if (follows != null
-                    && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
+                if (updateAfterChange != null)
                     return;
-                follows = data.follows;
-                UpdateSubscriptionForDetails();
-                InvokeAsync(() => StateHasChanged());
+                updateAfterChange = Task.Delay(TimeSpan.FromSeconds(StateHasChangedAfterSeconds)).ContinueWith((_) =>
+                {
+                    updateAfterChange = null;
+                    if (follows != null
+                    && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
+                        return;
+                    follows = data.follows;
+                    UpdateSubscriptionForDetails();
+                    InvokeAsync(() => StateHasChanged());
+                });
             }
         }
     }
@@ -219,17 +222,21 @@
             return;
         if (followersModal != null && followersModal.IsVisible())
         {
-            var now = DateTime.UtcNow;
-            if (followsRefreshAfter < now)
+            lock (lockobj)
             {
-                followsRefreshAfter = now.AddSeconds(FollowsRefreshAfterSeconds);
-                var newFollowers = eventDatabase.GetFollowerIds(accountId);
-                if (followers != null
-                    && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
+                if (updateAfterChange != null)
                     return;
-                followers = newFollowers;
-                UpdateSubscriptionForDetails();
-                InvokeAsync(() => StateHasChanged());
+                updateAfterChange = Task.Delay(TimeSpan.FromSeconds(StateHasChangedAfterSeconds)).ContinueWith((_) =>
+                {
+                    updateAfterChange = null;
+                    var newFollowers = eventDatabase.GetFollowerIds(accountId);
+                    if (followers != null
+                        && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
+                        return;
+                    followers = newFollowers;
+                    UpdateSubscriptionForDetails();
+                    InvokeAsync(() => StateHasChanged());
+                });
             }
         }
     }
