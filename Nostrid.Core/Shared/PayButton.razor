@@ -3,7 +3,7 @@
     public string Id { get; set; }
 
     [Parameter]
-    public bool OnlyText { get; set; }
+    public Action OnClick { get; set; }
 }
 
 @using Nostrid.Data;
@@ -12,31 +12,12 @@
 
 @inject AccountService _accountService
 
-<span class="text-break">
-    @if (_details != null && _details.Nip05Id.IsNotNullOrEmpty() && _details.Nip05Valid &&
-    Nip05.DecodeNip05(_details.Nip05Id, out var domain, out var username))
-    {
-        if (username != "_")
-        {
-            @username
-        }
-        <span class="d-inline-block">
-            @(username != "_" ? "@" : "")@domain
-        </span>
-        @if (!OnlyText)
-        {
-            <i class="text-success bi bi-patch-check-fill ms-1"></i>
-        }
-    }
-    else if (Id != null)
-    {
-        @(_details?.Name ?? ByteTools.PubkeyToNpub(Id, true))
-    }
-    @if (!OnlyText && (_details?.Lud16Id ?? _details?.Lud06Url).IsNotNullOrEmpty())
-    {
-        <i class="bi bi-lightning-charge-fill text-warning ms-1"></i>
-    }
-</span>
+@if (_details != null && (_details.Lud06Url.IsNotNullOrEmpty() || _details.Lud16Id.IsNotNullOrEmpty()))
+{
+    <a role="button" @onclick="@OnClick" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+        <i class="bi bi-lightning-charge"></i>
+    </a>
+}
 
 @code
 {
@@ -44,7 +25,7 @@
 
     protected override void OnParametersSet()
     {
-    base.OnParametersSet();
+        base.OnParametersSet();
 
         _details = _accountService.GetAccountDetails(Id);
         _accountService.AccountDetailsChanged += AccountDetailsChanged;

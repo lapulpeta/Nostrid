@@ -29,14 +29,14 @@
 <div class="d-flex flex-row">
     <div class="d-flex flex-column flex-shrink-0">
         <a href="/account/@Event?.PublicKey" @onclick:stopPropagation="true">
-            <AccountPicture Details="@accountDetails" Id="@Event?.PublicKey"></AccountPicture>
+            <AccountPicture Id="@Event?.PublicKey"></AccountPicture>
         </a>
         @LeftPlaceholder
     </div>
     <div class="flex-grow-1 ms-2">
         <p class="mb-1">
             <a href="/account/@Event?.PublicKey" @onclick:stopPropagation="true" class="fw-bold text-decoration-none mb-1">
-                <AccountName Details="@accountDetails" Id="@Event?.PublicKey"></AccountName>
+                <AccountName Id="@Event?.PublicKey"></AccountName>
             </a>
             <span class="text-secondary">
                 <span>·</span>
@@ -99,7 +99,6 @@
 
 @code {
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
-    private AccountDetails? accountDetails;
     private SubscriptionFilter? subscriptionFilter;
 
     protected override void OnParametersSet()
@@ -108,9 +107,7 @@
         if (Event == null) return;
 
         Cleanup();
-        accountService.AccountDetailsChanged += AccountDetailsChanged;
 
-        accountDetails = accountService.GetAccountDetails(Event.PublicKey);
         var repostEventId = Event.RepostEventId;
         if (repostEventId != null)
         {
@@ -122,16 +119,6 @@
             var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
             accountService.AddDetailsNeeded(accountIds);
         }
-    }
-
-    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
-    {
-        // Will refresh if details match event author or any mention
-        if (data.accountId == Event?.PublicKey)
-            accountDetails = data.details;
-        else if (!Event?.GetMentionsIdsPresentInContent('p').Contains(data.accountId) ?? true)
-            return;
-        InvokeAsync(() => StateHasChanged());
     }
 
     #region Dispose
@@ -154,7 +141,6 @@
 
     private void Cleanup()
     {
-        accountService.AccountDetailsChanged -= AccountDetailsChanged;
         if (subscriptionFilter != null)
         {
             relayService.DeleteFilter(subscriptionFilter);

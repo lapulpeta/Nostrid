@@ -27,6 +27,8 @@
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
+
+        refreshAfter = DateTime.MinValue;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
     }

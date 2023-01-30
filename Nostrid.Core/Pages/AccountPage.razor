@@ -19,9 +19,9 @@
 
 <div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
 
-    <AccountPicture Details="@account.Details" Id="@account.Id" Size="128" />
+    <AccountPicture Id="@account.Id" Size="128" />
 
-    <div class="fs-4 fw-bolder"><AccountName Details="@account.Details" Id="@account.Id" /></div>
+    <div class="fs-4 fw-bolder"><AccountName Id="@account.Id" /></div>
     <div class="fs-7 text-body-tertiary text-break mb-3">
         @ByteTools.PubkeyToNpub(PubKey)
         <div class="btn-group">
@@ -56,7 +56,7 @@
         @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
         {
             <div class="btn-group mb-3" role="group">
-                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payModal?.Show(account.Details))">
+                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payModal?.Show(account.Id))">
                     <i class="bi bi-lightning-charge"></i> Pay
                 </button>
             </div>
@@ -98,7 +98,7 @@
                     }
                     @foreach (var following in follows ?? new List<string>())
                     {
-                        <FollowAccount Account="@(GetAccount(following))"></FollowAccount>
+                        <FollowAccount AccountId="@following"></FollowAccount>
                     }
                 </div>
             </div>
@@ -140,7 +140,7 @@
                     }
                     @foreach (var follower in followers ?? new List<string>())
                     {
-                        <FollowAccount Account="@(GetAccount(follower))"></FollowAccount>
+                        <FollowAccount AccountId="@follower"></FollowAccount>
                     }
                 </div>
             </div>
@@ -156,11 +156,14 @@
     private Account? account;
     private SubscriptionFilter? feedFilter, followsFilter, followersFilter;
     private SubscriptionFilter[] followsDetailsFilter = { };
-    private ConcurrentDictionary<string, Account> accounts = new();
+    //private ConcurrentDictionary<string, Account> accounts = new();
     private PayModal? payModal;
     private ModalContainer? followsModal, followersModal;
     private List<string>? follows, followers;
     private int followsInitialCount, followersInitialCount;
+    private DateTime followsRefreshAfter = DateTime.MinValue;
+
+    private const int FollowsRefreshAfterSeconds = 5;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;
@@ -171,15 +174,13 @@
         followsModal?.Hide();
         followersModal?.Hide();
 
-        accounts = new();
         account = accountService.GetAccount(PubKey);
         feedFilter = new AuthorSubscriptionFilter(PubKey);
 
-        relayService.AddFilter(followsFilter = new FollowsSubscriptionFilter(PubKey));
+        relayService.AddFilter(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
         relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey));
         accountService.RegisterFollowerRequestFilter(followersFilter.Id, PubKey);
 
-        accountService.AccountDetailsChanged += AccountDetailsChanged;
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
 
@@ -189,29 +190,6 @@
         followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
     }
 
-    private Account GetAccount(string accountId)
-    {
-        return accounts.GetOrAdd(accountId, _ => accountService.GetAccount(accountId));
-    }
-
-    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
-    {
-        if (_disposed)
-            return;
-        if (data.accountId == account?.Id)
-        {
-            account.Details = data.details;
-            InvokeAsync(() => StateHasChanged());
-        }
-        else
-        {
-            if (!follows?.Contains(data.accountId) ?? false)
-                return;
-            if (!accounts.TryGetValue(data.accountId, out Account followAccount))
-                return;
-            followAccount.Details = data.details;
-        }
-    }
 
     private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
     {
@@ -219,14 +197,19 @@
             return;
         if (data.accountId != PubKey)
             return;
-        if (follows != null
-            && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
-            return;
-        follows = data.follows;
-        if (followsModal?.IsVisible() ?? false)
+        if (followsModal != null && followsModal.IsVisible())
         {
-            UpdateSubscriptionForDetails();
-            InvokeAsync(() => StateHasChanged());
+            var now = DateTime.UtcNow;
+            if (followsRefreshAfter < now)
+            {
+                followsRefreshAfter = now.AddSeconds(FollowsRefreshAfterSeconds);
+                if (follows != null
+                    && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
+                    return;
+                follows = data.follows;
+                UpdateSubscriptionForDetails();
+                InvokeAsync(() => StateHasChanged());
+            }
         }
     }
 
@@ -236,15 +219,20 @@
             return;
         if (accountId != PubKey)
             return;
-        var newFollowers = eventDatabase.GetFollowerIds(accountId);
-        if (followers != null
-            && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
-            return;
-        followers = newFollowers;
-        if (followersModal?.IsVisible() ?? false)
+        if (followersModal != null && followersModal.IsVisible())
         {
-            UpdateSubscriptionForDetails();
-            InvokeAsync(() => StateHasChanged());
+            var now = DateTime.UtcNow;
+            if (followsRefreshAfter < now)
+            {
+                followsRefreshAfter = now.AddSeconds(FollowsRefreshAfterSeconds);
+                var newFollowers = eventDatabase.GetFollowerIds(accountId);
+                if (followers != null
+                    && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
+                    return;
+                followers = newFollowers;
+                UpdateSubscriptionForDetails();
+                InvokeAsync(() => StateHasChanged());
+            }
         }
     }
 
@@ -317,7 +305,6 @@
 
     private void Cleanup()
     {
-        accountService.AccountDetailsChanged -= AccountDetailsChanged;
         accountService.AccountFollowsChanged -= AccountFollowsChanged;
         accountService.AccountFollowersChanged -= AccountFollowersChanged;
         relayService.DeleteFilters(feedFilter, followsFilter, followersFilter);

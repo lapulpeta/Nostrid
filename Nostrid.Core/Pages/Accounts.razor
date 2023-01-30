@@ -43,7 +43,7 @@
                         }
                         @if (account.Id != accountEditing)
                         {
-                            <AccountName Details="@account.Details" Id="@account.Id" />
+                            <AccountName Id="@account.Id" />
                             @if (!string.IsNullOrEmpty(account.Details?.About))
                             {
                                 <div class="mt-3">
