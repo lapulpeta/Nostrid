@@ -16,6 +16,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] NIP-05 profiles
 - [x] Lightning Network (pay button and profile setup)
 - [x] Text notes with support for markdown (receive and send)
+- [x] Upload media files (uses third-party services [nostr.build](https://nostr.build/) and [void.cat](https://void.cat/)) (Not available in Web version due to CORS)
 - [x] Delete notes
 - [x] NIP-13 PoW (receive/filter and send)
 - [x] Reactions (receive and send)

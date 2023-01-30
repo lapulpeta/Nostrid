@@ -1,15 +1,13 @@
-﻿using Nostrid.Misc;
+﻿using Newtonsoft.Json;
+using Nostrid.Misc;
 using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
 
 namespace Nostrid.Externals
 {
-    public partial class NostrBuildMediaService : IMediaService
+    public class NostrBuildMediaService : IMediaService
     {
-        private static Regex _linkRegex = LinkRegex();
-
         public string Name => "nostr.build";
-        
+
         public int MaxSize { get => 50 * 1024 * 1024; }
 
         public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType, Action<float> progress)
@@ -22,27 +20,20 @@ namespace Nostrid.Externals
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
             httpContent.Add(fileContent, "fileToUpload", filename);
             httpContent.Add(new StringContent("Upload Image"), "submit");
-            var response = await httpClient.PostAsync("https://nostr.build/upload.php", httpContent);
+            var response = await httpClient.PostAsync("https://nostr.build/api/upload/nostrid.php", httpContent);
             if (response.IsSuccessStatusCode)
             {
                 var responseText = await response.Content.ReadAsStringAsync();
                 if (responseText.IsNotNullOrEmpty())
                 {
-                    var match = _linkRegex.Match(responseText);
-                    if (match.Success)
+                    var link = JsonConvert.DeserializeObject<string>(responseText);
+                    if (Uri.IsWellFormedUriString(link, UriKind.Absolute))
                     {
-                        var link = match.Groups["link"].Value;
-                        if (Uri.IsWellFormedUriString(link, UriKind.Absolute))
-                        {
-                            return new Uri(link);
-                        }
+                        return new Uri(link);
                     }
                 }
             }
             return null;
         }
-
-        [GeneratedRegex(".*(?<link>https://nostr.build/i/nostr.build_([0-9a-f]+).([0-9a-zA-Z]+)).*")]
-        private static partial Regex LinkRegex();
     }
 }
