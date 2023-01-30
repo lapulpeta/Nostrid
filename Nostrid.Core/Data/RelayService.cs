@@ -528,7 +528,7 @@ public class RelayService
                 if (!filters.Contains(sub.Filter))
                 {
                     sub.Unsubscribe();
-                    //filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _); // TODO: find out best way to cleanup this dictionary
+                    filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _); // TODO: find out best way to cleanup this dictionary
                     subs.RemoveAt(i);
                 }
             }

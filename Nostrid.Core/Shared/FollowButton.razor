@@ -1,0 +1,63 @@
+﻿@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject EventDatabase eventDatabase
+@inject AccountService accountService
+
+@code {
+    [Parameter, EditorRequired]
+    public string AccountId { get; set; } = null!;
+}
+
+<button class="btn btn-sm @(!accountService.IsFollowing(AccountId) ? "btn-primary" : "btn-danger")"
+        @onclick="@(async () => await FollowUnfollow(AccountId))" @onclick:stopPropagation="true">
+    @(!accountService.IsFollowing(AccountId) ? "Follow" : "Unfollow")
+</button>
+
+@code
+{
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        accountService.AccountFollowsChanged += AccountFollowsChanged;
+    }
+
+    private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
+    {
+        if (_disposed)
+            return;
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task FollowUnfollow(string accountId)
+    {
+        await accountService.FollowUnfollow(accountId, accountService.IsFollowing(accountId));
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        accountService.AccountFollowsChanged -= AccountFollowsChanged;
+    }
+    #endregion
+}

@@ -39,12 +39,12 @@
     }
     <div class="d-flex flex-row flex-grow-1 align-items-start @(ReplyTo != null ? "pt-2" : "")">
         <a class="flex-shrink-0" href="/account/@accountService.MainAccount.Id">
-            <AccountPicture Details="@accountService.MainAccount?.Details" Id="@accountService.MainAccount?.Id"></AccountPicture>
+            <AccountPicture Id="@accountService.MainAccount?.Id"></AccountPicture>
         </a>
         <div class="flex-grow-1 ms-2">
             <p class="mb-1">
                 <a href="/account/@accountService?.MainAccount?.Id" class="fw-bold text-decoration-none mb-1">
-                    <AccountName Details="@accountService?.MainAccount?.Details" Id="@accountService?.MainAccount?.Id" />
+                    <AccountName Id="@accountService?.MainAccount?.Id" />
                 </a>
             </p>
             <EditForm Model="@textInput" OnValidSubmit="@Send">

@@ -8,10 +8,6 @@ public class Account
 
     public AccountDetails? Details { get; set; }
 
-    public List<string> FollowList { get; set; } = new();
-
-    public List<string> FollowerList { get; set; } = new();
-
     public DateTimeOffset? FollowsLastUpdate { get; set; }
 
     public DateTime LastNotificationRead { get; set; }

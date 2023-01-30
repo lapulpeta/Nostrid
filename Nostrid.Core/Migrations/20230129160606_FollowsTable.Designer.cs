@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nostrid.Model;
 
@@ -10,9 +11,11 @@ using Nostrid.Model;
 namespace Nostrid.Migrations
 {
     [DbContext(typeof(Context))]
-    partial class ContextModelSnapshot : ModelSnapshot
+    [Migration("20230129160606_FollowsTable")]
+    partial class FollowsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "7.0.2");
@@ -93,9 +96,6 @@ namespace Nostrid.Migrations
 
                     b.Property<string>("MainAccountId")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("ManualRelayManagement")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("MinDiffIncoming")
                         .HasColumnType("INTEGER");
@@ -244,15 +244,9 @@ namespace Nostrid.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("Read")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Uri")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("Write")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

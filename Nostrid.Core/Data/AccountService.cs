@@ -19,10 +19,12 @@ public class AccountService
 
     private readonly ConcurrentDictionary<string, ISigner> knownSigners = new();
     private readonly ConcurrentDictionary<string, DateTime> detailsNeededIds = new();
+    private readonly ConcurrentDictionary<string, string> followerRequestFilters = new();
 
     public event EventHandler? MainAccountChanged;
     public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
     public event EventHandler<(string accountId, List<string> follows)>? AccountFollowsChanged;
+    public event EventHandler<string>? AccountFollowersChanged;
     public event EventHandler? MentionsUpdated;
 
 
@@ -128,50 +130,38 @@ public class AccountService
 
     public bool IsFollowing(string accountToCheckId)
     {
-        return mainAccount.FollowList.Contains(accountToCheckId);
+        return eventDatabase.IsFollowing(MainAccount.Id, accountToCheckId);
     }
 
     public async Task FollowUnfollow(string otherAccountId, bool unfollow)
     {
         lock (eventDatabase)
         {
-            if ((unfollow && !mainAccount.FollowList.Contains(otherAccountId)) ||
-                (!unfollow && mainAccount.FollowList.Contains(otherAccountId)))
+            if ((unfollow && !IsFollowing(otherAccountId)) ||
+                (!unfollow && IsFollowing(otherAccountId)))
                 return;
 
             if (unfollow)
-                mainAccount.FollowList.Remove(otherAccountId);
+                eventDatabase.RemoveFollow(MainAccount.Id, otherAccountId);
             else
-                mainAccount.FollowList.Add(otherAccountId);
-            var otherAccount = eventDatabase.GetAccount(otherAccountId);
-            if (unfollow)
-            {
-                otherAccount.FollowerList.RemoveAll(f => f == mainAccount.Id);
-            }
-            else
-            {
-                if (!otherAccount.FollowerList.Contains(mainAccount.Id))
-                    otherAccount.FollowerList.Add(mainAccount.Id);
-            }
-
-            eventDatabase.SaveAccount(mainAccount);
-            eventDatabase.SaveAccount(otherAccount);
+                eventDatabase.AddFollow(MainAccount.Id, otherAccountId);
         }
-        await SendContactList(mainAccount);
+        await SendContactList();
     }
 
-    public async Task<bool> SendContactList(Account account)
+    public async Task<bool> SendContactList()
     {
+        var accountId = MainAccount.Id;
         var nostrEvent = new NostrEvent()
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = 3,
-            PublicKey = account.Id,
+            PublicKey = accountId,
             Tags = new(),
             Content = "{}",
         };
 
-        foreach (var follow in account.FollowList)
+        foreach (var follow in eventDatabase.GetFollowIds(accountId))
         {
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = { follow, relayService.GetRecommendedRelayUri(), "" } });
         }
@@ -228,7 +218,7 @@ public class AccountService
 
                     Task.Run(async () =>
                     {
-                        accountDetails.Nip05Valid = accountDetails.Nip05Id.IsNotNullOrEmpty() && await Nip05.RefreshNip05(mainAccount.Id, accountDetails.Nip05Id);
+                        accountDetails.Nip05Valid = accountDetails.Nip05Id.IsNotNullOrEmpty() && await Nip05.RefreshNip05(accountDetails.Id, accountDetails.Nip05Id);
                         eventDatabase.SetNip05Validity(accountDetails.Id, accountDetails.Nip05Valid);
                         AccountDetailsChanged?.Invoke(this, (accountDetails.Id, accountDetails));
                     });
@@ -238,62 +228,66 @@ public class AccountService
         }
     }
 
-    // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md
-    public void HandleKind3(Event eventToProcess)
+    public void RegisterFollowerRequestFilter(string filterId, string accountId)
     {
-        Account accountChanged = null;
+        followerRequestFilters[filterId] = accountId;
+    }
+
+    public void UnregisterFollowerRequestFilter(string filterId)
+    {
+        followerRequestFilters.TryRemove(filterId, out _);
+    }
+
+    // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md
+    public void HandleKind3(Event eventToProcess, string filterId)
+    {
+        Action? update = null;
 
         lock (eventDatabase)
         {
-            var newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.DataCount > 1).Select(t => t.Data1).Distinct().ToList();
+            var newFollowList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1).Distinct().ToList();
             var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
             if (!eventToProcess.CreatedAt.HasValue || !account.FollowsLastUpdate.HasValue ||
                 eventToProcess.CreatedAt.Value > account.FollowsLastUpdate.Value)
             {
-                var existingFollows = account.FollowList;
-
-                var removedFollows = existingFollows.Where(f => !newFollowList.Contains(f)).ToList();
-                var addedFollows = newFollowList.Where(f => !existingFollows.Contains(f)).ToList();
-
-                // Remove followed by
-                foreach (var removedFollowId in removedFollows)
+                if (followerRequestFilters.TryGetValue(filterId, out var requesterId))
                 {
-                    var removedFollow = eventDatabase.GetAccount(removedFollowId);
-                    removedFollow.FollowerList.RemoveAll(f => f == account.Id);
-                    eventDatabase.SaveAccount(removedFollow);
+                    // If we received this because someone is requesting his followers then we don't save all the list, just this single follow
+                    if (newFollowList.Contains(requesterId) && !eventDatabase.IsFollowing(account.Id, requesterId))
+                    {
+                        eventDatabase.AddFollow(account.Id, requesterId);
+
+                        update = () =>
+                        {
+                            AccountFollowersChanged?.Invoke(this, requesterId);
+                        };
+                    }
                 }
-
-                // Add followed by
-                foreach (var addedFollowId in addedFollows)
+                else
                 {
-                    var addedFollow = eventDatabase.GetAccount(addedFollowId);
-                    if (!addedFollow.FollowerList.Contains(account.Id))
-                        addedFollow.FollowerList.Add(account.Id);
-                    eventDatabase.SaveAccount(addedFollow);
-                }
+                    eventDatabase.SetFollows(account.Id, newFollowList);
 
-                // Save new list
-                account.FollowList = newFollowList;
+                    account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
 
-                account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+                    eventDatabase.SaveAccount(account);
 
-                eventDatabase.SaveAccount(account);
+                    if (account.Id == mainAccount?.Id)
+                    {
+                        SetMainAccount(account);
+                    }
 
-                if (account.Id == mainAccount?.Id)
-                {
-                    SetMainAccount(account);
-                }
-
-                if (addedFollows.Any() || removedFollows.Any())
-                {
-                    accountChanged = account;
+                    update = () =>
+                    {
+                        AccountFollowsChanged?.Invoke(this, (account.Id, newFollowList));
+                        foreach (var follow in newFollowList)
+                            AccountFollowersChanged?.Invoke(this, follow);
+                    };
                 }
             }
         }
 
-        if (accountChanged != null)
-            AccountFollowsChanged?.Invoke(this, (accountChanged.Id, accountChanged.FollowList));
+        update?.Invoke();
     }
 
     public string GetAccountName(string accountId)

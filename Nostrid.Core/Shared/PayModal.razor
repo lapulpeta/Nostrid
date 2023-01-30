@@ -4,6 +4,7 @@
 @using QRCoder;
 
 @inject Lud06Service lud06Service
+@inject AccountService accountService
 @inject IClipboardService clipboardService
 
 <ModalContainer @ref="modalContainer">
@@ -12,7 +13,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h1 class="modal-title fs-5" id="staticBackdropLabel">
-                        Pay to <AccountName Details="accountDetails" OnlyText="true"></AccountName>
+                        Pay to <AccountName id="@accountId" OnlyText="true"></AccountName>
                     </h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -79,7 +80,7 @@
     private const int MSAT_UNIT = 1000;
 
     private ModalContainer? modalContainer;
-    private AccountDetails? accountDetails;
+    private string accountId;
     private State state = State.Loading;
     private Lud06Data? lud06Data;
     private long amount;
@@ -89,9 +90,12 @@
     private long Min => lud06Data?.MinSendableMsat / MSAT_UNIT ?? 1;
     private long Max => lud06Data?.MaxSendableMsat / MSAT_UNIT ?? long.MaxValue;
 
-    public void Show(AccountDetails? accountDetails)
+    public void Show(string accountId)
     {
-        this.accountDetails = accountDetails;
+        this.accountId = accountId;
+
+        var accountDetails = accountService.GetAccountDetails(accountId);
+
         var ln = accountDetails?.Lud16Id ?? accountDetails?.Lud06Url;
 
         if (ln.IsNullOrEmpty())

@@ -1,32 +1,75 @@
-﻿
-@code{
+﻿@code {
     [Parameter]
-    public string? Id { get; set; }
+    public string Id { get; set; }
 
     [Parameter]
-    public AccountDetails? Details { get; set; }
+    public bool OnlyText { get; set; }
 
     [Parameter]
     public int? Size { get; set; }
 }
 
-@using Nostrid.Model;
+@using Nostrid.Data;
 @using Nostrid.Misc;
+@using Nostrid.Model;
 
-@if (!string.IsNullOrEmpty(PictureUrl) && Uri.IsWellFormedUriString(PictureUrl, UriKind.Absolute))
+@inject AccountService _accountService
+
+@if (_details != null && _details.PictureUrl.IsNotNullOrEmpty() && Uri.IsWellFormedUriString(_details.PictureUrl, UriKind.Absolute))
 {
-    <img style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" src="@PictureUrl" class="card-img-top rounded-999" alt="">
+    <img style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" src="@_details.PictureUrl" class="card-img-top rounded-999" alt="">
 }
-else if (!string.IsNullOrEmpty(AccountId))
+else if (Id.IsNotNullOrEmpty())
 {
     <div style="width:@(Size ?? DEFAULT_SIZE)px; height:@(Size ?? DEFAULT_SIZE)px" class="rounded-999 overflow-hidden">
-        @((MarkupString)Utils.ToSvgIdenticon(AccountId, Size ?? DEFAULT_SIZE))
+        @((MarkupString)Utils.ToSvgIdenticon(Id, Size ?? DEFAULT_SIZE))
     </div>
 }
 
-@code {
-    const int DEFAULT_SIZE = 48;
+@code
+{
+    private const int DEFAULT_SIZE = 48;
 
-    private string? PictureUrl => Details?.PictureUrl;
-    private string? AccountId => Id;
+    private AccountDetails _details;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        _details = _accountService.GetAccountDetails(Id);
+        _accountService.AccountDetailsChanged += AccountDetailsChanged;
+    }
+
+    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
+    {
+        if (data.accountId == Id)
+        {
+            _details = data.details;
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        _accountService.AccountDetailsChanged -= AccountDetailsChanged;
+    }
+    #endregion
 }

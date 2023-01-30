@@ -29,7 +29,7 @@
     public Action<Event>? OnRepost { get; set; }
 
     [Parameter]
-    public Action<AccountDetails>? OnPay { get; set; }
+    public Action<string>? OnPay { get; set; }
 
     [Parameter]
     public Action<Event>? OnDelete { get; set; }
@@ -124,9 +124,9 @@
             ConfirmationModal.Options.Button.CreateYesButton(async () => await feedService.Repost(_event))));
     }
 
-    private void Pay(AccountDetails accountDetails)
+    private void Pay(string accountId)
     {
-        payModal?.Show(accountDetails);
+        payModal?.Show(accountId);
     }
 
     private void Delete(Event _event)

@@ -4,8 +4,6 @@ public class NoteTree
 {
     public Event Note { get; set; }
 
-    public AccountDetails Details { get; set; }
-
     public List<NoteTree> Children { get; set; } = new();
 
     public NoteTree(Event note)
