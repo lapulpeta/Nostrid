@@ -6,10 +6,27 @@ using System.Collections.Concurrent;
 
 namespace Nostrid.Data;
 
+public class RelaysMonitor
+{
+    private readonly Func<int> _pendingRelaysGetter;
+    private readonly Func<int> _maxRelaysGetter;
+    private readonly Func<bool> _isAutoGetter;
+
+    public RelaysMonitor(Func<int> pendingRelaysGetter, Func<int> maxRelaysGetter, Func<bool> isAutoGetter)
+    {
+        _pendingRelaysGetter = pendingRelaysGetter;
+        _maxRelaysGetter = maxRelaysGetter;
+        _isAutoGetter = isAutoGetter;
+    }
+
+    public int PendingRelays => _pendingRelaysGetter();
+    public int MaxRelays => _maxRelaysGetter();
+    public bool IsAuto => _isAutoGetter();
+}
+
 public class RelayService
 {
-    private readonly string[] DefaultHighPriorityRelays = new[] { "wss://relay.damus.io", "wss://relay.nostr.info", "wss://nostr-pub.wellorder.net", "wss://nostr.onsats.org", "wss://nostr-pub.semisol.dev", "wss://nostr.walletofsatoshi", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://nostr.zebedee.cloud", "wss://relay.nostr.ch", "wss://relay.nostr-latam.link" };
-    private readonly string[] DefaultLowPriorityRelays = new[] { "wss://nostr.openchain.fr", "wss://nostr.sandwich.farm", "wss://nostr.ono.re", "wss://nostr.rocks", "wss://nostr-relay.untethr.me", "wss://nostr.mom", "wss://relayer.fiatjaf.com", "wss://expensive-relay.fiatjaf.com", "wss://freedom-relay.herokuapp.com/ws", "wss://nostr-relay.freeberty.net", "wss://nostr.zaprite.io", "wss://nostr.delo.software", "wss://nostr-relay.untethr.me", "wss://nostr.semisol.dev", "wss://nostr-verified.wellorder.net", "wss://nostr.drss.io", "wss://nostr.unknown.place", "wss://nostr.oxtr.dev", "wss://relay.grunch.dev", "wss://relay.cynsar.foundation", "wss://nostr-2.zebedee.cloud", "wss://nostr-relay.digitalmob.ro", "wss://no.str.cr" };
+    private readonly string[] DefaultRelays = new[] { "wss://nostr-pub.wellorder.net", "wss://nostr-relay.wlvs.space", "wss://nostr.bitcoiner.social", "wss://relay.damus.io", "wss://nostr.zebedee.cloud", "wss://relay.nostr.info", "wss://nostr-pub.semisol.dev", "wss://nostr.walletofsatoshi.com", "wss://nostr.swiss-enigma.ch", "wss://nostr.cercatrova.me", "wss://relayer.fiatjaf.com", "wss://nostr.rocks", "wss://rsslay.fiatjaf.com", "wss://nostr-2.zebedee.cloud", "wss://expensive-relay.fiatjaf.com", "wss://freedom-relay.herokuapp.com/ws", "wss://nostr-relay.freeberty.net", "wss://nostr.onsats.org", "wss://nostr-relay.untethr.me", "wss://nostr.semisol.dev", "wss://nostr-verified.wellorder.net", "wss://nostr.drss.io", "wss://nostr.unknown.place", "wss://nostr.openchain.fr", "wss://nostr.delo.software", "wss://relay.minds.com/nostr/v1/ws", "wss://nostr.zaprite.io", "wss://nostr.oxtr.dev", "wss://nostr.ono.re", "wss://relay.grunch.dev", "wss://relay.cynsar.foundation", "wss://nostr.sandwich.farm", "wss://relay.nostr.ch", "wss://nostr.mom", "wss://nostr-relay.alekberg.net", "wss://nostr.developer.li" };
     private const int MinRelays = 8;
     private const int PriorityLowerBound = 0;
     private const int PriorityHigherBound = 10;
@@ -22,22 +39,24 @@ public class RelayService
     private readonly ConcurrentDictionary<string, SubscriptionFilter> filterBySubscriptionId = new();
     private readonly BlockingCollection<Relay>[] pendingRelaysByPriority = new BlockingCollection<Relay>[PriorityHigherBound - PriorityLowerBound + 1];
     private readonly ConcurrentDictionary<long, DateTimeOffset> relayRateLimited = new();
+    private readonly ConcurrentDictionary<long, bool> connectedRelays = new();
+    private readonly List<Task> runningTasks = new();
 
     private CancellationTokenSource clientThreadsCancellationTokenSource;
-
     private bool running;
-    private int connectedClients;
-    private List<Task> runningTasks = new();
 
-    public int ConnectedRelays => connectedClients;
-    public int PendingRelays => pendingRelaysByPriority.SelectMany(a => a).Count();
+    public int ConnectedRelays => connectedRelays.Count;
     public int RateLimitedRelays => relayRateLimited.Count;
-    public int MaxRelays => Math.Max(MinRelays, Environment.ProcessorCount);
     public int FiltersCount => filters.Count;
 
-    public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
+    public bool Restarting => clientThreadsCancellationTokenSource.IsCancellationRequested;
 
-    // This method starts one client per relay in a separate thread
+	public RelaysMonitor RelaysMonitor { get; private set; }
+
+    public event EventHandler<(string filterId, IEnumerable<Event> events)> ReceivedEvents;
+    public event EventHandler? ClientsStateChanged;
+    public event EventHandler<(long relayId, bool connected)>? ClientStatusChanged;
+
     public RelayService(EventDatabase eventDatabase, ConfigService configService)
     {
         if (PriorityLowerBound > PriorityHigherBound)
@@ -46,15 +65,6 @@ public class RelayService
         this.eventDatabase = eventDatabase;
         this.configService = configService;
         InitRelays();
-        foreach (var index in Enumerable.Range(PriorityLowerBound, PriorityHigherBound - PriorityLowerBound + 1))
-        {
-            pendingRelaysByPriority[index] = new();
-        }
-
-        foreach (var relay in eventDatabase.ListRelays().OrderBy(r => Random.Shared.Next()))
-        {
-            pendingRelaysByPriority[relay.Priority].Add(relay);
-        }
         StartNostrClients();
     }
 
@@ -64,13 +74,43 @@ public class RelayService
             return;
 
         running = true;
-        _ = Task.Run(() =>
+        Task.Run(() =>
         {
             clientThreadsCancellationTokenSource = new CancellationTokenSource();
-            for (int i = 0; i < MaxRelays; i++)
+            if (configService.MainConfig.ManualRelayManagement)
             {
-                runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
+                var relaysToUse = eventDatabase.ListRelays().Where(r => r.Read || r.Write).ToList();
+                RelaysMonitor = new RelaysMonitor(
+                    () => 0,
+                    () => relaysToUse.Count,
+                    () => false);
+                foreach (var relay in relaysToUse)
+                {
+
+                    runningTasks.Add(RunSpecificNostrClient(relay, clientThreadsCancellationTokenSource.Token));
+                }
             }
+            else
+            {
+                foreach (var index in Enumerable.Range(PriorityLowerBound, PriorityHigherBound - PriorityLowerBound + 1))
+                {
+                    pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - index] = new();
+                }
+                foreach (var relay in eventDatabase.ListRelays().OrderBy(r => Random.Shared.Next()))
+                {
+                    pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - relay.Priority].Add(relay);
+                }
+                var maxRelays = Math.Max(MinRelays, Environment.ProcessorCount);
+                RelaysMonitor = new RelaysMonitor(
+                    () => pendingRelaysByPriority.SelectMany(a => a).Count(),
+                    () => maxRelays,
+                    () => true);
+                foreach (var index in Enumerable.Range(0, maxRelays))
+                {
+                    runningTasks.Add(RunAnyNostrClient(clientThreadsCancellationTokenSource.Token));
+                }
+            }
+            ClientsStateChanged?.Invoke(this, EventArgs.Empty);
         });
     }
 
@@ -78,11 +118,12 @@ public class RelayService
     {
         running = false;
         clientThreadsCancellationTokenSource.Cancel();
+        ClientsStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void RestartNostrClients()
     {
-        _ = Task.Run(async () =>
+        Task.Run(async () =>
         {
             StopNostrClients();
             await Task.WhenAll(runningTasks);
@@ -91,24 +132,24 @@ public class RelayService
         });
     }
 
+    public void ResetRelays()
+    {
+        eventDatabase.ClearRelays();
+        InitRelays();
+    }
+
     private void InitRelays()
     {
         if (eventDatabase.GetRelayCount() == 0)
         {
-            foreach (var relay in DefaultHighPriorityRelays)
+            foreach (var relay in DefaultRelays)
             {
                 eventDatabase.SaveRelay(new Relay()
                 {
                     Uri = relay,
-                    Priority = PriorityLowerBound // Max priority
-                });
-            }
-            foreach (var relay in DefaultLowPriorityRelays)
-            {
-                eventDatabase.SaveRelay(new Relay()
-                {
-                    Uri = relay,
-                    Priority = (PriorityHigherBound + PriorityLowerBound) / 2 // Middle
+                    Priority = (PriorityHigherBound + PriorityLowerBound) / 2, // Middle
+                    Read = true,
+                    Write = true,
                 });
             }
         }
@@ -251,40 +292,76 @@ public class RelayService
         return eventDatabase.ListRelays().FirstOrDefault()?.Uri;
     }
 
-    public void AddNewRelayIfUnknown(string uri)
+    public bool AddNewRelayIfUnknown(string uri)
     {
-        if (!eventDatabase.RelayExists(uri))
+        if (Uri.IsWellFormedUriString(uri, UriKind.Absolute))
         {
-            AddRelay(new Relay()
+            return SaveRelay(new Relay()
             {
                 Uri = uri,
+                Read = true,
+                Write = true
             });
         }
+        return false;
     }
 
-    public void AddRelay(Relay relay)
+    public bool SaveRelay(Relay relay)
     {
         if (relay.Priority < PriorityLowerBound || relay.Priority > PriorityHigherBound)
             throw new Exception($"Priority should be between {PriorityLowerBound} and {PriorityHigherBound}");
 
-        eventDatabase.SaveRelay(relay);
-        pendingRelaysByPriority[relay.Priority].Add(relay);
+        return eventDatabase.SaveRelay(relay);
+    }
+
+    public List<Relay> GetRelays()
+    {
+        return eventDatabase.ListRelays();
     }
 
     private async Task EventDispatcher(Relay relay)
     {
+        if (!RelaysMonitor.IsAuto)
+            return;
+
         if (!clientByRelay.TryGetValue(relay, out var client))
             return;
 
         foreach (var ev in eventDatabase.ListOwnEvents(relay.Id))
         {
-            ev.Content ??= string.Empty; // TODO: LiteDb stores string.Empty as null
+            ev.Content ??= string.Empty;
             await client.PublishEvent(ev.ToNostrEvent());
             eventDatabase.AddSeenBy(ev.Id, relay.Id);
         }
     }
 
-    private static readonly object atomicSorting = new();
+    private async Task RunSpecificNostrClient(Relay relay, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                await RunNostrClient(relay, cancellationToken);
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
     private async Task RunAnyNostrClient(CancellationToken cancellationToken)
     {
         Relay? relay = null;
@@ -293,11 +370,6 @@ public class RelayService
             try
             {
                 BlockingCollection<Relay>.TakeFromAny(pendingRelaysByPriority, out relay, cancellationToken);
-
-                if (!eventDatabase.RelayExists(relay.Uri))
-                {
-                    continue;
-                }
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -316,7 +388,7 @@ public class RelayService
                 {
                     // Requeue after 30 seconds
                     await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    pendingRelaysByPriority[relayToRequeue.Priority].Add(relayToRequeue); // Put back in queue
+                    pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - relayToRequeue.Priority].Add(relayToRequeue); // Put back in queue
                 }, cancellationToken);
 
                 relay = null;
@@ -327,10 +399,6 @@ public class RelayService
             {
                 break;
             }
-        }
-        if (relay != null)
-        {
-            pendingRelaysByPriority[relay.Priority].Add(relay); // Put back in queue
         }
     }
 
@@ -353,14 +421,24 @@ public class RelayService
             await client.ConnectAndWaitUntilConnected(cancellationToken);
             try
             {
-                Interlocked.Increment(ref connectedClients);
+                connectedRelays[relay.Id] = true;
+                try
+                {
+                    ClientStatusChanged?.Invoke(this, (relay.Id, true));
+                }
+                catch { }
                 UpdateSubscriptions(relay);
                 _ = EventDispatcher(relay);
                 await client.ListenForMessages();
             }
             finally
             {
-                Interlocked.Decrement(ref connectedClients);
+                connectedRelays.TryRemove(relay.Id, out _);
+                try
+                {
+                    ClientStatusChanged?.Invoke(this, (relay.Id, false));
+                }
+                catch { }
             }
         }
         catch (Exception ex)
@@ -378,6 +456,11 @@ public class RelayService
         }
     }
 
+    public bool IsRelayConnected(long relayId)
+    {
+        return connectedRelays.ContainsKey(relayId);
+    }
+
     private void CleanupRelay(Relay relay)
     {
         lock (clientByRelay)
@@ -390,10 +473,9 @@ public class RelayService
         }
     }
 
-    public void DeleteRelay(Relay relay)
+    public void DeleteRelay(long relayId)
     {
-        CleanupRelay(relay);
-        eventDatabase.DeleteRelay(relay.Id);
+        eventDatabase.DeleteRelay(relayId);
     }
 
     private void UpdateSubscriptions()
@@ -409,6 +491,9 @@ public class RelayService
 
     private void UpdateSubscriptions(Relay relay)
     {
+        if (!RelaysMonitor.IsAuto && !relay.Read)
+            return;
+
         var client = clientByRelay[relay];
         var subs = subscriptionsByClient.GetOrAdd(client, _ => new());
 
@@ -452,18 +537,21 @@ public class RelayService
 
     public void SendEvent(NostrEvent nostrEvent)
     {
-        eventDatabase.SaveOwnEvents(nostrEvent);
+        eventDatabase.SaveOwnEvents(nostrEvent, RelaysMonitor.IsAuto);
         lock (clientByRelay)
         {
             foreach (var (relay, client) in clientByRelay)
             {
-                try
+                if (RelaysMonitor.IsAuto || relay.Write)
                 {
-                    _ = client.PublishEvent(nostrEvent);
-                    eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
-                }
-                catch
-                {
+                    try
+                    {
+                        _ = client.PublishEvent(nostrEvent);
+                        eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
+                    }
+                    catch
+                    {
+                    }
                 }
             }
         }

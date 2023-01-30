@@ -16,18 +16,6 @@ public class Config
     
     public string? Theme { get; set; }
 
-    public Config Clone()
-    {
-        return new Config()
-        {
-            Id = Id,
-            ShowDifficulty = ShowDifficulty,
-            MinDiffIncoming = MinDiffIncoming,
-            StrictDiffCheck = StrictDiffCheck,
-            TargetDiffOutgoing = TargetDiffOutgoing,
-            MainAccountId = MainAccountId,
-            Theme = Theme
-        };
-    }
+    public bool ManualRelayManagement { get; set; }
 }
 

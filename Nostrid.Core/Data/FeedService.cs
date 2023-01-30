@@ -70,7 +70,10 @@ public class FeedService
 
     public void HandleKind2(Event eventToProcess)
     {
-        HandleRelayRecommendation(eventToProcess.Content);
+        if (relayService.RelaysMonitor.IsAuto)
+        {
+            HandleRelayRecommendation(eventToProcess.Content);
+        }
     }
 
     public void HandleKind5(Event eventToProcess)
@@ -90,10 +93,7 @@ public class FeedService
 
     private void HandleRelayRecommendation(string uri)
     {
-        if (Uri.IsWellFormedUriString(uri, UriKind.Absolute))
-        {
-            relayService.AddNewRelayIfUnknown(uri.ToLower());
-        }
+        relayService.AddNewRelayIfUnknown(uri.ToLower());
     }
 
     public void HandleKind7(Event eventToProcess)
