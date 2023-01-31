@@ -518,14 +518,12 @@ namespace Nostrid.Data
             db.SaveChanges();
         }
 
-        public async Task ClearFollowsAsync(string accountId)
+        public void ClearFollows(string accountId)
         {
             using var db = new Context(_dbfile);
-            using var tx = await db.Database.BeginTransactionAsync();
             db.Events.Where(e => e.Kind == NostrKind.Contacts && e.PublicKey == accountId).ExecuteDelete();
             db.Follows.Where(f => f.AccountId == accountId).ExecuteDelete();
             db.Accounts.Where(a => a.Id == accountId).ExecuteUpdate(a => a.SetProperty(a => a.FollowsLastUpdate, (DateTimeOffset?)null));
-            await tx.CommitAsync();
         }
 
         public void RemoveFollow(string accountId, string followId)

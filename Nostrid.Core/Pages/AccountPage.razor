@@ -187,10 +187,10 @@
         followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
     }
 
-    private async Task ReloadFollows()
+    private void ReloadFollows()
     {
         follows = null;
-        await eventDatabase.ClearFollowsAsync(PubKey);
+        eventDatabase.ClearFollows(PubKey);
         relayService.DeleteFilters(followsFilter);
         relayService.AddFilter(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
     }
