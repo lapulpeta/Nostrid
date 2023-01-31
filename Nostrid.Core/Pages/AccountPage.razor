@@ -31,6 +31,7 @@
             <ul class="dropdown-menu">
                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(PubKey)))" @onclick:stopPropagation="true">Copy Npub</a></li>
                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(PubKey))" @onclick:stopPropagation="true">Copy Hex</a></li>
+                <li><a role="button" class="dropdown-item" @onclick="@(() => ReloadFollows())" @onclick:stopPropagation="true">Reload Follows</a></li>
             </ul>
         </div>
     </div>
@@ -174,7 +175,7 @@
         feedFilter = new AuthorSubscriptionFilter(PubKey);
 
         relayService.AddFilter(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
-        relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey));
+        relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey) { DontSaveInLocalCache = true });
         accountService.RegisterFollowerRequestFilter(followersFilter.Id, PubKey);
 
         accountService.AccountFollowsChanged += AccountFollowsChanged;
@@ -184,6 +185,14 @@
         followers = null;
         followsInitialCount = eventDatabase.GetFollowCount(PubKey);
         followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
+    }
+
+    private async Task ReloadFollows()
+    {
+        follows = null;
+        await eventDatabase.ClearFollowsAsync(PubKey);
+        relayService.DeleteFilters(followsFilter);
+        relayService.AddFilter(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
     }
 
     private static object lockobj = new();
@@ -203,10 +212,10 @@
                 updateAfterChange = Task.Delay(TimeSpan.FromSeconds(StateHasChangedAfterSeconds)).ContinueWith((_) =>
                 {
                     updateAfterChange = null;
-                    if (follows != null
-                    && Enumerable.SequenceEqual(data.follows.OrderBy(e => e), follows.OrderBy(e => e)))
-                        return;
-                    follows = data.follows;
+                    var newFollows = eventDatabase.GetFollowIds(PubKey);
+                    if (follows != null && Enumerable.SequenceEqual(newFollows.OrderBy(e => e), follows.OrderBy(e => e)))
+                            return;
+                    follows = newFollows;
                     UpdateSubscriptionForDetails();
                     InvokeAsync(() => StateHasChanged());
                 });
@@ -230,8 +239,7 @@
                 {
                     updateAfterChange = null;
                     var newFollowers = eventDatabase.GetFollowerIds(accountId);
-                    if (followers != null
-                        && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
+                    if (followers != null && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
                         return;
                     followers = newFollowers;
                     UpdateSubscriptionForDetails();

@@ -17,6 +17,8 @@ public abstract class SubscriptionFilter
 
     public DateTimeOffset? DestroyOn { get; set; }
 
+    public bool DontSaveInLocalCache { get; set; }
+
     protected SubscriptionFilter(params int[] requiredNips)
     {
         Id = IdGenerator.Generate();
