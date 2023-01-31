@@ -188,30 +188,26 @@ public class RelayService
 
     private void EventReceived(Relay relay, string subscriptionId, NostrEvent[] events)
     {
-        var oldest = DateTimeOffset.UtcNow;
         var newEvents = new HashSet<Event>();
         var destroyed = false;
 
-        foreach (var nostrEvent in events)
-        {
-            var ev = EventExtension.FromNostrEvent(nostrEvent);
-            if (ev.Kind == NostrKind.Text && configService.MainConfig.MinDiffIncoming > 0)
-            {
-                if (!ev.HasPow || ev.Difficulty < configService.MainConfig.MinDiffIncoming || !ev.CheckPowTarget(configService.MainConfig.StrictDiffCheck))
-                    continue;
-            }
-
-            if (ev.CreatedAt.HasValue && ev.CreatedAt < oldest)
-            {
-                oldest = ev.CreatedAt.Value;
-            }
-            if (eventDatabase.SaveNewEvent(ev, relay))
-            {
-                newEvents.Add(ev);
-            }
-        }
         if (filterBySubscriptionId.TryGetValue(subscriptionId, out var filter))
         {
+            foreach (var nostrEvent in events)
+            {
+                var ev = EventExtension.FromNostrEvent(nostrEvent);
+                if (ev.Kind == NostrKind.Text && configService.MainConfig.MinDiffIncoming > 0)
+                {
+                    if (!ev.HasPow || ev.Difficulty < configService.MainConfig.MinDiffIncoming || !ev.CheckPowTarget(configService.MainConfig.StrictDiffCheck))
+                        continue;
+                }
+
+                if (filter.DontSaveInLocalCache || eventDatabase.SaveNewEvent(ev, relay))
+                {
+                    newEvents.Add(ev);
+                }
+            }
+
             if (newEvents.Count > 0)
             {
                 ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
