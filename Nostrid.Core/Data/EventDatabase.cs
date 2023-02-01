@@ -37,6 +37,29 @@ namespace Nostrid.Data
             });
         }
 
+        public void Clean()
+        {
+            _optimizing = true;
+            Task.Run(async () =>
+            {
+                using var db = new Context(_dbfile);
+                await db.AccountDetails.ExecuteDeleteAsync();
+                await db.Follows.ExecuteDeleteAsync();
+                await db.Accounts.Where(a => a.PrivKey == null).ExecuteDeleteAsync();
+                await db.Accounts.Where(a => a.PrivKey != null).ExecuteUpdateAsync(a => a.SetProperty(a => a.FollowsLastUpdate, (DateTime?)null));
+                await db.EventSeen.ExecuteDeleteAsync();
+                await db.TagDatas.ExecuteDeleteAsync();
+                await db.Events.ExecuteDeleteAsync();
+                await db.Database.ExecuteSqlAsync($"VACUUM");
+                await db.Database.ExecuteSqlAsync($"ANALYZE");
+            })
+            .ContinueWith((_) =>
+            {
+                _optimizing = false;
+                OptimizationComplete?.Invoke(this, EventArgs.Empty);
+            });
+        }
+
         public bool IsOptimizing => _optimizing;
 
         public bool SaveRelay(Relay relay)

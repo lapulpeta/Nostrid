@@ -106,27 +106,40 @@
         <li class="list-group-item">
             <h5 class="my-2">Database</h5>
         </li>
-        <li class="list-group-item">
-            <div class="row">
-                <div class="col-8 align-self-center">
-                    @if (!eventDatabase.IsOptimizing)
-                    {
-                        <span class="fw-bold">Optimize database to make it faster and smaller</span>
-                    }
-                    else
-                    {
+        @if (eventDatabase.IsOptimizing)
+        {
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-8 align-self-center">
                         <div class="spinner-border" role="status"></div>
                         <span class="text-secondary">Optimizing database...</span>
-                    }
+                    </div>
                 </div>
-                <div class="col-4 text-end">
-                    @if (!eventDatabase.IsOptimizing)
-                    {
+            </li>
+        }
+        else
+        {
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-8 align-self-center">
+                        <span class="fw-bold">Optimize database to make it faster</span>
+                    </div>
+                    <div class="col-4 text-end">
                         <button class="btn btn-primary py-1" @onclick="@(() => eventDatabase.Optimize())">Optimize</button>
-                    }
+                    </div>
                 </div>
-            </div>
-        </li>
+            </li>
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-8 align-self-center">
+                        <span class="fw-bold">Remove all data except private keys and settings</span>
+                    </div>
+                    <div class="col-4 text-end">
+                        <button class="btn btn-primary py-1" @onclick="@Clean">Clean</button>
+                    </div>
+                </div>
+            </li>
+        }
     </ul>
 </div>
 
@@ -233,6 +246,8 @@
     </ul>
 </div>
 
+<ConfirmationModal @ref="confirmationModal" />
+
 <Scripts @ref="scripts" />
 
 @code {
@@ -241,6 +256,7 @@
     private List<Relay> relays = new();
     private string newRelayUri = string.Empty;
     private ConcurrentDictionary<long, bool> relayStatus = new();
+    private ConfirmationModal? confirmationModal;
 
     public const string DARK_THEME = "dark";
     public const string LIGHT_THEME = "light";
@@ -308,11 +324,18 @@
 
     private void ResetRelays()
     {
-        relayService.ResetRelays();
-        ReloadRelays();
-        configModel.ManualRelayManagement = false;
-        Save();
-        relayService.RestartNostrClients();
+        confirmationModal?.Show(ConfirmationModal.Options.Create(
+            "Are you sure you want to restore the default list of relays and activate automatic mode?",
+            "Reset relays",
+            ConfirmationModal.Options.Button.CreateNoButton(),
+            ConfirmationModal.Options.Button.CreateYesButton(() =>
+            {
+                relayService.ResetRelays();
+                ReloadRelays();
+                configModel.ManualRelayManagement = false;
+                Save();
+                relayService.RestartNostrClients();
+            })));
     }
 
     private bool IsRelayConnected(long relayId)
@@ -323,6 +346,18 @@
     private void OptimizationComplete(object? sender, EventArgs data)
     {
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private void Clean()
+    {
+        confirmationModal?.Show(ConfirmationModal.Options.Create(
+            "Are you sure you want to clean the database? Your accounts and settings will be preserved.",
+            "Clean database",
+            ConfirmationModal.Options.Button.CreateNoButton(),
+            ConfirmationModal.Options.Button.CreateYesButton(() =>
+            {
+                eventDatabase.Clean();
+            })));
     }
 
     #region Dispose
