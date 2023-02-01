@@ -95,6 +95,7 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
             db.Relays.ExecuteDelete();
+            db.EventSeen.ExecuteDelete();
         }
 
         public int GetRelayCount()
