@@ -135,36 +135,40 @@
         <li class="list-group-item">
             <h5 class="my-2">Relays</h5>
         </li>
-        <li class="list-group-item">
-            <div class="row">
-                <div class="col-8 align-self-center">
-                    @if (!relayService.Restarting)
-                    {
-                        <span class="fw-bold">You need to restart connections to apply any change here</span>
-                    }
-                    else
-                    {
+        @if (relayService.IsRestarting)
+        {
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-8 align-self-center">
+                        <div class="spinner-border" role="status"></div>
                         <span class="text-secondary">Restarting...</span>
-                    }
+                    </div>
                 </div>
-                <div class="col-4 text-end">
-                    @if (!relayService.Restarting)
-                    {
+            </li>
+        }
+        else
+        {
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-8 align-self-center">
+                        <span class="fw-bold">Reset to default list of relays and automatic mode</span>
+                    </div>
+                    <div class="col-4 text-end">
+                        <button class="btn btn-primary py-1" @onclick="@ResetRelays">Reset relays</button>
+                    </div>
+                </div>
+            </li>
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-8 align-self-center">
+                        <span class="fw-bold">Restart connections to apply any change made below</span>
+                    </div>
+                    <div class="col-4 text-end">
                         <button class="btn btn-primary py-1" @onclick="() => relayService.RestartNostrClients()">Restart connections</button>
-                    }
+                    </div>
                 </div>
-            </div>
-        </li>
-        <li class="list-group-item">
-            <div class="row">
-                <div class="col-8 align-self-center">
-                    <span class="fw-bold">Reset to default list of relays and automatic mode</span>
-                </div>
-                <div class="col-4 text-end">
-                    <button class="btn btn-primary py-1" @onclick="@ResetRelays">Reset relays</button>
-                </div>
-            </div>
-        </li>
+            </li>
+        }
         <li class="list-group-item">
             <div class="row align-items-center">
                 <label class="col-6" for="manualRelayManagement">

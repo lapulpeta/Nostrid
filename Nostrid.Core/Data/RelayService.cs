@@ -51,7 +51,7 @@ public class RelayService
     public int RateLimitedRelays => relayRateLimited.Count;
     public int FiltersCount => filters.Count;
 
-    public bool Restarting => clientThreadsCancellationTokenSource.IsCancellationRequested;
+    public bool IsRestarting => clientThreadsCancellationTokenSource.IsCancellationRequested;
 
     public RelaysMonitor RelaysMonitor { get; private set; }
 

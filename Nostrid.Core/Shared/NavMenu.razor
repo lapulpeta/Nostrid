@@ -105,7 +105,7 @@
 					}
 					<br />
 					-Connected: @relayService.ConnectedRelays/@relayService.RelaysMonitor.MaxRelays
-					@if (!relayService.Restarting)
+					@if (!relayService.IsRestarting)
 					{
 						<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button>
 					}
