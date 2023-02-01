@@ -416,7 +416,7 @@ public class RelayService
 
         try
         {
-            var nip11 = await TryNip11(relay.Uri);
+            var nip11 = await TryNip11(relay.Uri, cancellationToken);
             if (nip11 != null && nip11.SupportedNips != null)
             {
                 relay.SupportedNips = nip11.SupportedNips;
@@ -562,16 +562,16 @@ public class RelayService
     }
 
     // NIP-11: https://github.com/nostr-protocol/nips/blob/master/11.md
-    private static async Task<Nip11Response?> TryNip11(string uri)
+    private static async Task<Nip11Response?> TryNip11(string uri, CancellationToken cancellationToken)
     {
         try
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/nostr+json"));
-            using var httpResponse = await httpClient.GetAsync(uri.Replace("wss://", "https://"));
+            using var httpResponse = await httpClient.GetAsync(uri.Replace("wss://", "https://"), cancellationToken);
             if (httpResponse.IsSuccessStatusCode)
             {
-                var response = await httpResponse.Content.ReadAsStringAsync();
+                var response = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
                 if (response.IsNotNullOrEmpty())
                 {
                     return JsonConvert.DeserializeObject<Nip11Response>(response);
