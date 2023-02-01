@@ -52,6 +52,7 @@ namespace Nostrid.Data
                 await db.Events.ExecuteDeleteAsync();
                 await db.Database.ExecuteSqlAsync($"VACUUM");
                 await db.Database.ExecuteSqlAsync($"ANALYZE");
+                DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
             })
             .ContinueWith((_) =>
             {
