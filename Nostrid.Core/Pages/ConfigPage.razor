@@ -5,6 +5,7 @@
 
 @inject ConfigService configService
 @inject RelayService relayService
+@inject EventDatabase eventDatabase
 
 @implements IDisposable
 
@@ -94,6 +95,35 @@
                                checked="@Theme"
                                @onchange="@(args => { Theme = args.Value as bool? ?? false; Save(); })" />
                     </div>
+                </div>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<div class="mt-4 card shadow">
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+            <h5 class="my-2">Database</h5>
+        </li>
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-8 align-self-center">
+                    @if (!eventDatabase.IsOptimizing)
+                    {
+                        <span class="fw-bold">Optimize database to make it faster and smaller</span>
+                    }
+                    else
+                    {
+                        <div class="spinner-border" role="status"></div>
+                        <span class="text-secondary">Optimizing database...</span>
+                    }
+                </div>
+                <div class="col-4 text-end">
+                    @if (!eventDatabase.IsOptimizing)
+                    {
+                        <button class="btn btn-primary py-1" @onclick="@(() => eventDatabase.Optimize())">Optimize</button>
+                    }
                 </div>
             </div>
         </li>
@@ -228,6 +258,7 @@
         ReloadRelays();
         relayService.ClientsStateChanged += ClientsStateChanged;
         relayService.ClientStatusChanged += ClientStatusChanged;
+        eventDatabase.OptimizationComplete += OptimizationComplete;
     }
 
     private void ReloadRelays()
@@ -285,6 +316,11 @@
         return relayStatus.GetOrAdd(relayId, (_) => relayService.IsRelayConnected(relayId));
     }
 
+    private void OptimizationComplete(object? sender, EventArgs data)
+    {
+        InvokeAsync(() => StateHasChanged());
+    }
+
     #region Dispose
     private bool _disposed;
 
@@ -307,6 +343,7 @@
     {
         relayService.ClientsStateChanged -= ClientsStateChanged;
         relayService.ClientStatusChanged -= ClientStatusChanged;
+        eventDatabase.OptimizationComplete -= OptimizationComplete;
     }
     #endregion
 }

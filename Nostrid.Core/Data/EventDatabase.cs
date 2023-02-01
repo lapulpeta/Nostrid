@@ -9,18 +9,35 @@ namespace Nostrid.Data
     public class EventDatabase
     {
         private string _dbfile;
+        private bool _optimizing;
 
         public event EventHandler? DatabaseHasChanged;
-
+        public event EventHandler? OptimizationComplete;
 
         public void InitDatabase(string dbfile)
         {
             _dbfile = dbfile;
             using var db = new Context(dbfile);
             db.Database.Migrate();
-            db.Database.ExecuteSqlAsync($"ANALYZE");
-            db.Database.ExecuteSqlAsync($"VACUUM");
         }
+
+        public void Optimize()
+        {
+            _optimizing = true;
+            Task.Run(async () =>
+            {
+                using var db = new Context(_dbfile);
+                await db.Database.ExecuteSqlAsync($"VACUUM");
+                await db.Database.ExecuteSqlAsync($"ANALYZE");
+            })
+            .ContinueWith((_) =>
+            {
+                _optimizing = false;
+                OptimizationComplete?.Invoke(this, EventArgs.Empty);
+            });
+        }
+
+        public bool IsOptimizing => _optimizing;
 
         public bool SaveRelay(Relay relay)
         {
