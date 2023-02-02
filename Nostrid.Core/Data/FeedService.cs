@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
@@ -118,23 +119,47 @@ public class FeedService
         return eventDatabase.ListNotes(filters, count);
     }
 
-    public List<Event> GetNotesThread(string eventId, int downLevels, out bool maxReached)
+    public List<Event> GetNotesThread(string eventId, out string? rootId)
     {
-        return eventDatabase.ListNoteTree(eventId, downLevels, out maxReached).ToList();
+        using var db = eventDatabase.CreateContext();
+        var node = db.Events.Where(e => e.Kind == NostrKind.Text).Include(e => e.Tags).FirstOrDefault(e => e.Id == eventId) ??
+            db.Events.Where(e => e.Kind == NostrKind.Text).Include(e => e.Tags).FirstOrDefault(e => e.Tags.Any(t => t.Data0 == "e" && t.Data1 == eventId));
+        if (node != null)
+        {
+            rootId = node.ReplyToRootId ?? node.Id;
+            var localRootId = rootId;
+            var allthread = db.Events
+                .Include(e => e.Tags)
+                .Where(e => e.Kind == NostrKind.Text && (e.Id == localRootId || e.Tags.Any(t => t.Data0 == "e" && t.Data1 == localRootId)))
+                .ToList()
+                .Where(e => e.ReplyToRootId == localRootId || e.Id == localRootId);
+            var ret = new HashSet<Event>(allthread)
+            {
+                node
+            };
+            return ret.ToList();
+        }
+        rootId = null;
+        return new();
     }
 
-    public List<NoteTree> GetTreesFromNotes(IEnumerable<Event> tws)
+    public List<NoteTree> GetTreesFromNotes(IEnumerable<Event> tws, List<NoteTree>? rootTrees = null)
     {
-        List<NoteTree> rootTrees = new();
+        if (rootTrees == null)
+        {
+            rootTrees = new();
+        }
 
         foreach (var tw in tws.ToList())
         {
             if (rootTrees.Exists(tw.Id)) continue;
             var root = rootTrees.Find(tw.ReplyToId);
-            var newTree = new NoteTree(tw);
+            var newTree = new NoteTree(tw, root);
             if (root != null)
             {
                 root.Children.Add(newTree);
+                // Internal nodes are sorted newest on top
+                root.Children.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
             }
             else
             {
@@ -149,9 +174,15 @@ public class FeedService
             if (subtree != null)
             {
                 rootTrees.Remove(rootTree);
+                rootTree.Parent = subtree;
                 subtree.Children.Add(rootTree);
+                // Internal nodes are sorted newest on top
+                subtree.Children.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
             }
         }
+
+        // Root nodes are sorted oldest on top (original first)
+        rootTrees.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
 
         return rootTrees;
     }

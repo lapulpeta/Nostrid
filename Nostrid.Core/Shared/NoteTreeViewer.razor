@@ -5,13 +5,10 @@
 
 @code{
     [Parameter, EditorRequired]
-    public List<NoteTree> Trees { get; set; } = null!;
+    public IEnumerable<NoteTreeNode> Trees { get; set; } = null!;
 
     [Parameter]
     public bool Root { get; set; } = true;
-
-    [Parameter]
-    public bool NewestOnTop { get; set; }
 
     [Parameter]
     public string? MainEventId { get; set; }
@@ -33,28 +30,41 @@
 
     [Parameter]
     public Action<Event>? OnDelete { get; set; }
+
+    [Parameter]
+    public int ChildIndex { get; set; }
+
+    [Parameter]
+    public bool NotClickable { get; set; }
 }
 
 @{
     var i = 0;
-    var trees = NewestOnTop
-        ? Trees.OrderByDescending(t => t.Note.CreatedAtCurated) 
-        : Trees.OrderBy(t => t.Note.CreatedAtCurated);
-    foreach (var tree in trees)
+    foreach (var tree in Trees)
     {
         var treeLayout = (TreeLayout ?? new int[0]);
         if (!OnlyChild)
         {
-            treeLayout = treeLayout.Append(trees.Count() - (i++)).ToArray();
+            treeLayout = treeLayout.Append(Trees.Count() - (i++)).ToArray();
         }
-        <NoteViewer Tree="@tree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
-                OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent"
-                OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
-                OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
-                OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
-                OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)" />
+        if (tree is NoteTreeShowMore noteTreeShowMore)
+        {
+            <NoteViewerSeeMore EventId="@noteTreeShowMore.ParentEventId"
+                   OnlyChild="@OnlyChild"
+                   TreeLayout="@treeLayout"
+                   ChildIndex="@noteTreeShowMore.ShowMoreChildIndex" />
+        }
+        else if (tree is NoteTree noteTree)
+        {
+            <NoteViewer Tree="@noteTree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
+                    OnComponentLoad="AddNoteViewerComponent" OnComponentUnload="RemoveNoteViewerComponent"
+                    OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
+                    OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
+                    OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
+                    OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)"
+                    ChildIndex="@ChildIndex" NotClickable="@NotClickable" />
+        }
     }
-
     if (Root)
     {
         <ModalContainer @ref="composeModal">

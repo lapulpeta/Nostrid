@@ -14,6 +14,11 @@ namespace Nostrid.Data
         public event EventHandler? DatabaseHasChanged;
         public event EventHandler? OptimizationComplete;
 
+        public Context CreateContext()
+        {
+            return new Context(_dbfile);
+        }
+
         public void InitDatabase(string dbfile)
         {
             _dbfile = dbfile;
@@ -259,14 +264,6 @@ namespace Nostrid.Data
             {
                 SaveSeen(ev.Id, relay.Id, db);
             }
-        }
-
-        public List<Event> ListNoteTree(string rootEventId, int downlevels, out bool maxReached)
-        {
-            using var db = new Context(_dbfile);
-            var ret = ListAncestorNotesUntilRoot(rootEventId, db);
-            ret.AddRange(ListChildrenNotes(rootEventId, downlevels, out maxReached, db));
-            return ret;
         }
 
         public List<Event> ListNotes(int count)

@@ -33,7 +33,11 @@
 }
 else
 {
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@feedService.GetTreesFromNotes(renderedN.Values)" NewestOnTop="true" />
+    var trees = feedService.GetTreesFromNotes(renderedN.Values);
+    // Root nodes are sorted newest on top
+    trees.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
+
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" />
     <div class="text-center border-top px-3" style="margin: 0 -1rem -1rem -1rem;">
         <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="@LoadMore">Load more</button>
     </div>

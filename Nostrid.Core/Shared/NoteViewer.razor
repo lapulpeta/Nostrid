@@ -47,10 +47,16 @@
 
     [Parameter]
     public Action<Event>? OnDelete { get; set; }
+
+    [Parameter]
+    public int ChildIndex { get; set; }
+
+    [Parameter]
+    public bool NotClickable { get; set; }
 }
 
 <div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
-     @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem;">
+     @onclick="@HandleClick" style="margin: 0 -1rem;">
 
     @for (var i = 1; i < TreeLayout.Length; i++)
     {
@@ -164,10 +170,32 @@
 
 @if (Tree.Children.Count > 0)
 {
+    List<NoteTreeNode> visiblePortion = new();
+
+    if (TreeLayout.Length > MaxNestingLevel)
+    {
+        visiblePortion.Add(new NoteTreeShowMore(0, true, Tree.Note.Id));
+    }
+    else
+    {
+        if (ChildIndex > 0)
+        {
+            visiblePortion.Add(new NoteTreeShowMore(Math.Max(ChildIndex - MaxChildren, 0), true, Tree.Note.Id));
+        }
+        var skippedPortion = Tree.Children.Skip(ChildIndex);
+        visiblePortion.AddRange(skippedPortion.Take(MaxChildren));
+        if (skippedPortion.Skip(MaxChildren).Any())
+        {
+            visiblePortion.Add(new NoteTreeShowMore(ChildIndex + MaxChildren, false, Tree.Note.Id));
+        }
+    }
+
     <NoteTreeViewer @ref="NoteTreeViewerRef"
-                    Trees="@Tree.Children" Root="false" NewestOnTop="false" MainEventId="@MainEventId"
-                    TreeLayout="@TreeLayout" OnlyChild="@(Tree.Children.Count == 1)"
-                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete" />
+                    Trees="@visiblePortion" Root="false" MainEventId="@MainEventId"
+                    TreeLayout="@TreeLayout" OnlyChild="@(visiblePortion.Count == 1)"
+                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete"
+                    NotClickable="@NotClickable" />
+
 }
 
 @code {
@@ -177,6 +205,9 @@
     private IJSObjectReference? jsModule;
     private ElementReference? referenceElement;
     private NoteTreeViewer? NoteTreeViewerRef;
+
+    public const int MaxNestingLevel = 4;
+    public const int MaxChildren = 5;
 
     protected override void OnInitialized()
     {
@@ -257,6 +288,14 @@
 
         Tree.Note.Deleted = ev.Deleted; // For now only the deleted status can be updated (reactions are loaded on the fly)
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private void HandleClick()
+    {
+        if (!NotClickable)
+        {
+            navigationManager.NavigateTo($"/note/{Tree.Note.Id}");
+        }
     }
 
     #region Dispose
