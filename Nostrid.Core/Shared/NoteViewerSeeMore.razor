@@ -1,0 +1,52 @@
+﻿@inject NavigationManager navigationManager
+
+@code{
+    [Parameter, EditorRequired]
+    public string EventId { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public int[] TreeLayout { get; set; } = null!;
+
+    [Parameter]
+    public bool OnlyChild { get; set; }
+
+    [Parameter]
+    public int ChildIndex { get; set; }
+}
+
+
+
+<div role="button" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top"
+     @onclick="@(() => navigationManager.NavigateTo($"/note/{EventId}/{ChildIndex}"))" style="margin: 0 -1rem;">
+
+    @for (var i = 1; i < TreeLayout.Length; i++)
+    {
+        var last = i == TreeLayout.Length - 1;
+        <div class="flex-shrink-0 d-flex flex-row">
+            <div class="tree-placeholder-width-half"></div>
+            @if (TreeLayout[i] > 1)
+            {
+                <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+            }
+            else if (!OnlyChild && TreeLayout[i] == 1 && last)
+            {
+                <div class="bg-secondary opacity-75 tree-line-width tree-placeholder-height-half"></div>
+            }
+            else
+            {
+                <div class="tree-line-width"></div>
+            }
+            <div class="d-flex flex-column justify-content-center tree-placeholder-height tree-placeholder-width-last">
+                @if (!OnlyChild && last)
+                {
+                    <div class="bg-secondary opacity-75 tree-line-height"></div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="d-flex flex-grow-1 align-items-center justify-content-left text-secondary m-2">See more...</div>
+
+</div>
+
+

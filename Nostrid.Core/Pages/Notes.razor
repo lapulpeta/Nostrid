@@ -1,9 +1,13 @@
 ﻿@page "/note/{eventId}"
+@page "/note/{eventId}/{childIndex:int}"
 @implements IDisposable
 
 @code {
     [Parameter, EditorRequired]
     public string EventId { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public int ChildIndex { get; set; }
 }
 
 @using Nostrid.Data
@@ -17,7 +21,7 @@
 
 <div class="fs-4 fw-bolder">Thread</div>
 
-@if (renderedN.Any())
+@if (noteTrees.Any())
 {
     @if (!noteTrees.Exists(EventId) || 
         (!maxReached && (noteTrees.Count != 1 ||!string.IsNullOrEmpty(noteTrees[0].Note.ReplyToId))))
@@ -36,7 +40,7 @@
     }
 }
 
-@if (!renderedN.Any())
+@if (!noteTrees.Any())
 {
     <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
         <div class="spinner-border mx-3 my-2" role="status">
@@ -47,66 +51,130 @@
 else
 {
     <div style="margin-bottom: -1rem;">
-        <NoteTreeViewer Trees="@noteTrees" NewestOnTop="true" MainEventId="@EventId" />
+        <NoteTreeViewer Trees="@noteTrees" NewestOnTop="false" MainEventId="@EventId" ChildIndex="@ChildIndex" />
     </div>
 }
 
 @code {
-    private ConcurrentDictionary<string, Event> renderedN = new();
+    /// <summary>
+    /// This view has two modes
+    /// - Note view: shows the subtree whose root is a given note up to 3 levels down
+    /// - Thread view: shows one or more subtrees that make up the total thread (it can be many subtrees
+    ///   because there may be missing notes), up to 3 levels down
+    /// To choose which mode to use, we use this logic:
+    /// - Thread view if the note is visible in this view
+    /// - Note view in the rest of the cases
+    /// </summary>
     private List<NoteTree> noteTrees = new();
-    private Timer? refreshTimer;
     private SubscriptionFilter? eventFilter;
     private bool maxReached;
+    private string? rootId;
+
+    private DateTime lastUpdate;
+    private Task? updateTask;
+    private CancellationTokenSource cancellationTokenSource = new();
+
+    private const int MinSecondsBetweenUpdates = 3;
+
+    private static readonly object lockTree = new();
 
     protected override void OnParametersSet()
     {
         Cleanup();
 
-        renderedN = new();
+        cancellationTokenSource = new();
 
         feedService.NoteReceivedChild += NoteReceivedChild;
+        feedService.ReceivedNotes += ReceivedNotes;
 
-        UpdateEventFilters();
+        lastUpdate = DateTime.UtcNow;
 
-        refreshTimer = new Timer(new TimerCallback(_ =>
+        noteTrees = new();
+
+        Task.Run(() =>
         {
-            if (_disposed)
-                return;
+            var notes = feedService.GetNotesThread(EventId, out rootId);
+            TruncateTreeIfNeeded(notes);
+            UpdateEventFilters();
+            InvokeAsync(() => StateHasChanged());
+        },
+        cancellationTokenSource.Token);
+    }
 
-            var copied = new List<Event>();
-            var mustRefresh = EventExtension.Merge(renderedN, feedService.GetNotesThread(EventId, downLevels: 4, out maxReached), onCopy: (ev) => copied.Add(ev));
-
-            if (copied.Any())
+    private void TruncateTreeIfNeeded(IEnumerable<Event> newNotes)
+    {
+        lock (lockTree)
+        {
+            feedService.GetTreesFromNotes(newNotes, noteTrees);
+            var requestedNode = noteTrees.Find(EventId);
+            if (requestedNode != null && (requestedNode.RenderLevel >= NoteViewer.MaxNestingLevel) || ChildIndex > 0)
             {
-                UpdateEventFilters();
-                mustRefresh = true;
+                noteTrees = new List<NoteTree>() { requestedNode };
             }
-
-            if (mustRefresh)
-            {
-                noteTrees = feedService.GetTreesFromNotes(renderedN.Values);
-                InvokeAsync(() =>
-                {
-                    StateHasChanged();
-                });
-            }
-        }), null, 0, 3000);
+        }
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
     {
-        if (!renderedN.ContainsKey(data.EventId))
-            return;
+        Task.Run(() =>
+        {
+            if (data.Child.Kind != NostrKind.Text || (data.Child.ReplyToRootId != rootId && data.Child.Id != rootId))
+                return;
 
-        renderedN[data.Child.Id] = data.Child;
-        InvokeAsync(() => StateHasChanged());
+            TruncateTreeIfNeeded(new[] { data.Child });
+
+            if (updateTask != null)
+            {
+                return;
+            }
+
+            UpdateIfNeeded();
+        },
+        cancellationTokenSource.Token);
+    }
+
+    private void UpdateIfNeeded()
+    {
+        var waitFor = lastUpdate.AddSeconds(MinSecondsBetweenUpdates) < DateTime.UtcNow ? 0 : MinSecondsBetweenUpdates;
+        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
+        {
+            UpdateEventFilters();
+            InvokeAsync(() => StateHasChanged());
+            updateTask = null;
+        });
+    }
+
+    private void ReceivedNotes(object? sender, (string filterId, IEnumerable<Event> events) data)
+    {
+        Task.Run(() =>
+        {
+            var notesToAdd = data.events.Where(e => e.Kind == NostrKind.Text && (e.Id == rootId || e.ReplyToRootId == rootId));
+            if (!notesToAdd.Any())
+            {
+                return;
+            }
+
+            TruncateTreeIfNeeded(notesToAdd);
+
+            if (updateTask != null)
+            {
+                return;
+            }
+
+            UpdateIfNeeded();
+        },
+        cancellationTokenSource.Token);
     }
 
     private static object atomicSwap = new object();
     private void UpdateEventFilters()
     {
         SubscriptionFilter addedFilter, oldFilter;
-        var renderedNValues = renderedN.Values;
+        List<Event> renderedNValues;
+        lock (lockTree)
+        {
+            renderedNValues = noteTrees.AllNotes();
+        }
         var ids = renderedNValues.SelectMany(t => new[] { t.Id, t.ReplyToId, t.ReplyToRootId }).Union(new[] { EventId }).Where(t => !string.IsNullOrEmpty(t)).Distinct();
         relayService.AddFilter(addedFilter = new EventSubscriptionFilter(ids.ToArray()));
         lock (atomicSwap)
@@ -137,8 +205,8 @@ else
     private void Cleanup()
     {
         feedService.NoteReceivedChild -= NoteReceivedChild;
-        refreshTimer?.Dispose();
         if (eventFilter != null) relayService.DeleteFilter(eventFilter);
+        cancellationTokenSource.Cancel();
     }
     #endregion
 

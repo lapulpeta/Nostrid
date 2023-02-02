@@ -47,6 +47,9 @@
 
     [Parameter]
     public Action<Event>? OnDelete { get; set; }
+
+    [Parameter]
+    public int ChildIndex { get; set; }
 }
 
 <div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
@@ -164,10 +167,31 @@
 
 @if (Tree.Children.Count > 0)
 {
+    List<NoteTreeNode> visiblePortion = new();
+
+    if (TreeLayout.Length == MaxNestingLevel)
+    {
+        visiblePortion.Add(new NoteTreeShowMore(0, true, Tree.Note.Id));
+    }
+    else
+    {
+        if (ChildIndex > 0)
+        {
+            visiblePortion.Add(new NoteTreeShowMore(Math.Max(ChildIndex - MaxChildren, 0), true, Tree.Note.Id));
+        }
+        var skippedPortion = Tree.Children.Skip(ChildIndex);
+        visiblePortion.AddRange(skippedPortion.Take(MaxChildren));
+        if (skippedPortion.Skip(MaxChildren).Any())
+        {
+            visiblePortion.Add(new NoteTreeShowMore(ChildIndex + MaxChildren, false, Tree.Note.Id));
+        }
+    }
+
     <NoteTreeViewer @ref="NoteTreeViewerRef"
-                    Trees="@Tree.Children" Root="false" NewestOnTop="false" MainEventId="@MainEventId"
-                    TreeLayout="@TreeLayout" OnlyChild="@(Tree.Children.Count == 1)"
-                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete" />
+                    Trees="@visiblePortion" Root="false" NewestOnTop="false" MainEventId="@MainEventId"
+                    TreeLayout="@TreeLayout" OnlyChild="@(visiblePortion.Count == 1)"
+                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete"/>
+
 }
 
 @code {
@@ -177,6 +201,11 @@
     private IJSObjectReference? jsModule;
     private ElementReference? referenceElement;
     private NoteTreeViewer? NoteTreeViewerRef;
+
+    public const int MaxNestingLevel = 4;
+
+    private const int MaxChildren = 5;
+
 
     protected override void OnInitialized()
     {
