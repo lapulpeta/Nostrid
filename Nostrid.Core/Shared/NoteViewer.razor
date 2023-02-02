@@ -169,7 +169,7 @@
 {
     List<NoteTreeNode> visiblePortion = new();
 
-    if (TreeLayout.Length == MaxNestingLevel)
+    if (TreeLayout.Length > MaxNestingLevel)
     {
         visiblePortion.Add(new NoteTreeShowMore(0, true, Tree.Note.Id));
     }
