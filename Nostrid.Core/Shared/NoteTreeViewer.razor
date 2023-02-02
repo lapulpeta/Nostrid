@@ -11,9 +11,6 @@
     public bool Root { get; set; } = true;
 
     [Parameter]
-    public bool NewestOnTop { get; set; }
-
-    [Parameter]
     public string? MainEventId { get; set; }
 
     [Parameter]
@@ -43,15 +40,12 @@
 
 @{
     var i = 0;
-    var trees = NewestOnTop
-        ? Trees.OrderByDescending(t => (t is NoteTreeShowMore a) ? (a.Start ? 1 : -1) : 0).ThenByDescending(t => (t as NoteTree)?.Note?.CreatedAtCurated) 
-        : Trees.OrderBy(t => (t is NoteTreeShowMore a) ? (a.Start ? -1 : 1) : 0).ThenBy(t => (t as NoteTree)?.Note?.CreatedAtCurated);
-    foreach (var tree in trees)
+    foreach (var tree in Trees)
     {
         var treeLayout = (TreeLayout ?? new int[0]);
         if (!OnlyChild)
         {
-            treeLayout = treeLayout.Append(trees.Count() - (i++)).ToArray();
+            treeLayout = treeLayout.Append(Trees.Count() - (i++)).ToArray();
         }
         if (tree is NoteTreeShowMore noteTreeShowMore)
         {

@@ -158,7 +158,8 @@ public class FeedService
             if (root != null)
             {
                 root.Children.Add(newTree);
-                root.Children.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
+                // Internal nodes are sorted newest on top
+                root.Children.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
             }
             else
             {
@@ -175,10 +176,12 @@ public class FeedService
                 rootTrees.Remove(rootTree);
                 rootTree.Parent = subtree;
                 subtree.Children.Add(rootTree);
-                subtree.Children.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
+                // Internal nodes are sorted newest on top
+                subtree.Children.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
             }
         }
 
+        // Root nodes are sorted oldest on top (original first)
         rootTrees.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
 
         return rootTrees;
