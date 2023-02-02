@@ -36,6 +36,9 @@
 
     [Parameter]
     public int ChildIndex { get; set; }
+
+    [Parameter]
+    public bool NotClickable { get; set; }
 }
 
 @{
@@ -65,8 +68,8 @@
                     OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
                     OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
                     OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)"
-                    ChildIndex="@ChildIndex"/>
-            }
+                    ChildIndex="@ChildIndex" NotClickable="@NotClickable" />
+        }
     }
     if (Root)
     {

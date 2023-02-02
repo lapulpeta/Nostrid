@@ -158,6 +158,7 @@ public class FeedService
             if (root != null)
             {
                 root.Children.Add(newTree);
+                root.Children.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
             }
             else
             {
@@ -174,8 +175,11 @@ public class FeedService
                 rootTrees.Remove(rootTree);
                 rootTree.Parent = subtree;
                 subtree.Children.Add(rootTree);
+                subtree.Children.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
             }
         }
+
+        rootTrees.Sort((a, b) => a.Note.CreatedAtCurated.CompareTo(b.Note.CreatedAtCurated));
 
         return rootTrees;
     }

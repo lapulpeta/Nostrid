@@ -24,8 +24,17 @@ public class NoteTree : NoteTreeNode
 
     public NoteTree? Find(string id)
     {
-        if (Note.Id == id) return this;
-        return Children.Find(id);
+        return Find(id, out _);
+    }
+
+    public NoteTree? Find(string id, out bool exceededMax, int? maxChildAllowed = null)
+    {
+        if (Note.Id == id)
+        {
+            exceededMax = false;
+            return this;
+        }
+        return Children.Find(id, out exceededMax, maxChildAllowed);
     }
 
     public bool Exists(string id)
@@ -48,9 +57,17 @@ public static class NoteTreeExtensions
 
     public static NoteTree? Find(this List<NoteTree> chain, string id)
     {
-        foreach (var tw in chain)
+        return Find(chain, id, out _);
+    }
+
+    public static NoteTree? Find(this List<NoteTree> chain, string id, out bool exceededMax, int? maxChildAllowed = null)
+    {
+        exceededMax = false;
+        for (int i = 0; i < chain.Count; i++)
         {
-            var ret = tw.Find(id);
+            var ret = chain[i].Find(id, out exceededMax, maxChildAllowed);
+            if (maxChildAllowed.HasValue)
+                exceededMax |=  i >= maxChildAllowed;
             if (ret != null) return ret;
         }
         return null;

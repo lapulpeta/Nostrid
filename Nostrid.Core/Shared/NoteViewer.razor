@@ -50,10 +50,13 @@
 
     [Parameter]
     public int ChildIndex { get; set; }
+
+    [Parameter]
+    public bool NotClickable { get; set; }
 }
 
 <div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
-     @onclick="@(() => navigationManager.NavigateTo($"/note/{Tree.Note.Id}"))" style="margin: 0 -1rem;">
+     @onclick="@HandleClick" style="margin: 0 -1rem;">
 
     @for (var i = 1; i < TreeLayout.Length; i++)
     {
@@ -190,7 +193,8 @@
     <NoteTreeViewer @ref="NoteTreeViewerRef"
                     Trees="@visiblePortion" Root="false" NewestOnTop="false" MainEventId="@MainEventId"
                     TreeLayout="@TreeLayout" OnlyChild="@(visiblePortion.Count == 1)"
-                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete"/>
+                    OnReply="@OnReply" OnRepost="@OnRepost" OnPay="@OnPay" OnDelete="@OnDelete"
+                    NotClickable="@NotClickable" />
 
 }
 
@@ -203,9 +207,7 @@
     private NoteTreeViewer? NoteTreeViewerRef;
 
     public const int MaxNestingLevel = 4;
-
-    private const int MaxChildren = 5;
-
+    public const int MaxChildren = 5;
 
     protected override void OnInitialized()
     {
@@ -286,6 +288,14 @@
 
         Tree.Note.Deleted = ev.Deleted; // For now only the deleted status can be updated (reactions are loaded on the fly)
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private void HandleClick()
+    {
+        if (!NotClickable)
+        {
+            navigationManager.NavigateTo($"/note/{Tree.Note.Id}");
+        }
     }
 
     #region Dispose
