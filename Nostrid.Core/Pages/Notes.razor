@@ -48,15 +48,6 @@ else
 }
 
 @code {
-    /// <summary>
-    /// This view has two modes
-    /// - Note view: shows the subtree whose root is a given note up to 3 levels down
-    /// - Thread view: shows one or more subtrees that make up the total thread (it can be many subtrees
-    ///   because there may be missing notes), up to 3 levels down
-    /// To choose which mode to use, we use this logic:
-    /// - Thread view if the note is visible in this view
-    /// - Note view in the rest of the cases
-    /// </summary>
     private List<NoteTree> noteTrees = new();
     private SubscriptionFilter? eventFilter;
     private bool noteNotFound;
@@ -99,10 +90,24 @@ else
         lock (lockTree)
         {
             feedService.GetTreesFromNotes(newNotes, noteTrees);
-            var requestedNode = noteTrees.Find(EventId, out var maxExceeded, NoteViewer.MaxChildren);
-            noteNotFound = requestedNode == null;
-            if (requestedNode != null && (maxExceeded || requestedNode.RenderLevel >= NoteViewer.MaxNestingLevel || ChildIndex > 0))
+
+            //var requestedNode = noteTrees.Find(EventId, out var maxExceeded, NoteViewer.MaxChildren);
+            //noteNotFound = requestedNode == null;
+            //if (requestedNode != null && (maxExceeded || requestedNode.RenderLevel >= NoteViewer.MaxNestingLevel || ChildIndex > 0))
+            //{
+            //    noteTrees = new List<NoteTree>() { requestedNode };
+            //}
+
+            var requestedNode = noteTrees.Find(EventId);
+            if (requestedNode != null)
             {
+                // Let's back up MaxNestingLevel or until the node is no longer visible
+                for (int i = 0; i < NoteViewer.MaxNestingLevel && requestedNode.Parent != null; i++)
+                {
+                    if (requestedNode.Parent.Find(EventId, out var maxExceeded, NoteViewer.MaxChildren) == null || maxExceeded)
+                        break;
+                    requestedNode = requestedNode.Parent;
+                }
                 noteTrees = new List<NoteTree>() { requestedNode };
             }
         }
