@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>10</LangVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageVersion>0.0.17</PackageVersion>
+        <Title>Nostr Client</Title>
+        <Description>A client for Nostr</Description>
+        <Copyright>MIT</Copyright>
+        <PackageProjectUrl>https://github.com/Kukks/NNostr</PackageProjectUrl>
+        <PackageLicenseUrl>https://raw.githubusercontent.com/Kukks/NNostr/master/LICENSE</PackageLicenseUrl>
+        <license>MIT</license>
+        <RepositoryUrl>https://github.com/Kukks/NNostr</RepositoryUrl>
+        <PackageTags>Nostr</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="LinqKit.Core" Version="1.2.2" />
+        <PackageReference Include="NBitcoin.Secp256k1" Version="3.0.1" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    </ItemGroup>
+
+</Project>

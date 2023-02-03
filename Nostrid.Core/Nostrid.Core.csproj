@@ -34,14 +34,14 @@
 
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.30.4" />
-    <PackageReference Include="HtmlSanitizer" Version="8.0.601" />
+    <PackageReference Include="HtmlSanitizer" Version="8.0.645" />
     <PackageReference Include="Jdenticon-net" Version="3.1.2" />
     <PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
     <PackageReference Include="QRCoder" Version="1.4.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NNostr\NNostr.Client\NNostr.Client.csproj" />
+    <ProjectReference Include="..\NNostr.Client\NNostr.Client.csproj" />
   </ItemGroup>
 
   <Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
