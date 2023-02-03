@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading.Channels;
 
 namespace NNostr.Client
 {
@@ -16,8 +15,6 @@ namespace NNostr.Client
         public NostrClient(Uri relay)
         {
             _relay = relay;
-            _ = ProcessChannel(PendingIncomingMessages, HandleIncomingMessage, messageCts.Token);
-            _ = ProcessChannel(PendingOutgoingMessages, HandleOutgoingMessage, messageCts.Token);
         }
 
         public Task Disconnect()
@@ -72,15 +69,12 @@ namespace NNostr.Client
         {
             await foreach (var message in ListenForRawMessages())
             {
-                await PendingIncomingMessages.Writer.WriteAsync(message);
+                HandleIncomingMessage(message, _Cts.Token);
                 MessageReceived?.Invoke(this, message);
             }
         }
 
-        private readonly Channel<string> PendingIncomingMessages = Channel.CreateUnbounded<string>();
-        private readonly Channel<string> PendingOutgoingMessages = Channel.CreateUnbounded<string>();
-
-        private Task<bool> HandleIncomingMessage(string message, CancellationToken token)
+        private void HandleIncomingMessage(string message, CancellationToken token)
         {
             var json = JToken.Parse(message).Root;
             switch (json[0].Value<string>().ToLowerInvariant())
@@ -104,69 +98,42 @@ namespace NNostr.Client
                     EoseReceived?.Invoke(this, subscriptionId);
                     break;
             }
-
-            return Task.FromResult(true);
         }
 
         private async Task<bool> HandleOutgoingMessage(string message, CancellationToken token)
         {
             try
             {
-                return await WaitUntilConnected(token)
-                    .ContinueWith(_ => websocket?.SendMessageAsync(message, token), token)
-                    .ContinueWith(_ => true, token);
+                await WaitUntilConnected(token);
+                await websocket.SendMessageAsync(message, token);
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
                 return false;
             }
         }
 
-        private async Task ProcessChannel<T>(Channel<T> channel, Func<T, CancellationToken, Task<bool>> processor,
-            CancellationToken cancellationToken)
-        {
-            while (await channel.Reader.WaitToReadAsync(cancellationToken))
-            {
-                if (channel.Reader.TryPeek(out var evt))
-                {
-                    var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    linked.CancelAfter(5000);
-                    if (await processor(evt, linked.Token))
-                    {
-                        channel.Reader.TryRead(out _);
-                    }
-                }
-            }
-        }
-
-        public async Task PublishEvent(NostrEvent nostrEvent, CancellationToken token = default)
+        public async Task<bool> PublishEvent(NostrEvent nostrEvent, CancellationToken token = default)
         {
             var payload = JsonConvert.SerializeObject(new object[] { "EVENT", nostrEvent });
-            await PendingOutgoingMessages.Writer.WriteAsync(payload, token);
+            return await HandleOutgoingMessage(payload, token);
         }
 
-        public async Task CloseSubscription(string subscriptionId, CancellationToken token = default)
+        public async Task<bool> CloseSubscription(string subscriptionId, CancellationToken token = default)
         {
             var payload = JsonConvert.SerializeObject(new[] { "CLOSE", subscriptionId });
-
-            await PendingOutgoingMessages.Writer.WriteAsync(payload, token);
+            return await HandleOutgoingMessage(payload, token);
         }
 
-        public async Task CreateSubscription(string subscriptionId, NostrSubscriptionFilter[] filters,
+        public async Task<bool> CreateSubscription(string subscriptionId, NostrSubscriptionFilter[] filters,
             CancellationToken token = default)
         {
             var payload = JsonConvert.SerializeObject(new object[] { "REQ", subscriptionId }.Concat(filters), settings: new JsonSerializerSettings()
             {
                 NullValueHandling = NullValueHandling.Ignore,
             });
-
-            await PendingOutgoingMessages.Writer.WriteAsync(payload, token);
-        }
-
-        public void Dispose()
-        {
-            messageCts.Cancel();
-            Disconnect();
+            return await HandleOutgoingMessage(payload, token);
         }
 
         public async Task ConnectAndWaitUntilConnected(CancellationToken token = default)
@@ -187,10 +154,39 @@ namespace NNostr.Client
 
         private async Task WaitUntilConnected(CancellationToken token)
         {
-            while (websocket != null && websocket.State != WebSocketState.Open && !token.IsCancellationRequested)
+            while (websocket == null || (websocket.State != WebSocketState.Open && !token.IsCancellationRequested))
             {
                 await Task.Delay(100, token);
             }
         }
+
+        #region Dispose
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    Cleanup();
+                }
+
+                _disposed = true;
+            }
+        }
+
+        private void Cleanup()
+        {
+            messageCts.Cancel();
+            Disconnect();
+        }
+        #endregion
     }
 }

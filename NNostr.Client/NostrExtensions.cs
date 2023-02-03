@@ -76,13 +76,6 @@ namespace NNostr.Client
             return Context.Instance.CreateXOnlyPubKey(key.DecodHexData());
         }
 
-        public static string ToHex(this ECPrivKey key)
-        {
-            Span<byte> output = new Span<byte>(new byte[32]);
-            key.WriteToSpan(output);
-            return output.ToHex();
-        }
-
         public static string ToHex(this ECXOnlyPubKey key)
         {
             return key.ToBytes().ToHex();

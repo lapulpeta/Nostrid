@@ -7,42 +7,7 @@ namespace NNostr.Client
     {
         public static byte[] DecodHexData(this string encoded)
         {
-            if (encoded == null)
-                throw new ArgumentNullException(nameof(encoded));
-            if (encoded.Length % 2 == 1)
-                throw new FormatException("Invalid Hex String");
-
-            var result = new byte[encoded.Length / 2];
-            for (int i = 0, j = 0; i < encoded.Length; i += 2, j++)
-            {
-                var a = IsDigit(encoded[i]);
-                var b = IsDigit(encoded[i + 1]);
-                if (a == -1 || b == -1)
-                    throw new FormatException("Invalid Hex String");
-                result[j] = (byte)(((uint)a << 4) | (uint)b);
-            }
-
-            return result;
-        }
-
-        public static int IsDigit(this char c)
-        {
-            if ('0' <= c && c <= '9')
-            {
-                return c - '0';
-            }
-            else if ('a' <= c && c <= 'f')
-            {
-                return c - 'a' + 10;
-            }
-            else if ('A' <= c && c <= 'F')
-            {
-                return c - 'A' + 10;
-            }
-            else
-            {
-                return -1;
-            }
+            return Convert.FromHexString(encoded);
         }
 
         public static string ComputeSignature(this string rawData, ECPrivKey privKey)
@@ -50,7 +15,7 @@ namespace NNostr.Client
             var bytes = rawData.ComputeSha256Hash();
             var buf = new byte[64];
             privKey.SignBIP340(bytes).WriteToSpan(buf);
-            return buf.ToHex();
+            return Convert.ToHexString(buf).ToLower();
         }
 
         public static byte[] ComputeSha256Hash(this string rawData)
@@ -63,39 +28,9 @@ namespace NNostr.Client
 
         public static string ToHex(this byte[] bytes)
         {
-            var builder = new StringBuilder();
-            foreach (var t in bytes)
-            {
-                builder.Append(t.ToHex());
-            }
-
-            return builder.ToString();
+            return Convert.ToHexString(bytes).ToLower();
         }
 
-        private static string ToHex(this byte b)
-        {
-            return b.ToString("x2");
-        }
 
-        public static string ToHex(this Span<byte> bytes)
-        {
-            var builder = new StringBuilder();
-            foreach (var t in bytes)
-            {
-                builder.Append(t.ToHex());
-            }
-
-            return builder.ToString();
-        }
-        
-        
-    }
-    public static class EnumeratorExtensions
-    {
-        public static IEnumerable<T> ToEnumerable<T>(this IEnumerator<T> enumerator)
-        {
-            while(enumerator.MoveNext())
-                yield return enumerator.Current;
-        }
     }
 }
