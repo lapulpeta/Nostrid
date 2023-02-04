@@ -49,7 +49,7 @@
         }
         if (tree is NoteTreeShowMore noteTreeShowMore)
         {
-            <NoteViewerSeeMore EventId="@noteTreeShowMore.ParentEventId"
+            <NoteViewerSeeMore NoteTreeShowMore="@noteTreeShowMore"
                    OnlyChild="@OnlyChild"
                    TreeLayout="@treeLayout"
                    ChildIndex="@noteTreeShowMore.ShowMoreChildIndex" />

@@ -1,8 +1,10 @@
-﻿@inject NavigationManager navigationManager
+﻿@using Nostrid.Model;
+
+@inject NavigationManager navigationManager
 
 @code{
     [Parameter, EditorRequired]
-    public string EventId { get; set; } = null!;
+    public NoteTreeShowMore NoteTreeShowMore { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public int[] TreeLayout { get; set; } = null!;
@@ -15,7 +17,7 @@
 }
 
 <div role="button" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top"
-     @onclick="@(() => navigationManager.NavigateTo($"/note/{EventId}/{ChildIndex}"))" style="margin: 0 -1rem;">
+     @onclick="@(() => navigationManager.NavigateTo($"/note/{NoteTreeShowMore.ParentEventId}/{ChildIndex}"))" style="margin: 0 -1rem;">
 
     @for (var i = 1; i < TreeLayout.Length; i++)
     {
@@ -44,7 +46,16 @@
     }
 
     <div class="d-flex flex-row align-items-center flex-grow-1">
-        <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;"><i class="bi bi-plus-lg"></i></div>
+        <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;">
+            @if (NoteTreeShowMore.Start)
+            {
+                <i class="bi bi-chevron-up"></i>
+            }
+            else
+            {
+                <i class="bi bi-chevron-down"></i>
+            }
+        </div>
         <div class="ms-2 text-secondary">See more...</div>
     </div>
 
