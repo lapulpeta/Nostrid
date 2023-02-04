@@ -251,7 +251,11 @@
     // TODO: move save account details to profile
     private async Task SaveAccountDetails(Account account)
     {
-        AccountDetails accountDetailsToSave = new();
+        AccountDetails accountDetailsToSave = new()
+            {
+                Account = account
+            };
+        account.Details = accountDetailsToSave;
 
         accountDetails.Nip05Id = accountDetails.Nip05Id?.Trim();
         if (accountDetails.Nip05Id.IsNullOrEmpty())

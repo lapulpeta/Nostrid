@@ -307,16 +307,18 @@ public class AccountService
 
     public async Task<bool> SaveAccountDetails(AccountDetails details)
     {
-        var account = eventDatabase.GetAccount(mainAccount.Id);
-        account.Details = details;
-        eventDatabase.SaveAccount(account);
+        if (details.Id.IsNullOrEmpty())
+        {
+            details.Id = details.Account.Id;
+        }
+        eventDatabase.SaveAccountDetails(details);
 
         var unescapedContent = JsonSerializer.Serialize(details);
         var nostrEvent = new NostrEvent()
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = 0,
-            PublicKey = account.Id,
+            PublicKey = details.Id,
             Tags = new(),
             Content = unescapedContent,
         };
