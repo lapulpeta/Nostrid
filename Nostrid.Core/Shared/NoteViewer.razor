@@ -101,66 +101,84 @@
                     }
                 </LeftPlaceholder>
                 <BottomPlaceholder>
-                    <div class="w-100 mt-1" style="margin-right:-1.5rem;">
-                        @{
-                            var reactions = feedService.GetReactionGroups(Tree.Note.Id);
-                            if (reactions.Count > 0)
+                    <div class="w-100 mt-1 d-flex flex-row" style="margin-right:-1.5rem;">
+                        @if (accountService.MainAccount != null)
+                        {
+                            <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <i class="bi bi-chat"></i>
+                            </a>
+                            <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <i class="bi bi-repeat"></i>
+                            </a>
+                            <a role="button" @onclick:stopPropagation="true"
+                                class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi @(!likeSent ? "bi-heart" : "bi-heart-fill")"></i>
+                                @{
+                                    var groupedReactions = feedService
+                                        .GetReactionGroups(Tree.Note.Id)
+                                        .OrderByDescending(r => r.Count);
+                                    var groupedReactionsSum = groupedReactions.Sum(reaction => reaction.Count);
+                                    if (groupedReactionsSum > 0)
+                                    {
+                                        <span class="fs-7 lh-sm">&nbsp;@groupedReactionsSum</span>
+                                    }
+                                }
+                            </a>
+                            <div class="dropdown-menu p-1 shadow" style="min-width: initial;">
+                                @if (groupedReactionsSum > 0)
+                                {
+                                    <div class="d-flex flex-row" style="margin-right: -.25rem;">
+                                        @foreach (var reactionGroup in groupedReactions.Take(5))
+                                        {
+                                            <a @onclick="@(() => LikeNote(reactionGroup.Reaction))" @onclick:stopPropagation="true"
+                                               class="p-1 me-1 d-flex flex-row align-items-center fs-4 text-decoration-none bg-primary-opacity-10-hover">
+                                                <span class="text-center" style="min-width: 20px;">@NormalizedReaction(reactionGroup.Reaction)</span>
+                                                <span class="mt-1 me-1 fs-7 fw-normal text-secondary">@reactionGroup.Count</span>
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                                @if (groupedReactionsSum > 0 && !likeSent)
+                                {
+                                    <hr class="my-1" />
+                                }
+                                @if (!likeSent)
+                                {
+                                    <div class="fs-3 d-flex flex-row" style="margin: 0 -.25rem -.25rem 0;">
+                                        @{
+                                            var reactions = new string[] { "+", "-", "🤙", "❤️", "😂", "😭", "😡" };
+                                            foreach (var reaction in reactions)
+                                            {
+                                                <a @onclick="@(() => LikeNote(reaction))" @onclick:stopPropagation="true"
+                                               class="text-decoration-none me-1 mb-1 bg-primary-opacity-10-hover">
+                                                    @NormalizedReaction(reaction)
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
                             {
-                                var groupedReactions = reactions.OrderByDescending(r => r.Count);
-                                @foreach (var reaction in groupedReactions.Take(3))
-                                {
-                                    <span class="py-2 me-4">
-                                        <span class="d-inline-block">
-                                            <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
-                                                @NormalizedReaction(reaction.Reaction)
-                                            </a>
-                                        </span><span class="fs-7 fw-bold">@reaction.Count</span>
-                                    </span>
-                                }
-                                var remainingReactionCount = groupedReactions.Skip(3).Sum(reaction => reaction.Count);
-                                if (remainingReactionCount > 0)
-                                {
-                                    <span class="py-2 me-4">
-                                        <span class="d-inline-block">
-                                            <a role="button" @onclick="@(() => {})" @onclick:stopPropagation="true" class="d-flex align-items-center justify-content-center rounded-5 fs-6 text-secondary text-decoration-none" style="width:32px;height:32px;">
-                                                <i class="bi bi-three-dots"></i>
-                                            </a>
-                                        </span><span class="fs-7 fw-bold">@remainingReactionCount</span>
-                                    </span>
-                                }
+                                <a role="button" @onclick="@Delete" @onclick:stopPropagation="true"
+                                   class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                    <i class="bi bi-trash3"></i>
+                                </a>
                             }
                         }
-                        <div class="d-inline-block">
-                            @if (accountService.MainAccount != null)
-                            {
-                                <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                    <i class="bi bi-chat"></i>
-                                </a>
-                                <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                    <i class="bi bi-repeat"></i>
-                                </a>
-                                <a role="button" @onclick="@LikeNote" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 @(!likeSent ? "bg-primary-opacity-10-hover" : "")">
-                                    <i class="bi @(!likeSent ? "bi-heart" : "bi-heart-fill")"></i>
-                                </a>
-                                @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
-                                {
-                                    <a role="button" @onclick="@Delete" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                        <i class="bi bi-trash3"></i>
-                                    </a>
-                                }
-                            }
-                            <PayButton Id="@Tree.Note.PublicKey" OnClick="@Pay" />
-                            <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Note ID</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Note Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
-                            </ul>
-                        </div>
+                        <PayButton Id="@Tree.Note.PublicKey" OnClick="@Pay" />
+                        <a role="button" @onclick:stopPropagation="true"
+                           class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </a>
+                        <ul class="dropdown-menu shadow">
+                            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Note ID</a></li>
+                            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Note Hex</a></li>
+                            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
+                            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
+                            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
+                        </ul>
                     </div>
                 </BottomPlaceholder>
             </EventViewer>
@@ -240,10 +258,10 @@
         OnRepost?.Invoke(Tree.Note);
     }
 
-    private async Task LikeNote()
+    private async Task LikeNote(string reaction)
     {
         if (likeSent) return;
-        await feedService.SendReaction("+", Tree.Note);
+        await feedService.SendReaction(reaction, Tree.Note);
         likeClicked = true;
     }
 
@@ -261,12 +279,13 @@
     {
         if (string.IsNullOrEmpty(reaction) || reaction == "+")
         {
-            return "❤️";
+            return "👍";
         }
-        else
+        if (reaction == "-")
         {
-            return reaction;
+            return "👎";
         }
+        return reaction;
     }
 
     public async Task<bool> IsVisibleAsync()

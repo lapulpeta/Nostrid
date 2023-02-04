@@ -14,7 +14,8 @@
 
 @if (_details != null && (_details.Lud06Url.IsNotNullOrEmpty() || _details.Lud16Id.IsNotNullOrEmpty()))
 {
-    <a role="button" @onclick="@OnClick" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+    <a role="button" @onclick="@OnClick" @onclick:stopPropagation="true"
+       class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
         <i class="bi bi-lightning-charge"></i>
     </a>
 }
