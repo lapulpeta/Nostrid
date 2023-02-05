@@ -163,6 +163,14 @@ namespace Nostrid.Data
                 {
                     db.Add(new Account() { Id = accountDetails.Id });
                 }
+                else if (accountDetails.Account != null)
+                {
+                    db.Attach(accountDetails.Account);
+                }
+                else
+                {
+                    db.Attach(new Account() { Id = accountDetails.Id });
+                }
                 db.Add(accountDetails);
             }
             db.SaveChanges();
@@ -184,6 +192,7 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
 
+            db.TagDatas.Where(t => t.Event.PublicKey == account.Id).ExecuteDelete();
             db.Events.Where(e => e.PublicKey == account.Id).ExecuteDelete();
             db.AccountDetails.Where(a => a.Id == account.Id).ExecuteDelete();
             db.FeedSources.Where(f => f.OwnerId == account.Id).ExecuteDelete();
