@@ -1,0 +1,66 @@
+﻿@code
+{
+    [Parameter, EditorRequired]
+    public RenderFragment Header { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment Body { get; set; }
+
+    [Parameter]
+    public bool AlwaysExpanded { get; set; }
+
+    [Parameter]
+    public IEnumerable<ConfigSection> ConfigSections { get; set; }
+}
+
+@if (_isVisible)
+{
+    <div class="mt-4 card shadow">
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item" role="@(!AlwaysExpanded ? "button" : "")" @onclick="@(() =>ToggleExpanded())">
+                <div class="d-flex flex-row align-items-center">
+                    @if (!AlwaysExpanded && _isExpanded)
+                    {
+                        <i class="bi bi-arrow-left text-secondary fs-4 me-2"></i>
+                    }
+                    <div class="flex-grow-1">@Header</div>
+                    @if (!AlwaysExpanded && !_isExpanded)
+                    {
+                        <i class="bi bi-chevron-right text-secondary fs-4 ms-2"></i>
+                    }
+                </div>
+            </li>
+            @if (AlwaysExpanded || _isExpanded)
+            {
+                @Body
+            }
+        </ul>
+    </div>
+}
+
+@code
+{
+    private bool _isVisible = true;
+    private bool _isExpanded = false;
+
+    public void ToggleExpanded()
+    {
+        if (AlwaysExpanded) return;
+        var newValue = !_isExpanded;
+        ConfigSections.ToList().ForEach(s => 
+        {
+            if (s != this)
+            {
+                s.ToggleVisible(!newValue);
+            }
+        });
+        _isExpanded = newValue;
+    }
+
+    public void ToggleVisible(bool value)
+    {
+        _isVisible = value;
+        _isExpanded = false;
+        StateHasChanged();
+    }
+}

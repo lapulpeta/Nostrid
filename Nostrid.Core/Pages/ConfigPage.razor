@@ -11,11 +11,11 @@
 
 <h2 class="mb-4">Options</h2>
 
-<div class="mt-4 card shadow">
-    <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-            <h5 class="my-2">Proof of Work Configuration (NIP-13)</h5>
-        </li>
+<ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections">
+    <Header>
+        <h5 class="my-2">Proof of Work Configuration (NIP-13)</h5>
+    </Header>
+    <Body>
         <li class="list-group-item">
             <div class="row align-items-center">
                 <label class="col-6" for="switchShowDifficulty">
@@ -24,8 +24,8 @@
                 <div class="col-6 text-right">
                     <div class="form-check form-switch m-0 p-0 fs-4">
                         <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchShowDifficulty"
-                               checked="@configModel.ShowDifficulty"
-                               @onchange="@(args => { configModel.ShowDifficulty = args.Value as bool? ?? false; Save(); })" />
+                                checked="@configModel.ShowDifficulty"
+                                @onchange="@(args => { configModel.ShowDifficulty = args.Value as bool? ?? false; Save(); })" />
                     </div>
                 </div>
             </div>
@@ -54,8 +54,8 @@
                 <div class="col-6 text-right">
                     <div class="form-check form-switch m-0 p-0 fs-4">
                         <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchPowCheck"
-                               checked="@configModel.StrictDiffCheck"
-                               @onchange="@(args => { configModel.StrictDiffCheck = args.Value as bool? ?? false; Save(); })" />
+                                checked="@configModel.StrictDiffCheck"
+                                @onchange="@(args => { configModel.StrictDiffCheck = args.Value as bool? ?? false; Save(); })" />
                     </div>
                 </div>
             </div>
@@ -70,19 +70,19 @@
                     <div class="d-flex">
                         <span class="me-3 badge text-bg-light">@configModel.TargetDiffOutgoing</span>
                         <input type="range" class="form-range w-100" min="0" max="255" step="1" id="rangeTargetDiff"
-                               @bind-value="@configModel.TargetDiffOutgoing" @bind-value:event="oninput" @onchange="@Save" />
+                                @bind-value="@configModel.TargetDiffOutgoing" @bind-value:event="oninput" @onchange="@Save" />
                     </div>
                 </div>
             </div>
         </li>
-    </ul>
-</div>
+    </Body>
+</ConfigSection>
 
-<div class="mt-4 card shadow">
-    <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-            <h5 class="my-2">Appearance</h5>
-        </li>
+<ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections" AlwaysExpanded="true">
+    <Header>
+        <h5 class="my-2">Appearance</h5>
+    </Header>
+    <Body>
         <li class="list-group-item">
             <div class="row align-items-center">
                 <label class="col-6" for="switchTheme">
@@ -98,23 +98,19 @@
                 </div>
             </div>
         </li>
-    </ul>
-</div>
+    </Body>
+</ConfigSection>
 
-<div class="mt-4 card shadow">
-    <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-            <h5 class="my-2">Database</h5>
-        </li>
+<ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections" AlwaysExpanded="true">
+    <Header>
+        <h5 class="my-2">Database</h5>
+    </Header>
+    <Body>
         @if (eventDatabase.IsOptimizing)
         {
-            <li class="list-group-item">
-                <div class="row">
-                    <div class="col-8 align-self-center">
-                        <div class="spinner-border" role="status"></div>
-                        <span class="text-secondary">Optimizing database...</span>
-                    </div>
-                </div>
+            <li class="list-group-item d-flex flex-row align-items-center">
+                <div class="spinner-border me-2" role="status"></div>
+                <span class="text-secondary">Optimizing database...</span>
             </li>
         }
         else
@@ -122,7 +118,7 @@
             <li class="list-group-item">
                 <div class="row">
                     <div class="col-8 align-self-center">
-                        <span class="fw-bold">Optimize database to make it faster</span>
+                        <span>Optimize database to make it faster</span>
                     </div>
                     <div class="col-4 text-end">
                         <button class="btn btn-primary py-1" @onclick="@(() => eventDatabase.Optimize())">Optimize</button>
@@ -132,7 +128,7 @@
             <li class="list-group-item">
                 <div class="row">
                     <div class="col-8 align-self-center">
-                        <span class="fw-bold">Remove all data except private keys and settings</span>
+                        <span>Remove all data except private keys and settings</span>
                     </div>
                     <div class="col-4 text-end">
                         <button class="btn btn-primary py-1" @onclick="@Clean">Clean</button>
@@ -140,28 +136,24 @@
                 </div>
             </li>
         }
-    </ul>
-</div>
+    </Body>
+</ConfigSection>
 
-<div class="mt-4 card shadow">
-    <ul class="list-group list-group-flush">
-        <li class="list-group-item">
-            <h5 class="my-2">Relays</h5>
-        </li>
+<ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections">
+    <Header>
+        <h5 class="my-2">Relays</h5>
+    </Header>
+    <Body>
         @if (relayService.IsRestarting)
         {
-            <li class="list-group-item">
-                <div class="row">
-                    <div class="col-8 align-self-center">
-                        <div class="spinner-border" role="status"></div>
-                        <span class="text-secondary">Restarting...</span>
-                    </div>
-                </div>
+            <li class="list-group-item d-flex flex-row align-items-center py-3">
+                <div class="spinner-border me-2" role="status"></div>
+                <span class="text-secondary">Restarting...</span>
             </li>
         }
         else
         {
-            <li class="list-group-item">
+            <li class="list-group-item py-3">
                 <div class="row">
                     <div class="col-8 align-self-center">
                         <span class="fw-bold">Reset to default list of relays and automatic mode</span>
@@ -171,7 +163,7 @@
                     </div>
                 </div>
             </li>
-            <li class="list-group-item">
+        <li class="list-group-item py-3">
                 <div class="row">
                     <div class="col-8 align-self-center">
                         <span class="fw-bold">Restart connections to apply any change made below</span>
@@ -182,7 +174,7 @@
                 </div>
             </li>
         }
-        <li class="list-group-item">
+        <li class="list-group-item py-3">
             <div class="row align-items-center">
                 <label class="col-6" for="manualRelayManagement">
                     Manual relay management
@@ -196,7 +188,7 @@
                 </div>
             </div>
         </li>
-        <li class="list-group-item">
+        <li class="list-group-item py-3">
             <div class="input-group">
                 <span class="align-self-center me-3">New Relay</span>
                 <InputText class="form-control" placeholder="Relay uri" @bind-Value="@newRelayUri" />
@@ -207,50 +199,51 @@
         {
             <li class="list-group-item">
                 <div class="row g-2 align-items-center">
-                    <label class="col-sm-6">
+                    <label class="col-sm-6 col-lg-8">
                         <span class="bi bi-circle-fill @(IsRelayConnected(relay.Id) ? "text-success" : "text-danger")"></span>
                         @relay.Uri
                     </label>
-                    <div class="col-sm-6 d-flex flex-row justify-content-sm-end justify-content-md-end">
-                        @if (configModel.ManualRelayManagement)
-                        {
-                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
-                                <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
-                                        checked="@relay.Read" id="relayRead@(relay.Id)"
-                                        @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
-                                <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
-                            </div>
-                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
-                                <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
-                                        checked="@relay.Write" id="relayWrite@(relay.Id)"
-                                        @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
-                                <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                    <div class="col-sm-6 col-lg-4 d-flex flex-row">
+                        <div class="d-flex flex-row flex-grow-1 align-items-center justify-content-sm-end justify-content-md-end">
+                            @if (configModel.ManualRelayManagement)
+                            {
+                                <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                    <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                            checked="@relay.Read" id="relayRead@(relay.Id)"
+                                            @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                    <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
+                                </div>
+                                <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                    <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                            checked="@relay.Write" id="relayWrite@(relay.Id)"
+                                            @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                    <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
+                                </div>
+                            }
+                            else
+                            {
                                 <label class="form-check-label" for="relayPriority@(relay.Id)">Priority</label>
                                 <span class="me-3 badge text-bg-light">@relay.Priority</span>
-                                <input type="range"  min="0" max="10" step="1" id="relayPriority@(relay.Id)"
-                                    @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
-                            </div>
-                        }
-                        <div class="d-flex flex-row flex-grow-1 flex-sm-grow-0 justify-content-end">
-                            <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
+                                <input class="flex-grow-1 me-4" type="range"  min="0" max="10" step="1" id="relayPriority@(relay.Id)"
+                                        @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
+                            }
                         </div>
+                        <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
                     </div>
                 </div>
             </li>
         }
-    </ul>
-</div>
+    </Body>
+</ConfigSection>
 
 <ConfirmationModal @ref="confirmationModal" />
 
 <Scripts @ref="scripts" />
 
 @code {
+    private List<ConfigSection> configSections = new List<ConfigSection>();
+    private ConfigSection ConfigSectionRef { set => configSections.Add(value); }
+
     private Scripts? scripts;
     private Config configModel = new();
     private List<Relay> relays = new();
