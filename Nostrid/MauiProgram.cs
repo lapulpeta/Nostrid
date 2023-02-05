@@ -42,6 +42,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MediaServiceProvider>();
         builder.Services.AddSingleton<IMediaService, NostrBuildMediaService>();
         builder.Services.AddSingleton<IMediaService, VoidCatMediaService>();
+        builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
 
 		var app = builder.Build();
 

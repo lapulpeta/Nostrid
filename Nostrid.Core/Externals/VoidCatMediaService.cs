@@ -12,7 +12,7 @@ namespace Nostrid.Externals
 
         public string Name => "void.cat";
 
-        public int MaxSize { get => 50 * 1024 * 1024; }
+        public int MaxSize { get => 5 * 1024 * 1024; }
 
         public async Task<Uri?> UploadFile(Stream data, string filename, string mimeType, Action<float> progress)
         {

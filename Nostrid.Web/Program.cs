@@ -28,6 +28,7 @@ builder.Services.AddSingleton<ConfigService>();
 builder.Services.AddSingleton<DatabaseService>();
 builder.Services.AddSingleton<IClipboardService, ClipboardService>();
 builder.Services.AddSingleton<MediaServiceProvider>();
+builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
 
 var host = builder.Build();
 
