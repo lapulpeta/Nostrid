@@ -37,11 +37,13 @@ public class Context : DbContext
 
         builder.Entity<TagData>().HasIndex(t => t.Data0);
         builder.Entity<TagData>().HasIndex(t => new { t.Data0, t.Data1 });
-        builder.Entity<TagData>().HasIndex(t => new { t.Data0, t.Data1, t.Data3 });
         builder.Entity<Event>().HasIndex(e => e.Kind);
         builder.Entity<Event>().HasIndex(e => e.PublicKey);
         builder.Entity<Event>().HasIndex(e => e.Id);
         builder.Entity<Event>().HasIndex(e => e.CreatedAtCurated);
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToId });
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToRootId });
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ChannelId });
         builder.Entity<Account>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => new { e.Id, e.DetailsLastReceived });

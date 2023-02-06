@@ -170,6 +170,9 @@ namespace Nostrid.Migrations
                     b.Property<bool>("CanEcho")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ChannelId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Content")
                         .HasColumnType("TEXT");
 
@@ -195,6 +198,15 @@ namespace Nostrid.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReplyToId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReplyToRootId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepostEventId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Signature")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -208,6 +220,12 @@ namespace Nostrid.Migrations
                     b.HasIndex("Kind");
 
                     b.HasIndex("PublicKey");
+
+                    b.HasIndex("Kind", "ChannelId");
+
+                    b.HasIndex("Kind", "ReplyToId");
+
+                    b.HasIndex("Kind", "ReplyToRootId");
 
                     b.ToTable("Events");
                 });
@@ -336,8 +354,6 @@ namespace Nostrid.Migrations
                     b.HasIndex("EventId");
 
                     b.HasIndex("Data0", "Data1");
-
-                    b.HasIndex("Data0", "Data1", "Data3");
 
                     b.ToTable("TagDatas");
                 });

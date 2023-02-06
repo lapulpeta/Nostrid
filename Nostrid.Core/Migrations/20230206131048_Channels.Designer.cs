@@ -11,8 +11,8 @@ using Nostrid.Model;
 namespace Nostrid.Migrations
 {
     [DbContext(typeof(Context))]
-    [Migration("20230125182619_db.v2")]
-    partial class dbv2
+    [Migration("20230206131048_Channels")]
+    partial class Channels
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -23,14 +23,6 @@ namespace Nostrid.Migrations
             modelBuilder.Entity("Nostrid.Model.Account", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FollowList")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FollowerList")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset?>("FollowsLastUpdate")
@@ -57,6 +49,9 @@ namespace Nostrid.Migrations
                     b.Property<string>("About")
                         .HasColumnType("TEXT")
                         .HasAnnotation("Relational:JsonPropertyName", "about");
+
+                    b.Property<long>("DetailsLastReceived")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DetailsLastUpdate")
                         .HasColumnType("TEXT");
@@ -87,6 +82,8 @@ namespace Nostrid.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Id");
+
+                    b.HasIndex("Id", "DetailsLastReceived");
 
                     b.ToTable("AccountDetails");
                 });
@@ -142,6 +139,9 @@ namespace Nostrid.Migrations
                     b.Property<string>("MainAccountId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("ManualRelayManagement")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("MinDiffIncoming")
                         .HasColumnType("INTEGER");
 
@@ -173,6 +173,9 @@ namespace Nostrid.Migrations
                     b.Property<bool>("CanEcho")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ChannelId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Content")
                         .HasColumnType("TEXT");
 
@@ -198,6 +201,15 @@ namespace Nostrid.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReplyToId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReplyToRootId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RepostEventId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Signature")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -211,6 +223,12 @@ namespace Nostrid.Migrations
                     b.HasIndex("Kind");
 
                     b.HasIndex("PublicKey");
+
+                    b.HasIndex("Kind", "ChannelId");
+
+                    b.HasIndex("Kind", "ReplyToId");
+
+                    b.HasIndex("Kind", "ReplyToRootId");
 
                     b.ToTable("Events");
                 });
@@ -255,6 +273,31 @@ namespace Nostrid.Migrations
                     b.ToTable("FeedSources");
                 });
 
+            modelBuilder.Entity("Nostrid.Model.Follow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FollowId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("FollowId");
+
+                    b.HasIndex("AccountId", "FollowId");
+
+                    b.ToTable("Follows");
+                });
+
             modelBuilder.Entity("Nostrid.Model.Relay", b =>
                 {
                     b.Property<long>("Id")
@@ -264,9 +307,15 @@ namespace Nostrid.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Read")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Uri")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Write")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -308,8 +357,6 @@ namespace Nostrid.Migrations
                     b.HasIndex("EventId");
 
                     b.HasIndex("Data0", "Data1");
-
-                    b.HasIndex("Data0", "Data1", "Data3");
 
                     b.ToTable("TagDatas");
                 });

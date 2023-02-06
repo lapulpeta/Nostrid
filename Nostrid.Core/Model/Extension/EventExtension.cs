@@ -1,4 +1,5 @@
 using NNostr.Client;
+using Nostrid.Data.Relays;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Numerics;
@@ -9,7 +10,7 @@ public static class EventExtension
 {
     public static Event FromNostrEvent(this NostrEvent ev)
     {
-        return new Event()
+        var ret = new Event()
         {
             Content = ev.Content,
             CreatedAt = ev.CreatedAt?.UtcDateTime,
@@ -33,6 +34,11 @@ public static class EventExtension
             Difficulty = CalculateDifficulty(ev.Id),
             HasPow = ev.Tags.Any(t => t.TagIdentifier == "nonce"),
         };
+        ret.ReplyToId = GetReplyToId(ret);
+        ret.ReplyToRootId = GetReplyToRootId(ret);
+        ret.ChannelId = GetChannelId(ret);
+        ret.RepostEventId = GetRepostEventId(ret);
+        return ret;
     }
 
     public static NostrEvent ToNostrEvent(this Event ev)
@@ -73,6 +79,82 @@ public static class EventExtension
         }
 
         return ev.Difficulty >= target;
+    }
+
+    public static string? GetReplyToId(Event ev)
+    {
+        if (ev.Kind == NostrKind.Text || ev.Kind == NostrKind.ChannelMessage)
+        {
+            var preferred = ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data3 == "reply")
+                .Select(t => t.Data1)
+                .FirstOrDefault();
+            if (preferred != null)
+            {
+                return preferred;
+            }
+            if (ev.Kind == NostrKind.ChannelMessage && ev.Tags.Count(t => t.Data0 == "e") <= 1)
+            {
+                return null;
+            }
+            return ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data1 != null)
+                .Select(t => t.Data1)
+                .LastOrDefault();
+        }
+        return null;
+    }
+
+    public static string? GetReplyToRootId(Event ev)
+    {
+        if (ev.Kind == NostrKind.Text)
+        {
+            var preferred = ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data3 == "root")
+                .Select(t => t.Data1)
+                .FirstOrDefault();
+            if (preferred != null)
+            {
+                return preferred;
+            }
+            return ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data1 != null)
+                .Select(t => t.Data1)
+                .FirstOrDefault();
+        }
+        return null;
+    }
+
+    public static string? GetRepostEventId(Event ev)
+    {
+        if (ev.Kind == NostrKind.Repost)
+        {
+            return ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data1 != null)
+                .Select(t => t.Data1)
+                .FirstOrDefault();
+        }
+        return null;
+    }
+
+    public static string? GetChannelId(Event ev)
+    {
+        if (ev.Kind == NostrKind.ChannelMessage)
+        {
+            var preferred = ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data3 == "root")
+                .Select(t => t.Data1)
+                .FirstOrDefault();
+            if (preferred != null)
+            {
+                return preferred;
+            }
+            return ev.Tags
+                .Where(t => t.Data0 == "e" && t.Data1 != null)
+                .Select(t => t.Data1)
+                .FirstOrDefault();
+        }
+        return null;
     }
 
     public static int CalculateDifficulty(string id)

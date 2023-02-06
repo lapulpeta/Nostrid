@@ -6,11 +6,35 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Nostrid.Migrations
 {
     /// <inheritdoc />
-    public partial class dbv2 : Migration
+    public partial class Channels : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "ChannelId",
+                table: "Events",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ReplyToId",
+                table: "Events",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "ReplyToRootId",
+                table: "Events",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "RepostEventId",
+                table: "Events",
+                type: "TEXT",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "Channels",
                 columns: table => new
@@ -45,9 +69,19 @@ namespace Nostrid.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_TagDatas_Data0_Data1_Data3",
-                table: "TagDatas",
-                columns: new[] { "Data0", "Data1", "Data3" });
+                name: "IX_Events_Kind_ChannelId",
+                table: "Events",
+                columns: new[] { "Kind", "ChannelId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Events_Kind_ReplyToId",
+                table: "Events",
+                columns: new[] { "Kind", "ReplyToId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Events_Kind_ReplyToRootId",
+                table: "Events",
+                columns: new[] { "Kind", "ReplyToRootId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChannelDetails_Id",
@@ -58,6 +92,10 @@ namespace Nostrid.Migrations
                 name: "IX_Channels_Id",
                 table: "Channels",
                 column: "Id");
+
+            migrationBuilder.Sql("DELETE FROM TagDatas");
+            migrationBuilder.Sql("DELETE FROM Events");
+
         }
 
         /// <inheritdoc />
@@ -70,8 +108,32 @@ namespace Nostrid.Migrations
                 name: "Channels");
 
             migrationBuilder.DropIndex(
-                name: "IX_TagDatas_Data0_Data1_Data3",
-                table: "TagDatas");
+                name: "IX_Events_Kind_ChannelId",
+                table: "Events");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Events_Kind_ReplyToId",
+                table: "Events");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Events_Kind_ReplyToRootId",
+                table: "Events");
+
+            migrationBuilder.DropColumn(
+                name: "ChannelId",
+                table: "Events");
+
+            migrationBuilder.DropColumn(
+                name: "ReplyToId",
+                table: "Events");
+
+            migrationBuilder.DropColumn(
+                name: "ReplyToRootId",
+                table: "Events");
+
+            migrationBuilder.DropColumn(
+                name: "RepostEventId",
+                table: "Events");
         }
     }
 }

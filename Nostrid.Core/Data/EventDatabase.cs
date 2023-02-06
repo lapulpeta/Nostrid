@@ -664,8 +664,7 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
             return db.Events.Count(e =>
-                e.Kind == NostrKind.ChannelMessage &&
-                e.Tags.Any(t => t.Data3 == "root" && t.Data1 == channelId)); // TODO: count replies as well
+                e.Kind == NostrKind.ChannelMessage && e.ChannelId == channelId);
         }
 
         public List<ChannelWithInfo> ListChannelsWithInfo()
@@ -673,8 +672,8 @@ namespace Nostrid.Data
             using var db = new Context(_dbfile);
 
             var channelsMessageCount = db.Events
-                .Where(e => e.Kind == NostrKind.ChannelMessage && e.Tags.Any(t => t.Data3 == "root"))
-                .GroupBy(e => e.Tags.First(t => t.Data3 == "root").Data1 ?? string.Empty)
+                .Where(e => e.Kind == NostrKind.ChannelMessage && !string.IsNullOrEmpty(e.ChannelId))
+                .GroupBy(e => e.ChannelId ?? string.Empty)
                 .Select(g => new
                 {
                     Id = g.Key,
