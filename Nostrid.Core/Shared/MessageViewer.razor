@@ -9,6 +9,7 @@
 @inject EventDatabase eventDatabase
 @inject ConfigService configService
 @inject RelayService relayService
+@inject AccountService accountService
 
 @code{
     [Parameter, EditorRequired]
@@ -61,6 +62,12 @@
                 DestroyOnEose = true, 
                 DestroyOnFirstEvent = true 
             });
+        }
+
+        if (Event != null)
+        {
+            var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
+            accountService.AddDetailsNeeded(accountIds);
         }
     }
 
