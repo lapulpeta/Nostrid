@@ -66,7 +66,6 @@
                 <MessageWrapperViewer Tree="@noteTree"
                     OnComponentLoad="AddTreeItemComponent" OnComponentUnload="RemoveTreeItemComponent"
                     OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
-                    OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"
                     OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
                     OnDelete="@(Root ? (arg => Delete(arg)) : OnDelete)" />
             }

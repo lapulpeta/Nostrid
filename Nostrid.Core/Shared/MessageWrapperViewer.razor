@@ -34,9 +34,6 @@
     public Action<Event>? OnReply { get; set; }
 
     [Parameter]
-    public Action<Event>? OnRepost { get; set; }
-
-    [Parameter]
     public Action<string>? OnPay { get; set; }
 
     [Parameter]
@@ -71,12 +68,6 @@
                                         <a role="button" class="dropdown-item" @onclick="@Reply" @onclick:stopPropagation="true">
                                             <i class="bi bi-chat"></i>
                                             Reply
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a role="button" class="dropdown-item" @onclick="@Repost" @onclick:stopPropagation="true">
-                                            <i class="bi bi-repeat"></i>    
-                                            Repost
                                         </a>
                                     </li>
                                     @if (Tree.Note != null 
@@ -160,11 +151,6 @@
     private void Reply()
     {
         OnReply?.Invoke(Tree.Note);
-    }
-
-    private void Repost()
-    {
-        OnRepost?.Invoke(Tree.Note);
     }
 
     private void Pay()
