@@ -67,7 +67,6 @@ else
 
         cancellationTokenSource = new();
 
-        feedService.NoteReceivedChild += NoteReceivedChild;
         feedService.NotesReceived += ReceivedNotes;
 
         lastUpdate = DateTime.UtcNow;
@@ -113,24 +112,6 @@ else
         }
     }
 
-    private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
-    {
-        Task.Run(() =>
-        {
-            if (data.Child.Kind != NostrKind.Text || (data.Child.ReplyToRootId != rootId && data.Child.Id != rootId))
-                return;
-
-            TruncateTreeIfNeeded(new[] { data.Child });
-
-            if (updateTask != null)
-            {
-                return;
-            }
-
-            UpdateIfNeeded();
-        },
-        cancellationTokenSource.Token);
-    }
 
     private void UpdateIfNeeded()
     {
@@ -147,6 +128,15 @@ else
     {
         Task.Run(() =>
         {
+            if (rootId == null)
+            {
+                var note = data.events.Where(e => e.Kind == NostrKind.Text && (e.Id == EventId || e.ReplyToRootId == EventId || e.ReplyToId == EventId)).FirstOrDefault();
+                if (note == null)
+                {
+                    return;
+                }
+                rootId = note.ReplyToRootId ?? note.Id;
+            }
             var notesToAdd = data.events.Where(e => e.Kind == NostrKind.Text && (e.Id == rootId || e.ReplyToRootId == rootId));
             if (!notesToAdd.Any())
             {
@@ -203,7 +193,7 @@ else
 
     private void Cleanup()
     {
-        feedService.NoteReceivedChild -= NoteReceivedChild;
+        feedService.NotesReceived -= ReceivedNotes;
         if (eventFilter != null) relayService.DeleteFilter(eventFilter);
         cancellationTokenSource.Cancel();
     }

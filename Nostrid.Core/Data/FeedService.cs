@@ -132,25 +132,18 @@ public class FeedService
     public List<Event> GetNotesThread(string eventId, out string? rootId)
     {
         using var db = eventDatabase.CreateContext();
-        var node = db.Events.Where(e => e.Kind == NostrKind.Text).Include(e => e.Tags).FirstOrDefault(e => e.Id == eventId) ??
-            db.Events.Where(e => e.Kind == NostrKind.Text).Include(e => e.Tags).FirstOrDefault(e => e.Tags.Any(t => t.Data0 == "e" && t.Data1 == eventId));
-        if (node != null)
+        var note = db.Events.Where(e => e.Kind == NostrKind.Text && (e.Id == eventId || e.ReplyToRootId == eventId || e.ReplyToId == eventId)).FirstOrDefault();
+        if (note == null)
         {
-            rootId = node.ReplyToRootId ?? node.Id;
-            var localRootId = rootId;
-            var allthread = db.Events
-                .Include(e => e.Tags)
-                .Where(e => e.Kind == NostrKind.Text && (e.Id == localRootId || e.Tags.Any(t => t.Data0 == "e" && t.Data1 == localRootId)))
-                .ToList()
-                .Where(e => e.ReplyToRootId == localRootId || e.Id == localRootId);
-            var ret = new HashSet<Event>(allthread)
-            {
-                node
-            };
-            return ret.ToList();
+            rootId = null;
+            return new();
         }
-        rootId = null;
-        return new();
+        rootId = note.ReplyToRootId ?? note.Id;
+        var localRootId = rootId;
+        return db.Events
+            .Include(e => e.Tags)
+            .Where(e => e.Kind == NostrKind.Text && (e.Id == localRootId || e.ReplyToRootId == localRootId))
+            .ToList();
     }
 
     public List<NoteTree> GetTreesFromNotesNoGrouping(IEnumerable<Event> evs)
