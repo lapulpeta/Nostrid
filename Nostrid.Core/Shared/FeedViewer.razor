@@ -119,7 +119,13 @@ else
         if (!notes.Any())
             return;
 
-        if (data.filterId == oldFilter.Id)
+        if (inChannel)
+        {
+            EventExtension.Merge(renderedN, notes);
+            TrimOlder();
+            InvokeAsync(() => StateHasChanged());
+        }
+        else if (data.filterId == oldFilter.Id)
         {
             EventExtension.Merge(renderedN, notes);
             TrimOlder();
@@ -153,13 +159,16 @@ else
         feedService.NotesReceived += ReceivedNotes;
         feedService.NoteReceivedChild += NoteReceivedChild;
 
-        refreshPageTimer = new Timer(new TimerCallback(_ =>
+        if (!inChannel) // Channel auto refreshes
         {
-            InvokeAsync(() =>
+            refreshPageTimer = new Timer(new TimerCallback(_ =>
             {
-                StateHasChanged();
-            });
-        }), null, 0, 5000);
+                InvokeAsync(() =>
+                {
+                    StateHasChanged();
+                });
+            }), null, 0, 5000);
+        }
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
