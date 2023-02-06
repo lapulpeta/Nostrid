@@ -635,6 +635,14 @@ namespace Nostrid.Data
                 {
                     db.Add(new Channel() { Id = channelDetails.Id });
                 }
+                else if (channelDetails.Channel != null)
+                {
+                    db.Attach(channelDetails.Channel);
+                }
+                else
+                {
+                    db.Attach(new Channel() { Id = channelDetails.Id });
+                }
                 db.Add(channelDetails);
             }
             db.SaveChanges();
