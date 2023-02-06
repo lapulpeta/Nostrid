@@ -17,7 +17,6 @@ public class ChannelSubscriptionFilter : SubscriptionFilter
     public ChannelSubscriptionFilter(string[] ids)
     {
         this.ids = ids;
-        //ParamsId = Utils.HashWithSHA256($"csf:{ids}");
     }
 
     public override NostrSubscriptionFilter[] GetFilters()

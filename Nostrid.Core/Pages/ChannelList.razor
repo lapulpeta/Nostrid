@@ -5,6 +5,8 @@
 @using System.Collections.Concurrent;
 @using Nostrid.Model;
 
+@implements IDisposable
+
 @inject ChannelService channelService
 @inject RelayService relayService
 @inject NavigationManager navigationManager
@@ -43,9 +45,9 @@
 
         channelService.ChannelReceivedMessage += ChannelReceivedMessage;
 
-        messageFilter = new ChannelSubscriptionFilter((string[])null);
+        messageFilter = new ChannelSubscriptionFilter((string[])null) { DestroyOnEose = true };
         messageFilter.limitFilterData.Limit = 100;
-        detailsFilter = new ChannelListSubscriptionFilter();
+        detailsFilter = new ChannelListSubscriptionFilter() { DestroyOnEose = true };
         relayService.AddFilters(messageFilter, detailsFilter);
 
         channelsById = new ConcurrentDictionary<string, int>(channelService.GetChannelsWithInfo().ToDictionary(c => c.Id, c => c.MessageCount));
