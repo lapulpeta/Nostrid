@@ -59,6 +59,8 @@ public class RelayService
     public event EventHandler? ClientsStateChanged;
     public event EventHandler<(long relayId, bool connected)>? ClientStatusChanged;
 
+    private static object lockObj = new();
+
     public RelayService(EventDatabase eventDatabase, ConfigService configService)
     {
         if (PriorityLowerBound > PriorityHigherBound)
@@ -161,7 +163,7 @@ public class RelayService
     {
         if (filterBySubscriptionId.TryGetValue(subscriptionId, out var filter) && filter.DestroyOnEose)
         {
-            lock (filters)
+            lock (lockObj)
             {
                 if (!clientByRelay.TryGetValue(relay, out var client))
                     return;
@@ -226,7 +228,7 @@ public class RelayService
 
     public void AddFilter(SubscriptionFilter filter)
     {
-        lock (filters)
+        lock (lockObj)
         {
             filters.Add(filter);
         }
@@ -235,7 +237,7 @@ public class RelayService
 
     public void AddFilters(IEnumerable<SubscriptionFilter> fls)
     {
-        lock (filters)
+        lock (lockObj)
         {
             filters.AddRange(fls);
         }
@@ -249,12 +251,12 @@ public class RelayService
 
     public void RefreshFilters(params SubscriptionFilter[] fls)
     {
-        lock (filters)
+        lock (lockObj)
         {
             filters.RemoveAll(f => fls.Contains(f));
         }
         UpdateSubscriptions();
-        lock (filters)
+        lock (lockObj)
         {
             filters.AddRange(fls);
         }
@@ -263,7 +265,7 @@ public class RelayService
 
     public void DeleteFilter(SubscriptionFilter filter)
     {
-        lock (filters)
+        lock (lockObj)
         {
             filters.Remove(filter);
         }
@@ -277,7 +279,7 @@ public class RelayService
 
     public void DeleteFilters(IEnumerable<SubscriptionFilter?> fls)
     {
-        lock (filters)
+        lock (lockObj)
         {
             filters.RemoveAll(f => fls.Contains(f));
         }
@@ -404,7 +406,7 @@ public class RelayService
     private async Task RunNostrClient(Relay relay, CancellationToken cancellationToken)
     {
         NostrClient client;
-        lock (clientByRelay)
+        lock (lockObj)
         {
             if (clientByRelay.ContainsKey(relay)) return;
             client = new NostrClient(new Uri(relay.Uri));
@@ -466,7 +468,7 @@ public class RelayService
 
     private void CleanupRelay(Relay relay)
     {
-        lock (clientByRelay)
+        lock (lockObj)
         {
             relayRateLimited.TryRemove(relay.Id, out _);
             if (!clientByRelay.TryRemove(relay, out var client)) return;
@@ -483,7 +485,7 @@ public class RelayService
 
     private void UpdateSubscriptions()
     {
-        lock (clientByRelay)
+        lock (lockObj)
         {
             foreach (var relay in clientByRelay.Keys)
             {
@@ -509,8 +511,8 @@ public class RelayService
             relayRateLimited.TryRemove(relay.Id, out _);
         }
 
-        lock (filters)
-        //lock (clientByRelay)
+        lock (lockObj)
+        //lock (lockObj)
         {
             // Add new filters
             var supportedFilters = filters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
@@ -542,7 +544,7 @@ public class RelayService
     public void SendEvent(NostrEvent nostrEvent)
     {
         eventDatabase.SaveOwnEvents(nostrEvent, RelaysMonitor.IsAuto);
-        lock (clientByRelay)
+        lock (lockObj)
         {
             foreach (var (relay, client) in clientByRelay)
             {
