@@ -536,14 +536,20 @@ namespace Nostrid.Data
         public bool TryDetermineHexType(string id, out IdType type)
         {
             using var db = new Context(_dbfile);
-            if (db.Events.Any(e => e.Id == id))
-            {
-                type = IdType.Event;
-                return true;
-            }
             if (db.Accounts.Any(a => a.Id == id) || db.AccountDetails.Any(a => a.Id == id))
             {
                 type = IdType.Account;
+                return true;
+            }
+            if (db.Channels.Any(c => c.Id == id) || db.ChannelDetails.Any(c => c.Id == id) ||
+                db.Events.Any(e => e.ChannelId == id))
+            {
+                type = IdType.Channel;
+                return true;
+            }
+            if (db.Events.Any(e => e.Id == id && (e.Kind == NostrKind.Text || e.Kind == NostrKind.Repost)))
+            {
+                type = IdType.Event;
                 return true;
             }
             type = IdType.Unknown;

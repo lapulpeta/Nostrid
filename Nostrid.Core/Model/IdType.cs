@@ -7,5 +7,6 @@ namespace Nostrid.Model
         Unknown,
         Account,
         Event,
+        Channel,
     }
 }

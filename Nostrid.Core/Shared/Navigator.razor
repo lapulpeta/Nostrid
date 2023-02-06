@@ -42,6 +42,9 @@
                     case IdType.Account:
                         NavigationManager.NavigateTo($"/account/{input}");
                         return;
+                    case IdType.Channel:
+                        NavigationManager.NavigateTo($"/channel/{input}");
+                        return;
                     case IdType.Event:
                         NavigationManager.NavigateTo($"/note/{input}");
                         return;
@@ -55,6 +58,10 @@
                     ConfirmationModal.Options.Button.CreateButton("Account", () =>
                     {
                         NavigationManager.NavigateTo($"/account/{input}");
+                    }),
+                    ConfirmationModal.Options.Button.CreateButton("Channel", () =>
+                    {
+                        NavigationManager.NavigateTo($"/channel/{input}");
                     }),
                     ConfirmationModal.Options.Button.CreateButton("Event", () =>
                     {
