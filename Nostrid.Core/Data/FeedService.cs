@@ -330,8 +330,6 @@ public class FeedService
         if (!replyToId.IsNullOrEmpty())
         {
             // Use preferred method as per NIP-10 https://github.com/nostr-protocol/nips/blob/master/10.md
-            //var replyToId = replyTo.Id;
-            //var rootId = replyTo.NoteMetadata.ReplyToRootId;
             if (rootId.IsNullOrEmpty())
             {
                 // RootId missing maybe because of a faulty/deprecated client. Let's try to find the rootId
@@ -370,7 +368,7 @@ public class FeedService
             // When replying to a text event E the reply event's "p" tags should contain all of E's "p" tags as well as the "pubkey" of the event being replied to.
             if (accountMentionIds != null)
             {
-                foreach (var mention in accountMentionIds) // replyTo.NoteMetadata.AccountMentions.Values.Union(new[] { replyTo.PublicKey }))
+                foreach (var mention in accountMentionIds)
                 {
                     if (!ps.Contains(mention) && !prs.Contains(mention))
                         prs.Add(mention);
