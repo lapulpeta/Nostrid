@@ -55,6 +55,8 @@ namespace Nostrid.Data
                 await db.EventSeen.ExecuteDeleteAsync();
                 await db.TagDatas.ExecuteDeleteAsync();
                 await db.Events.ExecuteDeleteAsync();
+                await db.ChannelDetails.ExecuteDeleteAsync();
+                await db.Channels.ExecuteDeleteAsync();
                 await db.Database.ExecuteSqlAsync($"VACUUM");
                 await db.Database.ExecuteSqlAsync($"ANALYZE");
                 DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
