@@ -1,6 +1,6 @@
 ﻿@code{
-    [Parameter]
-    public string Id { get; set; }
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = null!;
 
     [Parameter]
     public bool OnlyText { get; set; }
@@ -40,7 +40,7 @@
 
 @code
 {
-    private AccountDetails _details;
+    private AccountDetails? _details;
 
     protected override void OnParametersSet()
     {

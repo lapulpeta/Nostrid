@@ -1,0 +1,43 @@
+﻿@page "/channel/{id}"
+
+@code {
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = null!;
+}
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Interfaces;
+@using Nostrid.Model;
+
+@inject IClipboardService clipboardService
+@inject ChannelService channelService
+
+<div class="d-flex flex-column flex-grow-1">
+    <div class="fs-4 fw-bolder">@channel?.Details?.Name</div>
+    @*<div class="fs-7 text-body-tertiary text-break mb-2">
+        @Id
+        <button class="btn btn-sm text-secondary ms-1 mb-1 p-0" type="button"
+                @onclick="@(() => clipboardService.CopyAsync(Id))">
+            <i class="bi bi-files"></i>
+        </button>
+    </div>*@
+    <div class="position-relative d-flex flex-column flex-column-reverse flex-grow-1 overflow-y-auto px-3"
+         style="margin: 0 -1rem; flex-basis:0;">
+        <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.ChannelMessage})" ChannelId="@Id" />
+    </div>
+    <div>
+        <NoteComposer ChannelId="@Id" Rows="1" />
+    </div>
+</div>
+
+@code {
+    private SubscriptionFilter? filter;
+    private Channel? channel;
+
+    protected override void OnParametersSet()
+    {
+        channel = channelService.GetChannel(Id);
+        filter = new ChannelSubscriptionFilter(Id);
+    }
+}

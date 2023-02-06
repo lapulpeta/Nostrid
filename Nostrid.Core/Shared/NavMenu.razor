@@ -10,32 +10,19 @@
 @inject IJSRuntime jsRuntime
 @implements IDisposable
 
-<nav class="navbar navbar-light bg-body-tertiary fixed-top d-md-none m-0 px-2 py-1 border-bottom bg-opacity-95">
-	<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
-		<NavLink class="nav-link" href="#">
-			<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
-		</NavLink>
-		<div class="flex-grow-1 text-center">
-			<a class="navbar-brand m-0" href="/">Nostrid</a>
-		</div>
-		<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
-			<span class="navbar-toggler-icon"></span>
-			@if (mentionsCount > 0)
-			{
-				<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
-					@mentionsCount
-				</span>
-			}
-		</button>
-	</div>
-</nav>
+@code
+{
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}
 
-<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
-	<div class="offcanvas-header d-md-none">
-		<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-	</div>
-	<div class="offcanvas-body d-flex flex-column flex-grow-1">
-		<div class="d-flex flex-column">
+<div class="d-flex flex-row flex-grow-1">
+
+	<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
+		<div class="offcanvas-header d-md-none">
+			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+		</div>
+		<div class="offcanvas-body d-flex flex-column flex-grow-1">
 			<a class="d-block pb-3 text-center text-decoration-none" href="/">Nostrid</a>
 			<nav class="p-0 flex-grow-1 fs-5" style="min-width: 150px;">
 				<ul class="nav nav-pills flex-column">
@@ -74,6 +61,11 @@
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap" href="explore" @onclick="HideOffCanvasMenu">
 							<span class="bi bi-search" aria-hidden="true"></span> Explore
+						</NavLink>
+					</li>
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap" href="channels" @onclick="HideOffCanvasMenu">
+							<span class="bi bi-tv-fill" aria-hidden="true"></span> Channels
 						</NavLink>
 					</li>
 					<li class="nav-item pb-2">
@@ -117,6 +109,54 @@
 				</div>
 			</div>
 		</div>
+	</div>
+
+	<div class="d-flex flex-column flex-grow-1">
+		
+		<nav class="navbar navbar-light bg-body-tertiary d-md-none m-0 px-2 py-1 border-bottom bg-opacity-95">
+			<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
+				<NavLink class="nav-link" href="#">
+					<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
+				</NavLink>
+				<div class="flex-grow-1 text-center">
+					<a class="navbar-brand m-0" href="/">Nostrid</a>
+				</div>
+				<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
+					<span class="navbar-toggler-icon"></span>
+					@if (mentionsCount > 0)
+					{
+						<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
+							@mentionsCount
+						</span>
+					}
+				</button>
+			</div>
+		</nav>
+
+		<div class="position-relative d-flex flex-column flex-grow-1 overflow-y-auto">
+			@ChildContent
+		</div>
+
+		<nav class="navbar navbar-light bg-body-tertiary d-md-none p-0 m-0 border-top">
+			<ul class="nav flex-grow-1 d-flex text-center">
+				<li class="nav-item flex-grow-1">
+					<NavLink class="nav-link fs-4 text-body" href="/" Match="NavLinkMatch.All">
+						<span class="bi bi-house-fill" aria-hidden="true"></span>
+					</NavLink>
+				</li>
+				<li class="nav-item flex-grow-1">
+					<NavLink class="nav-link fs-4 text-body" href="compose">
+						<div class="bi bi-chat-dots-fill" aria-hidden="true"></div>
+					</NavLink>
+				</li>
+				<li class="nav-item flex-grow-1">
+					<NavLink class="nav-link fs-4 text-body" href="explore">
+						<div class="bi bi-search" aria-hidden="true"></div>
+					</NavLink>
+				</li>
+			</ul>
+		</nav>
+
 	</div>
 </div>
 

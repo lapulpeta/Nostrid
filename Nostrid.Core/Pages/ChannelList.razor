@@ -1,0 +1,87 @@
+﻿@page "/channels"
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using System.Collections.Concurrent;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject ChannelService channelService
+@inject RelayService relayService
+@inject NavigationManager navigationManager
+
+<h4>Channels</h4>
+<div style="margin-bottom: -1rem;">
+    @foreach (var (channelId, messageCount) in channelsById.OrderByDescending(m => m.Value).Take(50))
+    {
+        <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+            @onclick="@(() => navigationManager.NavigateTo($"/channel/{channelId}"))" style="margin: 0 -1rem;">
+            <div class="flex-shrink-0">
+                <ChannelPicture Id="@channelId" />
+            </div>
+            <div class="flex-grow-1 px-2 text-break">
+                <div class="fw-bold">
+                    <ChannelName Id="@channelId" />
+                </div>
+                <div class="fs-7 text-secondary">@channelId</div>
+            </div>
+            <div>
+                <span class="badge text-bg-primary rounded-pill">
+                    <ChannelMessageCount Id="@channelId" />
+                </span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private SubscriptionFilter? messageFilter, detailsFilter;
+    private ConcurrentDictionary<string, int> channelsById = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        channelService.ChannelReceivedMessage += ChannelReceivedMessage;
+
+        messageFilter = new ChannelSubscriptionFilter((string[])null) { DestroyOnEose = true };
+        messageFilter.limitFilterData.Limit = 100;
+        detailsFilter = new ChannelListSubscriptionFilter() { DestroyOnEose = true };
+        relayService.AddFilters(messageFilter, detailsFilter);
+
+        channelsById = new ConcurrentDictionary<string, int>(channelService.GetChannelsWithInfo().ToDictionary(c => c.Id, c => c.MessageCount));
+    }
+    private void ChannelReceivedMessage(object? sender, string channelId)
+    {
+        channelsById.AddOrUpdate(channelId,
+            (_) => channelService.GetChannelMessagesInDb(channelId),
+            (_, channel) => channelService.GetChannelMessagesInDb(channelId));
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        channelService.ChannelReceivedMessage -= ChannelReceivedMessage;
+        relayService.DeleteFilters(messageFilter, detailsFilter);
+    }
+    #endregion
+}

@@ -1,39 +1,33 @@
-﻿@code{
+﻿@code {
     [Parameter, EditorRequired]
     public string Id { get; set; } = null!;
-
-    [Parameter]
-    public RenderFragment? ChildContent { get; set; }
 }
 
 @using Nostrid.Data;
 @using Nostrid.Misc;
 @using Nostrid.Model;
 
-@inject AccountService _accountService
+@inject ChannelService _channelService
 
-@if (_details != null && (_details.Lud06Url.IsNotNullOrEmpty() || _details.Lud16Id.IsNotNullOrEmpty()))
-{
-    @ChildContent
-}
+@_messageCount
 
 @code
 {
-    private AccountDetails? _details;
+    private int _messageCount = 0;
 
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
 
-        _details = _accountService.GetAccountDetails(Id);
-        _accountService.AccountDetailsChanged += AccountDetailsChanged;
+        _messageCount = _channelService.GetChannelMessagesInDb(Id);
+        _channelService.ChannelReceivedMessage += ChannelReceivedMessage;
     }
 
-    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
+    private void ChannelReceivedMessage(object? sender, string channelId)
     {
-        if (data.accountId == Id)
+        if (channelId == Id)
         {
-            _details = data.details;
+            _messageCount = _channelService.GetChannelMessagesInDb(channelId);
             InvokeAsync(() => StateHasChanged());
         }
     }
@@ -58,7 +52,7 @@
 
     private void Cleanup()
     {
-        _accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        _channelService.ChannelReceivedMessage -= ChannelReceivedMessage;
     }
     #endregion
 }

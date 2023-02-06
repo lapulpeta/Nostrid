@@ -10,7 +10,7 @@
 @using Nostrid.Misc;
 @using Nostrid.Model;
 
-@inject AccountService _accountService
+@inject ChannelService _channelService
 
 @if (_details != null && _details.PictureUrl.IsNotNullOrEmpty() && Uri.IsWellFormedUriString(_details.PictureUrl, UriKind.Absolute))
 {
@@ -25,19 +25,19 @@ else if (Id.IsNotNullOrEmpty())
 
 @code
 {
-    private AccountDetails? _details;
+    private ChannelDetails? _details;
 
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
 
-        _details = _accountService.GetAccountDetails(Id);
-        _accountService.AccountDetailsChanged += AccountDetailsChanged;
+        _details = _channelService.GetChannel(Id)?.Details;
+        _channelService.ChannelDetailsChanged += ChannelDetailsChanged;
     }
 
-    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
+    private void ChannelDetailsChanged(object? sender, (string channelId, ChannelDetails details) data)
     {
-        if (data.accountId == Id)
+        if (data.channelId == Id)
         {
             _details = data.details;
             InvokeAsync(() => StateHasChanged());
@@ -64,7 +64,7 @@ else if (Id.IsNotNullOrEmpty())
 
     private void Cleanup()
     {
-        _accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        _channelService.ChannelDetailsChanged -= ChannelDetailsChanged;
     }
     #endregion
 }

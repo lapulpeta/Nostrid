@@ -68,7 +68,7 @@ else
         cancellationTokenSource = new();
 
         feedService.NoteReceivedChild += NoteReceivedChild;
-        feedService.ReceivedNotes += ReceivedNotes;
+        feedService.NotesReceived += ReceivedNotes;
 
         lastUpdate = DateTime.UtcNow;
 

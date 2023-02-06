@@ -1,0 +1,224 @@
+﻿@implements IDisposable
+@implements ITreeItem
+
+@using Markdig;
+@using Microsoft.JSInterop;
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Interfaces;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+@using Ganss.Xss;
+@using System.Web;
+@using System.Net;
+
+@inject NavigationManager navigationManager
+@inject AccountService accountService
+@inject FeedService feedService
+@inject IJSRuntime jsRuntime
+@inject ConfigService configService
+@inject IClipboardService clipboardService
+@inject NoteProcessor noteProcessor
+
+@code{
+    [Parameter, EditorRequired]
+    public NoteTree Tree { get; set; } = null!;
+
+    [Parameter]
+    public Action<ITreeItem>? OnComponentLoad { get; set; }
+
+    [Parameter]
+    public Action<ITreeItem>? OnComponentUnload { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnReply { get; set; }
+
+    [Parameter]
+    public Action<string>? OnPay { get; set; }
+
+    [Parameter]
+    public Action<Event>? OnDelete { get; set; }
+}
+
+<div @ref="referenceElement" class="d-flex flex-row mb-3 @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "flex-row-reverse align-self-end" : string.Empty)">
+    @if (Tree.Note.Deleted)
+    {
+        <div class="d-flex flex-grow-1 align-items-center justify-content-center text-secondary">Note deleted</div>
+    }
+    else
+    {
+        <div class="flex-shrink-0">
+            <a href="/account/@Tree.Note?.PublicKey" @onclick:stopPropagation="true">
+                <AccountPicture Id="@Tree.Note?.PublicKey"></AccountPicture>
+            </a>
+        </div>
+        <div class="d-flex flex-column align-items-start">
+            <div class="p-2 pt-1 mx-2 rounded shadow-sm position-relative triangle @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "triangle-end bg-success-subtle" : "bg-body-secondary triangle-start")">
+                <MessageViewer Event="@Tree.Note">
+                    <TopContent>
+                        <span class="ms-2 d-inline-block text-secondary">@Utils.FormatDate(Tree.Note?.CreatedAtCurated ?? 0)</span>
+                        <div class="btn-group">
+                            <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-1 ms-1 rounded-5 fs-6 text-secondary bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </a>
+                            <ul class="dropdown-menu shadow">
+                                @if (accountService.MainAccount != null)
+                                {
+                                    <li>
+                                        <a role="button" class="dropdown-item" @onclick="@Reply" @onclick:stopPropagation="true">
+                                            <i class="bi bi-chat"></i>
+                                            Reply
+                                        </a>
+                                    </li>
+                                    @if (Tree.Note != null 
+                                        && Tree.Note.PublicKey == accountService.MainAccount?.Id)
+                                    {
+                                        <li>
+                                            <a role="button" class="dropdown-item" @onclick="@Delete" @onclick:stopPropagation="true">
+                                                <i class="bi bi-trash3"></i>
+                                                Delete
+                                            </a>
+                                        </li>
+                                    }
+                                }
+                                <PayButton Id="@Tree.Note?.PublicKey">
+                                    <li>
+                                        <a role="button" class="dropdown-item" @onclick="@Pay" @onclick:stopPropagation="true">
+                                            <i class="bi bi-lightning-charge"></i>
+                                            Pay
+                                        </a>
+                                    </li>
+                                </PayButton>
+                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note?.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Message ID</a></li>
+                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Message Hex</a></li>
+                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note?.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
+                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
+                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
+                            </ul>
+                        </div>
+                    </TopContent>
+                </MessageViewer>
+            </div>
+            @{
+                const int MAX_GROUPS = 1;
+                var groupedReactions = feedService.GetReactionGroups(Tree.Note?.Id ?? string.Empty);
+                if (groupedReactions.Count > 0)
+                {
+                    <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
+                        @{
+                            foreach (var group in groupedReactions.Take(MAX_GROUPS))
+                            {
+                                <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
+                                    @NormalizedReaction(group.Reaction)
+                                    <span class="fs-7">@group.Count</span>
+                                </div>
+                            }
+                            var remainingReactionCount = groupedReactions.Skip(MAX_GROUPS).Sum(group => group.Count);
+                            if (remainingReactionCount > 0)
+                            {
+                                <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
+                                    <i class="bi bi-three-dots"></i>
+                                    <span class="fs-7">@remainingReactionCount</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+<Scripts @ref="scripts" />
+
+@code {
+    private ElementReference? referenceElement;
+    private Scripts? scripts;
+
+    protected override void OnInitialized()
+    {
+        feedService.NoteUpdated += NoteUpdated;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && OnComponentLoad != null)
+        {
+            OnComponentLoad(this);
+        }
+    }
+
+    private void Reply()
+    {
+        OnReply?.Invoke(Tree.Note);
+    }
+
+    private void Pay()
+    {
+        OnPay?.Invoke(Tree.Note.PublicKey);
+    }
+
+    private void Delete()
+    {
+        OnDelete?.Invoke(Tree.Note);
+    }
+
+    private string NormalizedReaction(string reaction)
+    {
+        if (string.IsNullOrEmpty(reaction) || reaction == "+")
+        {
+            return "❤️";
+        }
+        else
+        {
+            return reaction;
+        }
+    }
+
+    public async Task<bool> IsVisibleAsync()
+    {
+        if (scripts == null || referenceElement == null) return false;
+        return await scripts.InvokeAsync<bool>("isElementVisible", referenceElement);
+    }
+
+    public IEnumerable<ITreeItem> GetTreeItems()
+    {
+        return (new ITreeItem[] { this });
+    }
+
+    private void NoteUpdated(object? sender, Event ev)
+    {
+        if (Tree.Note.Id != ev.Id)
+            return;
+
+        Tree.Note.Deleted = ev.Deleted; // For now only the deleted status can be updated (reactions are loaded on the fly)
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        if (OnComponentUnload != null)
+        {
+            OnComponentUnload(this);
+        }
+    }
+    #endregion
+}

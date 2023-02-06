@@ -55,6 +55,8 @@ namespace Nostrid.Data
                 await db.EventSeen.ExecuteDeleteAsync();
                 await db.TagDatas.ExecuteDeleteAsync();
                 await db.Events.ExecuteDeleteAsync();
+                await db.ChannelDetails.ExecuteDeleteAsync();
+                await db.Channels.ExecuteDeleteAsync();
                 await db.Database.ExecuteSqlAsync($"VACUUM");
                 await db.Database.ExecuteSqlAsync($"ANALYZE");
                 DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
@@ -534,14 +536,20 @@ namespace Nostrid.Data
         public bool TryDetermineHexType(string id, out IdType type)
         {
             using var db = new Context(_dbfile);
-            if (db.Events.Any(e => e.Id == id))
-            {
-                type = IdType.Event;
-                return true;
-            }
             if (db.Accounts.Any(a => a.Id == id) || db.AccountDetails.Any(a => a.Id == id))
             {
                 type = IdType.Account;
+                return true;
+            }
+            if (db.Channels.Any(c => c.Id == id) || db.ChannelDetails.Any(c => c.Id == id) ||
+                db.Events.Any(e => e.ChannelId == id))
+            {
+                type = IdType.Channel;
+                return true;
+            }
+            if (db.Events.Any(e => e.Id == id && (e.Kind == NostrKind.Text || e.Kind == NostrKind.Repost)))
+            {
+                type = IdType.Event;
                 return true;
             }
             type = IdType.Unknown;
@@ -608,6 +616,108 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
             return db.Follows.Count(f => f.FollowId == accountId);
+        }
+
+        public Channel GetChannel(string id)
+        {
+            using var db = new Context(_dbfile);
+            return db.Channels.Include(c => c.Details).FirstOrDefault(c => c.Id == id) ?? new Channel() { Id = id };
+        }
+
+        public ChannelDetails GetChannelDetails(string channelId)
+        {
+            using var db = new Context(_dbfile);
+            return db.ChannelDetails.FirstOrDefault(cd => cd.Channel.Id == channelId) ?? new ChannelDetails() { Id = channelId };
+        }
+
+        public void SaveChannelDetails(ChannelDetails channelDetails)
+        {
+            using var db = new Context(_dbfile);
+            if (db.ChannelDetails.Any(ad => ad.Id == channelDetails.Id))
+            {
+                db.Update(channelDetails);
+            }
+            else
+            {
+                if (!db.Channels.Any(a => a.Id == channelDetails.Id))
+                {
+                    db.Add(new Channel() { Id = channelDetails.Id });
+                }
+                else if (channelDetails.Channel != null)
+                {
+                    db.Attach(channelDetails.Channel);
+                }
+                else
+                {
+                    db.Attach(new Channel() { Id = channelDetails.Id });
+                }
+                db.Add(channelDetails);
+            }
+            db.SaveChanges();
+        }
+
+        public void SaveChannel(Channel channel)
+        {
+            using var db = new Context(_dbfile);
+            if (db.Channels.Any(c => c.Id == channel.Id))
+            {
+                db.Update(channel);
+            }
+            else
+            {
+                db.Add(channel);
+            }
+            db.SaveChanges();
+        }
+
+        public List<Channel> ListChannels()
+        {
+            using var db = new Context(_dbfile);
+            return db.Channels.Include(c => c.Details).ToList();
+        }
+
+        public int GetChannelMessagesInDb(string channelId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Events.Count(e =>
+                e.Kind == NostrKind.ChannelMessage && e.ChannelId == channelId);
+        }
+
+        public List<ChannelWithInfo> ListChannelsWithInfo()
+        {
+            using var db = new Context(_dbfile);
+
+            var channelsMessageCount = db.Events
+                .Where(e => e.Kind == NostrKind.ChannelMessage && !string.IsNullOrEmpty(e.ChannelId))
+                .GroupBy(e => e.ChannelId ?? string.Empty)
+                .Select(g => new
+                {
+                    Id = g.Key,
+                    MessageCount = g.Count(),
+                })
+                .ToDictionary(c => c.Id);
+
+            // Get all channels with details and populate with previous data
+            var channelsWithInfo = db.Channels
+                .Include(c => c.Details)
+                .AsEnumerable()
+                .Select(c =>
+                    new ChannelWithInfo(c)
+                    {
+                        MessageCount = channelsMessageCount.TryGetValue(c.Id, out var channelInfo) ? channelInfo.MessageCount : 0
+                    })
+                .ToList();
+
+            // Add channels with count but without details
+            foreach (var (channelId, channelInfo) in channelsMessageCount)
+            {
+                if (!channelsWithInfo.Any(c => c.Id == channelId))
+                {
+                    channelsWithInfo.Add(new ChannelWithInfo() { Id = channelId, MessageCount = channelInfo.MessageCount });
+                }
+            }
+
+            return channelsWithInfo;
         }
     }
 }

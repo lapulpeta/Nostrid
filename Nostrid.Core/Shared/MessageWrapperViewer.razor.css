@@ -1,0 +1,30 @@
+﻿.triangle {
+    --triangle-width: 10px;
+    --triangle-height: 10px;
+    position: relative;
+}
+
+    .triangle:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        border-bottom: solid var(--triangle-height) transparent;
+    }
+
+    .triangle.triangle-start {
+        border-top-left-radius: 0 !important;
+    }
+
+        .triangle.triangle-start:before {
+            left: calc((var(--triangle-width)-1)*-1);
+            border-right: solid var(--triangle-width) rgba(var(--bs-secondary-bg-rgb),var(--bs-bg-opacity));
+        }
+
+    .triangle.triangle-end {
+        border-top-right-radius: 0 !important;
+    }
+
+        .triangle.triangle-end:before {
+            right: calc((var(--triangle-width)-1)*-1);
+            border-left: solid var(--triangle-width) var(--bs-success-bg-subtle);
+        }

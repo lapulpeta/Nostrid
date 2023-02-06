@@ -7,11 +7,13 @@
 
 <h2>Mentions Feed</h2>
 
-<div class="d-none d-md-flex px-3 pb-2" style="margin: 0 -1rem;">
+<div class="d-none d-md-flex pb-2">
     <NoteComposer />
 </div>
 
-<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+<div style="margin-bottom: -1rem;">
+    <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+</div>
 
 @code {
     private SubscriptionFilter? filter;

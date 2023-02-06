@@ -14,18 +14,20 @@
 
     [Parameter, EditorRequired]
     public int[] MessageKinds { get; set; }
+
+    [Parameter]
+    public string? ChannelId { get; set; }
 }
 
 @if (newN.Count > 0)
 {
-    <div class="text-center border-top px-3" style="margin: 0 -1rem;">
+    <div class="text-center px-3 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
         <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
     </div>
 }
-
 @if (renderedN.Count == 0)
 {
-    <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
+    <div class="text-center px-3 py-2 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
         <div class="spinner-border mx-3 my-2" role="status">
             <span class="visually-hidden">Waiting for feed...</span>
         </div>
@@ -33,23 +35,26 @@
 }
 else
 {
-    var trees = feedService.GetTreesFromNotes(renderedN.Values);
+    var trees = inChannel ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
     // Root nodes are sorted newest on top
     trees.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
 
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" />
-    <div class="text-center border-top px-3" style="margin: 0 -1rem -1rem -1rem;">
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@inChannel" />
+    <div class="text-center @(!inChannel ? "border-top" : "") px-3" style="margin: 0 -1rem;">
         <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="@LoadMore">Load more</button>
-    </div>
+    </div>   
 }
 
-<div class="position-fixed main-margin p-3" style="right: 0; bottom: 0;">
-    <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4" style="height: 3rem; width: 3rem;">
-        <i class="bi bi-arrow-repeat"></i>
-    </button>
+<div class="position-absolute" style="height: 44px; width: 44px; @(!inChannel ? "bottom" : "top"): 1rem; right: 1rem;">
+    <div class="position-fixed">
+        <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4">
+            <i class="bi bi-arrow-repeat"></i>
+        </button>
+    </div>
 </div>
 
 @code {
+    private bool inChannel => !ChannelId.IsNullOrEmpty();
     private ConcurrentDictionary<string, Event> renderedN = new(), newN = new(), oldN = new();
     private int dbLimit;
     private SubscriptionFilter? newFilter, oldFilter;
@@ -82,13 +87,13 @@ else
         {
             return;
         }
-        var noteViewer = await noteTreeViewer.GetFirstVisibleAsync();
-        if (noteViewer == null)
+        var treeItem = await noteTreeViewer.GetFirstVisibleAsync();
+        if (treeItem == null)
         {
             return;
         }
 
-        oldFilter.limitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(noteViewer.Tree.Note.CreatedAtCurated);
+        oldFilter.limitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(treeItem.Tree.Note.CreatedAtCurated);
         relayService.RefreshFilters(oldFilter);
 
         requestDisabled = true;
@@ -114,7 +119,13 @@ else
         if (!notes.Any())
             return;
 
-        if (data.filterId == oldFilter.Id)
+        if (inChannel)
+        {
+            EventExtension.Merge(renderedN, notes);
+            TrimOlder();
+            InvokeAsync(() => StateHasChanged());
+        }
+        else if (data.filterId == oldFilter.Id)
         {
             EventExtension.Merge(renderedN, notes);
             TrimOlder();
@@ -145,16 +156,19 @@ else
 
         LoadMore();
 
-        feedService.ReceivedNotes += ReceivedNotes;
+        feedService.NotesReceived += ReceivedNotes;
         feedService.NoteReceivedChild += NoteReceivedChild;
 
-        refreshPageTimer = new Timer(new TimerCallback(_ =>
+        if (!inChannel) // Channel auto refreshes
         {
-            InvokeAsync(() =>
+            refreshPageTimer = new Timer(new TimerCallback(_ =>
             {
-                StateHasChanged();
-            });
-        }), null, 0, 5000);
+                InvokeAsync(() =>
+                {
+                    StateHasChanged();
+                });
+            }), null, 0, 5000);
+        }
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
@@ -198,7 +212,7 @@ else
 
     private void Cleanup()
     {
-        feedService.ReceivedNotes -= ReceivedNotes;
+        feedService.NotesReceived -= ReceivedNotes;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
         refreshPageTimer?.Dispose();

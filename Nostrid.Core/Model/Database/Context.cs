@@ -14,6 +14,8 @@ public class Context : DbContext
     public DbSet<EventSeen> EventSeen { get; set; }
     public DbSet<FeedSource> FeedSources { get; set; }
     public DbSet<TagData> TagDatas { get; set; }
+    public DbSet<Channel> Channels { get; set; }
+    public DbSet<ChannelDetails> ChannelDetails { get; set; }
 
     public string _dbfile { get; }
 
@@ -39,6 +41,9 @@ public class Context : DbContext
         builder.Entity<Event>().HasIndex(e => e.PublicKey);
         builder.Entity<Event>().HasIndex(e => e.Id);
         builder.Entity<Event>().HasIndex(e => e.CreatedAtCurated);
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToId });
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToRootId });
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ChannelId });
         builder.Entity<Account>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => new { e.Id, e.DetailsLastReceived });
@@ -46,6 +51,8 @@ public class Context : DbContext
         builder.Entity<Follow>().HasIndex(f => f.AccountId);
         builder.Entity<Follow>().HasIndex(f => f.FollowId);
         builder.Entity<Follow>().HasIndex(f => new { f.AccountId, f.FollowId });
+        builder.Entity<Channel>().HasIndex(e => e.Id);
+        builder.Entity<ChannelDetails>().HasIndex(e => e.Id);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)

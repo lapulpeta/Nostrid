@@ -149,7 +149,9 @@
 
 <PayModal @ref="payModal" />
 
-<FeedViewer BaseFilter="@feedFilter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+<div style="margin-bottom: -1rem;">
+    <FeedViewer BaseFilter="@feedFilter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+</div>
 
 @code {
     private Account? account;

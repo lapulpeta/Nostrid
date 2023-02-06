@@ -74,6 +74,7 @@
         </p>
         @switch (Event?.Kind)
         {
+            case NostrKind.ChannelMessage:
             case NostrKind.Text:
                 <div class="text-break note-content">
                     @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
