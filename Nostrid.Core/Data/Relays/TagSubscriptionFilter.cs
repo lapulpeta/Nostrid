@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NNostr.Client;
 using Nostrid.Misc;
+using Nostrid.Model;
 
 namespace Nostrid.Data.Relays;
 

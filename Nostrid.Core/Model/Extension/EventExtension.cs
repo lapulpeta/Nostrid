@@ -1,5 +1,4 @@
 using NNostr.Client;
-using Nostrid.Data.Relays;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Numerics;

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
-using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
 using System.Collections.Generic;

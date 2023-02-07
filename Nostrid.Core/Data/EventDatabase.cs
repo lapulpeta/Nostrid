@@ -1,7 +1,6 @@
 ﻿using LinqKit;
 using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
-using Nostrid.Data.Relays;
 using Nostrid.Model;
 
 namespace Nostrid.Data

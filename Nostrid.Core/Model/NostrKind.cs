@@ -1,4 +1,4 @@
-namespace Nostrid.Data.Relays;
+namespace Nostrid.Model;
 
 public static class NostrKind
 {

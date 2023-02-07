@@ -1,6 +1,7 @@
 using Nostrid.Misc;
 using NNostr.Client;
 using System;
+using Nostrid.Model;
 
 namespace Nostrid.Data.Relays;
 
