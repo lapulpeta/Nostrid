@@ -7,6 +7,9 @@
     [Parameter]
     public Action? OnAfterFirstRender { get; set; }
 
+    [Parameter]
+    public Func<Task>? OnAfterFirstRenderAsync { get; set; }
+
     public IJSObjectReference? JSModule { get; private set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -16,6 +19,7 @@
         {
             JSModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
             OnAfterFirstRender?.Invoke();
+            OnAfterFirstRenderAsync?.Invoke();
         }
     }
 

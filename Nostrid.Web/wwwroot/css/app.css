@@ -28,7 +28,12 @@ html, body {
     display: flex;
 }
 
-h1:focus {
+h1:focus,
+h2:focus,
+h3:focus,
+h4:focus,
+h6:focus,
+h6:focus {
     outline: none;
 }
 

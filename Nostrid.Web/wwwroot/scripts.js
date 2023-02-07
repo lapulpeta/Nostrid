@@ -46,3 +46,37 @@ export function isElementVisible(element) {
     var position = element.getBoundingClientRect();
     return position.bottom > 0 && window.innerHeight > position.top;
 }
+
+export function createIntersectionObserver(element, componentInstance, methodName, margin) {
+    const observer = new IntersectionObserver(async (entries) => {
+        for (const entry of entries) {
+            await componentInstance.invokeMethodAsync(methodName, entry.isIntersecting);
+        }
+    }, {
+        root: findClosestScrollContainer(element),
+        rootMargin: margin,
+        threshold: 0,
+    });
+    observer.observe(element);
+    return { dispose: () => observer.disconnect() };
+}
+
+export function scrollTop(element, value) {
+    var elementWithScroll = findClosestScrollContainer(element);
+    if (elementWithScroll) {
+        elementWithScroll.scroll({
+            top: value,
+            behavior: 'smooth'
+        });
+    }
+}
+
+var findClosestScrollContainer = function (element) {
+    while (element) {
+        if (getComputedStyle(element).overflowY !== 'visible') {
+            return element;
+        }
+        element = element.parentElement;
+    }
+    return null;
+}

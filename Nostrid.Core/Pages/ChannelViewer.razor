@@ -22,8 +22,7 @@
             <i class="bi bi-files"></i>
         </button>
     </div>*@
-    <div class="position-relative d-flex flex-column flex-column-reverse flex-grow-1 overflow-y-auto px-3"
-         style="margin: 0 -1rem; flex-basis:0;">
+    <div class="d-flex flex-grow-1 flex-column pb-3">
         <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.ChannelMessage})" ChannelId="@Id" />
     </div>
     <div>
