@@ -1,16 +1,16 @@
 ﻿@code
 {
     [Parameter, EditorRequired]
-    public RenderFragment Header { get; set; }
+    public RenderFragment Header { get; set; } = null!;
 
     [Parameter, EditorRequired]
-    public RenderFragment Body { get; set; }
+    public RenderFragment Body { get; set; } = null!;
 
     [Parameter]
     public bool AlwaysExpanded { get; set; }
 
     [Parameter]
-    public IEnumerable<ConfigSection> ConfigSections { get; set; }
+    public IEnumerable<ConfigSection>? ConfigSections { get; set; }
 }
 
 @if (_isVisible)
@@ -47,7 +47,7 @@
     {
         if (AlwaysExpanded) return;
         var newValue = !_isExpanded;
-        ConfigSections.ToList().ForEach(s => 
+        ConfigSections?.ToList().ForEach(s => 
         {
             if (s != this)
             {

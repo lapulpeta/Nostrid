@@ -17,5 +17,11 @@ public class Config
     public string? Theme { get; set; }
 
     public bool ManualRelayManagement { get; set; }
+
+    public string? ProxyUri { get; set; }
+
+    public string? ProxyUser { get; set; }
+
+    public string? ProxyPassword { get; set; }
 }
 

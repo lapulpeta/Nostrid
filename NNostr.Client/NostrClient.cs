@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 
@@ -8,13 +9,15 @@ namespace NNostr.Client
     public class NostrClient : IDisposable
     {
         private readonly Uri _relay;
+        private readonly IWebProxy? _proxy;
         protected ClientWebSocket? websocket;
         private CancellationTokenSource? _Cts;
         private CancellationTokenSource messageCts = new();
 
-        public NostrClient(Uri relay)
+        public NostrClient(Uri relay, IWebProxy? proxy)
         {
             _relay = relay;
+            _proxy = proxy;
         }
 
         public Task Disconnect()
@@ -147,6 +150,10 @@ namespace NNostr.Client
 
             websocket?.Dispose();
             websocket = new ClientWebSocket();
+            if (_proxy != null)
+            {
+                websocket.Options.Proxy = _proxy;
+            }
             var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             await websocket.ConnectAsync(_relay, cts.Token);
             await WaitUntilConnected(cts.Token);
