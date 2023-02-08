@@ -409,7 +409,7 @@ public class RelayService
         lock (lockObj)
         {
             if (clientByRelay.ContainsKey(relay)) return;
-            client = new NostrClient(new Uri(relay.Uri));
+            client = new NostrClient(new Uri(relay.Uri), HttpClient.DefaultProxy);
             clientByRelay[relay] = client;
         }
         client.NoticeReceived += (_, message) => NoticeReceived(relay, message);
