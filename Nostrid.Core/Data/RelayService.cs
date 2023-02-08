@@ -2,6 +2,7 @@ using LinqKit;
 using Newtonsoft.Json;
 using NNostr.Client;
 using Nostrid.Data.Relays;
+using Nostrid.Misc;
 using Nostrid.Model;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
@@ -409,7 +410,8 @@ public class RelayService
         lock (lockObj)
         {
             if (clientByRelay.ContainsKey(relay)) return;
-            client = new NostrClient(new Uri(relay.Uri), HttpClient.DefaultProxy);
+            var proxy = Utils.IsWasm() ? null : HttpClient.DefaultProxy;
+            client = new NostrClient(new Uri(relay.Uri), proxy);
             clientByRelay[relay] = client;
         }
         client.NoticeReceived += (_, message) => NoticeReceived(relay, message);

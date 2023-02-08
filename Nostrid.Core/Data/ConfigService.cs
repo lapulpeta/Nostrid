@@ -1,3 +1,4 @@
+using Nostrid.Misc;
 using Nostrid.Model;
 using System.Net;
 
@@ -33,7 +34,7 @@ public class ConfigService
 
     private void ConfigureProxy()
     {
-        if (MainConfig.ProxyUri.IsNullOrEmpty())
+        if (Utils.IsWasm() || MainConfig.ProxyUri.IsNullOrEmpty())
         {
             HttpClient.DefaultProxy = DefaultProxy;
             return;

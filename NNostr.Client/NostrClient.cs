@@ -9,12 +9,12 @@ namespace NNostr.Client
     public class NostrClient : IDisposable
     {
         private readonly Uri _relay;
-        private readonly IWebProxy _proxy;
+        private readonly IWebProxy? _proxy;
         protected ClientWebSocket? websocket;
         private CancellationTokenSource? _Cts;
         private CancellationTokenSource messageCts = new();
 
-        public NostrClient(Uri relay, IWebProxy proxy)
+        public NostrClient(Uri relay, IWebProxy? proxy)
         {
             _relay = relay;
             _proxy = proxy;
@@ -150,7 +150,10 @@ namespace NNostr.Client
 
             websocket?.Dispose();
             websocket = new ClientWebSocket();
-            websocket.Options.Proxy = _proxy;
+            if (_proxy != null)
+            {
+                websocket.Options.Proxy = _proxy;
+            }
             var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             await websocket.ConnectAsync(_relay, cts.Token);
             await WaitUntilConnected(cts.Token);

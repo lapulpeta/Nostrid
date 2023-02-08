@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace Nostrid.Misc
 {
@@ -107,6 +108,11 @@ namespace Nostrid.Misc
             Assembly assembly = Assembly.GetExecutingAssembly();
 			AssemblyInformationalVersionAttribute versionAttribute = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
             return versionAttribute.InformationalVersion;
+        }
+
+        public static bool IsWasm()
+        {
+            return RuntimeInformation.ProcessArchitecture == Architecture.Wasm;
         }
 
         [GeneratedRegex("#([a-zA-Z0-9_]+)", RegexOptions.Compiled)]
