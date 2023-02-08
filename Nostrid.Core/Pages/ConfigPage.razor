@@ -1,5 +1,6 @@
 ﻿@page "/config"
 @using Nostrid.Data;
+@using Nostrid.Misc;
 @using Nostrid.Model;
 @using System.Collections.Concurrent;
 
@@ -100,8 +101,6 @@
         </li>
     </Body>
 </ConfigSection>
-
-
 
 <ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections" AlwaysExpanded="true">
     <Header>
@@ -238,78 +237,82 @@
     </Body>
 </ConfigSection>
 
-<ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections">
-    <Header>
-        <h5 class="my-2">Proxy</h5>
-    </Header>
-    <Body>
-        <li class="list-group-item py-3">
-            <div class="row">
-                <div class="col-8 align-self-center">
-                    <span class="fw-bold">Uri (http://server:port, socks5://server:port)</span>
-                </div>
-                <div class="col-4 text-end">
-                <InputText @bind-Value="@configModel.ProxyUri" />
-                </div>
-            </div>
-        </li>
-        <li class="list-group-item py-3">
-            <div class="row">
-                <div class="col-8 align-self-center">
-                    <span class="fw-bold">Username</span>
-                </div>
-                <div class="col-4 text-end">
-                    <InputText @bind-Value="@configModel.ProxyUser" />
-                </div>
-            </div>
-        </li>
-        <li class="list-group-item py-3">
-            <div class="row">
-                <div class="col-8 align-self-center">
-                    <span class="fw-bold">Password</span>
-                </div>
-                <div class="col-4 text-end">
-                    <InputText @bind-Value="@configModel.ProxyPassword" />
-                </div>
-            </div>
-        </li>
-        @if (relayService.IsRestarting)
-        {
-            <li class="list-group-item d-flex flex-row align-items-center py-3">
-                <div class="spinner-border me-2" role="status"></div>
-                <span class="text-secondary">Restarting...</span>
-            </li>
-        }
-        else
-        {
+@if(!Utils.IsWasm())
+{
+    <ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections">
+        <Header>
+            <h5 class="my-2">Proxy</h5>
+        </Header>
+        <Body>
             <li class="list-group-item py-3">
-                <div class="row">
-                    <div class="col-4 text-end">
-                        <button class="btn btn-primary py-1" @onclick="@SaveAndRestart">Apply</button>
+            <div class="row g-2">
+                    <div class="col-md-6 align-self-center">
+                        <b>Uri</b>
+                        <div class="text-secondary">http://server:port, socks5://server:port</div>
+                    </div>
+                    <div class="col-md-6 align-self-center">
+                        <input type="text" class="form-control @(isUriValid ? "" : "is-invalid")"
+                            @bind-value="@configModel.ProxyUri"
+                            @onfocusout="@(() => isUriValid = string.IsNullOrEmpty(configModel.ProxyUri) || Uri.IsWellFormedUriString(configModel.ProxyUri, UriKind.Absolute))" />
                     </div>
                 </div>
             </li>
-        }
-    </Body>
-</ConfigSection>
+            <li class="list-group-item py-3">
+                <div class="row g-2">
+                    <div class="col-md-6 align-self-center fw-bold">Username</div>
+                <div class="col-md-6 align-self-center">
+                        <InputText class="form-control" @bind-Value="@configModel.ProxyUser" />
+                    </div>
+                </div>
+            </li>
+            <li class="list-group-item py-3">
+                <div class="row g-2">
+                    <div class="col-md-6 align-self-center fw-bold">Password</div>
+                <div class="col-md-6 align-self-center">
+                        <InputText class="form-control" @bind-Value="@configModel.ProxyPassword" />
+                    </div>
+                </div>
+            </li>
+            <li class="list-group-item d-flex flex-column py-3">
+            @if (relayService.IsRestarting)
+            {
+                <div class="d-flex flex-row align-items-center py-1">
+                    <div class="spinner-border me-2" role="status"></div>
+                    <span class="text-secondary">Restarting...</span>
+                </div>
+            }
+            else
+            {
+                <button class="btn btn-primary align-self-end" style="min-width: 100px;" @onclick="@SaveAndRestart">Apply</button>
+            }
+            </li>
+        </Body>
+    </ConfigSection>
+}
 
 <ConfirmationModal @ref="confirmationModal" />
 
 <Scripts @ref="scripts" />
 
 @code {
+    // General
     private List<ConfigSection> configSections = new List<ConfigSection>();
-    private ConfigSection ConfigSectionRef { set => configSections.Add(value); }
-
-    private Scripts? scripts;
+    private ConfigSection? ConfigSectionRef { set => configSections.Add(value); }
     private Config configModel = new();
+    private ConfirmationModal? confirmationModal;
+
+    // Theme
+    private Scripts? scripts;
+    public const string DARK_THEME = "dark";
+    public const string LIGHT_THEME = "light";
+
+    // Relays
     private List<Relay> relays = new();
     private string newRelayUri = string.Empty;
     private ConcurrentDictionary<long, bool> relayStatus = new();
-    private ConfirmationModal? confirmationModal;
 
-    public const string DARK_THEME = "dark";
-    public const string LIGHT_THEME = "light";
+    // Proxy
+    private bool isUriValid = true;
 
     private bool Theme
     {
@@ -354,6 +357,7 @@
 
     private void SaveAndRestart()
     {
+        if (!isUriValid) return;
         configService.MainConfig = configModel;
         relayService.RestartNostrClients();
     }
