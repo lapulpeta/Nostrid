@@ -70,5 +70,13 @@
     <ItemGroup>
         <ProjectReference Include="..\Nostrid.Core\Nostrid.Core.csproj" />
     </ItemGroup>
+  
+    <ItemGroup>
+      <Content Remove="libman.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="libman.json" />
+    </ItemGroup>
 
 </Project>
