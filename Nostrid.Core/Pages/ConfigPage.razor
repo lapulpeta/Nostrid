@@ -40,7 +40,7 @@
                 <div class="col-lg-6">
                     <div class="d-flex">
                         <span class="me-3 badge text-bg-light">@configModel.MinDiffIncoming</span>
-                        <input type="range" class="form-range" min="0" max="255" step="1" id="rangeMinimumPow"
+                        <input type="range" class="form-range" min="0" max="50" step="1" id="rangeMinimumPow"
                                 @bind-value="@configModel.MinDiffIncoming" @bind-value:event="oninput" @onchange="@Save" />
                     </div>
                 </div>
@@ -189,6 +189,23 @@
                 </div>
             </div>
         </li>
+        @if (!configModel.ManualRelayManagement)
+        {
+            <li class="list-group-item py-3">
+                <div class="row align-items-center">
+                    <label class="col-6" for="rangeMaxAutoRelays">
+                        Maximum simultaneous relay connections
+                    </label>
+                    <div class="col-lg-6">
+                        <div class="d-flex">
+                            <span class="me-3 badge text-bg-light">@configModel.MaxAutoRelays</span>
+                            <input type="range" class="form-range" min="0" max="50" step="1" id="rangeMaxAutoRelays"
+                                   @bind-value="@configModel.MaxAutoRelays" @bind-value:event="oninput" @onchange="@Save" />
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
         <li class="list-group-item py-3">
             <div class="input-group">
                 <span class="align-self-center me-3">New Relay</span>

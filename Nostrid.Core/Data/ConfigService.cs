@@ -32,6 +32,11 @@ public class ConfigService
         }
     }
 
+    public void Save()
+    {
+        eventDatabase.SaveConfig(mainConfig);
+    }
+
     private void ConfigureProxy()
     {
         if (Utils.IsWasm() || MainConfig.ProxyUri.IsNullOrEmpty())
@@ -59,6 +64,5 @@ public class ConfigService
             HttpClient.DefaultProxy = DefaultProxy;
         }
     }
-
 }
 

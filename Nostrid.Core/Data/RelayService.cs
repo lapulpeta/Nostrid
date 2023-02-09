@@ -71,6 +71,13 @@ public class RelayService
 
         this.eventDatabase = eventDatabase;
         this.configService = configService;
+
+        if (configService.MainConfig.MaxAutoRelays == 0)
+        {
+            configService.MainConfig.MaxAutoRelays = int.Max(MinRelays, Environment.ProcessorCount);
+            configService.Save();
+        }
+
         InitRelays();
         StartNostrClients();
     }
@@ -107,7 +114,7 @@ public class RelayService
                 {
                     pendingRelaysByPriority[PriorityHigherBound - PriorityLowerBound - relay.Priority].Add(relay);
                 }
-                var maxRelays = Math.Max(MinRelays, Environment.ProcessorCount);
+                var maxRelays = configService.MainConfig.MaxAutoRelays;
                 RelaysMonitor = new RelaysMonitor(
                     () => pendingRelaysByPriority.SelectMany(a => a).Count(),
                     () => maxRelays,
