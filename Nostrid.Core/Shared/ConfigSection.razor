@@ -17,7 +17,7 @@
 {
     <div class="mt-4 card shadow">
         <ul class="list-group list-group-flush">
-            <li class="list-group-item" role="@(!AlwaysExpanded ? "button" : "")" @onclick="@(() =>ToggleExpanded())">
+            <li class="list-group-item @(!AlwaysExpanded && _isExpanded ? "sticky-top" : "")" role="@(!AlwaysExpanded ? "button" : "")" @onclick="@(() =>ToggleExpanded())">
                 <div class="d-flex flex-row align-items-center">
                     @if (!AlwaysExpanded && _isExpanded)
                     {

@@ -207,10 +207,22 @@ a, .btn-link {
     --bs-bg-opacity: 0.95;
 }
 
-.form-control {
-    background-color: var(--bs-bg-body) !important;
+.glow-0:focus {
+    box-shadow: none;
 }
 
-input[type="number"].glow-0:focus {
-    box-shadow: none;
+:root {
+    --bs-form-control-bg: var(--bs-bg-body) !important;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+.form-range::-webkit-slider-runnable-track {
+    background-color: var(--bs-secondary-bg) !important;
+}
+
+.form-range::-moz-range-track {
+    background-color: var(--bs-secondary-bg) !important;
 }
