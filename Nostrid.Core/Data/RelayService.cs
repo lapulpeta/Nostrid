@@ -30,7 +30,7 @@ public class RelaysMonitor
 public class RelayService
 {
     private readonly string[] DefaultFreeRelays = new[] { "wss://relay.snort.social", "wss://nostr.developer.li", "wss://nostr-relay.alekberg.net", "wss://nostr.mom", "wss://relay.nostr.ch", "wss://nostr.sandwich.farm", "wss://nostr.oxtr.dev", "wss://nostr.zaprite.io", "wss://relay.minds.com/nostr/v1/ws", "wss://nostr.drss.io", "wss://nostr-verified.wellorder.net", "wss://nostr.semisol.dev", "wss://nostr-relay.untethr.me", "wss://nostr.onsats.org", "wss://nostr.cercatrova.me", "wss://nostr.swiss-enigma.ch", "wss://nostr-pub.semisol.dev", "wss://relay.nostr.info", "wss://nostr.zebedee.cloud", "wss://relay.damus.io", "wss://nostr-pub.wellorder.net" };
-    private readonly string[] DefaultPaidRelays = new[] { "wss://nostr.milou.lol", "wss://eden.nostr.land", "wss://puravida.nostr.land", "wss://nostr.wine", "wss://nostr.uselessshit.co" };
+    private readonly string[] DefaultPaidRelays = new[] { "wss://eden.nostr.land", "wss://nostr.milou.lol", "wss://puravida.nostr.land", "wss://relay.nostr.com.au", "wss://relay.orangepill.dev", "wss://nostr.wine", "wss://nostr.inosta.cc", "wss://relay.nostrati.com", "wss://atlas.nostr.land", "wss://nostr.plebchain.org", "wss://relay.nostriches.org", "wss://relay.nostrich.land", "wss://nostr.decentony.com", "wss://bitcoiner.social", "wss://private.red.gb.net", "wss://nostr.gives.africa", "wss://nostr.uselessshit.co", "wss://nostr.ownscale.org", "wss://nostr.howtobitcoin.shop", "wss://nostr.bitcoinpuertori.co", "wss://paid.spore.ws", "wss://nostr.bitcoinplebs.de", "wss://nostr.naut.social" };
 
     private const int MinRelays = 8;
     private const int PriorityLowerBound = 0;
@@ -71,12 +71,6 @@ public class RelayService
 
         this.eventDatabase = eventDatabase;
         this.configService = configService;
-
-        if (configService.MainConfig.MaxAutoRelays == 0)
-        {
-            configService.MainConfig.MaxAutoRelays = int.Max(MinRelays, Environment.ProcessorCount);
-            configService.Save();
-        }
 
         InitRelays();
         StartNostrClients();
@@ -149,11 +143,18 @@ public class RelayService
     public void ResetRelays()
     {
         eventDatabase.ClearRelays();
+        configService.MainConfig.MaxAutoRelays = 0;
         InitRelays();
     }
 
     private void InitRelays()
     {
+        if (configService.MainConfig.MaxAutoRelays == 0)
+        {
+            configService.MainConfig.MaxAutoRelays = int.Max(MinRelays, Environment.ProcessorCount);
+            configService.Save();
+        }
+
         if (eventDatabase.GetRelayCount() == 0)
         {
             foreach (var relay in DefaultFreeRelays)
