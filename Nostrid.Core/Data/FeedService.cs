@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
+using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
 using System.Collections.Generic;
@@ -123,9 +124,13 @@ public class FeedService
         return eventDatabase.ListNotes(count).ToList();
     }
 
-    public List<Event> GetNotesFeed(NostrSubscriptionFilter[] filters, int count)
+    public List<Event> GetNotesFeed(SubscriptionFilter filter, int count, int[]? kinds = null)
     {
-        return eventDatabase.ListNotes(filters, count);
+        if (filter is IDbFilter dbFilter)
+        {
+            return eventDatabase.ListNotes(dbFilter, kinds, count);
+        }
+        return eventDatabase.ListNotes(filter.GetFilters(), kinds, count);
     }
 
     public List<Event> GetNotesThread(string eventId, out string? rootId)

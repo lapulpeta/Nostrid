@@ -1,6 +1,7 @@
 ﻿using LinqKit;
 using Microsoft.EntityFrameworkCore;
 using NNostr.Client;
+using Nostrid.Data.Relays;
 using Nostrid.Model;
 
 namespace Nostrid.Data
@@ -286,15 +287,33 @@ namespace Nostrid.Data
             return db.Events.Where(e => e.Kind == 1).OrderByDescending(e => e.CreatedAtCurated).Take(count).ToList();
         }
 
-        public List<Event> ListNotes(NostrSubscriptionFilter[] filters, int count)
+        public List<Event> ListNotes(NostrSubscriptionFilter[] filters, int[]? kinds, int count)
         {
             using var db = new Context(_dbfile);
             List<Event> notes = new();
             foreach (var filter in filters)
             {
-                notes.AddRange(ApplyFilter(db, db.Events.OrderByDescending(n => n.CreatedAtCurated), filter).Take(count).Include(e => e.Tags).ToList());
+                var query = ApplyFilter(db, db.Events.OrderByDescending(n => n.CreatedAtCurated), filter);
+                if (kinds != null)
+                {
+                    query = query.Where(n => kinds.Contains(n.Kind));
+                }
+                var newNotes = query.Take(count).Include(e => e.Tags).ToList();
+                notes.AddRange(newNotes);
             }
             return notes;
+        }
+
+        public List<Event> ListNotes(IDbFilter dbFilter, int[]? kinds, int count)
+        {
+            using var db = new Context(_dbfile);
+            var query = dbFilter.ApplyDbFilter(db, db.Events);
+            if (kinds != null)
+            {
+                query = query.Where(n => kinds.Contains(n.Kind));
+            }
+            query = query.OrderByDescending(n => n.CreatedAtCurated).Take(count);
+            return query.Include(e => e.Tags).ToList();
         }
 
         public int GetNotesCount(NostrSubscriptionFilter[] filters)

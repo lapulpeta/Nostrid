@@ -29,7 +29,9 @@ public class RelaysMonitor
 
 public class RelayService
 {
-    private readonly string[] DefaultRelays = new[] { "wss://nostr.milou.lol", "wss://relay.snort.social", "wss://eden.nostr.land", "wss://nostr.developer.li", "wss://nostr-relay.alekberg.net", "wss://nostr.mom", "wss://relay.nostr.ch", "wss://nostr.sandwich.farm", "wss://nostr.oxtr.dev", "wss://nostr.zaprite.io", "wss://relay.minds.com/nostr/v1/ws", "wss://nostr.drss.io", "wss://nostr-verified.wellorder.net", "wss://nostr.semisol.dev", "wss://nostr-relay.untethr.me", "wss://nostr.onsats.org", "wss://nostr.cercatrova.me", "wss://nostr.swiss-enigma.ch", "wss://nostr-pub.semisol.dev", "wss://relay.nostr.info", "wss://nostr.zebedee.cloud", "wss://relay.damus.io", "wss://nostr-pub.wellorder.net" };
+    private readonly string[] DefaultFreeRelays = new[] { "wss://relay.snort.social", "wss://nostr.developer.li", "wss://nostr-relay.alekberg.net", "wss://nostr.mom", "wss://relay.nostr.ch", "wss://nostr.sandwich.farm", "wss://nostr.oxtr.dev", "wss://nostr.zaprite.io", "wss://relay.minds.com/nostr/v1/ws", "wss://nostr.drss.io", "wss://nostr-verified.wellorder.net", "wss://nostr.semisol.dev", "wss://nostr-relay.untethr.me", "wss://nostr.onsats.org", "wss://nostr.cercatrova.me", "wss://nostr.swiss-enigma.ch", "wss://nostr-pub.semisol.dev", "wss://relay.nostr.info", "wss://nostr.zebedee.cloud", "wss://relay.damus.io", "wss://nostr-pub.wellorder.net" };
+    private readonly string[] DefaultPaidRelays = new[] { "wss://nostr.milou.lol", "wss://eden.nostr.land", "wss://puravida.nostr.land", "wss://nostr.wine" };
+
     private const int MinRelays = 8;
     private const int PriorityLowerBound = 0;
     private const int PriorityHigherBound = 10;
@@ -147,7 +149,7 @@ public class RelayService
     {
         if (eventDatabase.GetRelayCount() == 0)
         {
-            foreach (var relay in DefaultRelays)
+            foreach (var relay in DefaultFreeRelays)
             {
                 eventDatabase.SaveRelay(new Relay()
                 {
@@ -155,8 +157,32 @@ public class RelayService
                     Priority = (PriorityHigherBound + PriorityLowerBound) / 2, // Middle
                     Read = true,
                     Write = true,
+                    IsPaid = false,
                 });
             }
+            foreach (var relay in DefaultPaidRelays)
+            {
+                eventDatabase.SaveRelay(new Relay()
+                {
+                    Uri = relay,
+                    Priority = (PriorityHigherBound + PriorityLowerBound) / 2, // Middle
+                    Read = true,
+                    Write = true,
+                    IsPaid = true,
+                });
+            }
+        }
+        else
+        {
+            using var db = eventDatabase.CreateContext();
+            foreach (var relay in db.Relays.Where(r => !r.IsPaid))
+            {
+                if (DefaultPaidRelays.Contains(relay.Uri))
+                {
+                    relay.IsPaid = true;
+                }
+            }
+            db.SaveChanges();
         }
     }
 
@@ -520,12 +546,17 @@ public class RelayService
             var supportedFilters = filters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
             foreach (var f in supportedFilters)
             {
-                if (!subs.Any(s => s.Filter == f))
+                if (!subs.Any(s => s.FilterId == f.Id))
                 {
-                    var sub = new Subscription(client, f);
-                    filterBySubscriptionId[sub.SubscriptionId] = f;
-                    sub.Subscribe();
-                    subs.Add(sub);
+                    // Auto mode uses per-relay filters if supported
+                    var nostrFilters = RelaysMonitor.IsAuto && f is IRelayFilter relayFilter ? relayFilter.GetFiltersForRelay(relay.Id) : f.GetFilters();
+                    if (nostrFilters.Any())
+                    {
+                        var sub = new Subscription(client, nostrFilters, f.Id);
+                        filterBySubscriptionId[sub.SubscriptionId] = f;
+                        sub.Subscribe();
+                        subs.Add(sub);
+                    }
                 }
             }
 
@@ -533,7 +564,7 @@ public class RelayService
             for (int i = subs.Count - 1; i >= 0; i--)
             {
                 var sub = subs[i];
-                if (!filters.Contains(sub.Filter))
+                if (!filters.Any(f => f.Id == sub.FilterId))
                 {
                     sub.Unsubscribe();
                     filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _); // TODO: find out best way to cleanup this dictionary

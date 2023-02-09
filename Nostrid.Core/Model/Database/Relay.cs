@@ -14,6 +14,8 @@ public class Relay
 
     public bool Write { get; set; }
 
+    public bool IsPaid { get; set; }
+
     [NotMapped]
     public List<int> SupportedNips { get; set; } = new();
 
