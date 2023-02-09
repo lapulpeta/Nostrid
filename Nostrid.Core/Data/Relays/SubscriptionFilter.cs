@@ -9,7 +9,7 @@ public abstract class SubscriptionFilter
 
     public List<int> RequiredNips { get; private set; }
 
-    public LimitFilterData limitFilterData { get; } = new();
+    public LimitFilterData LimitFilterData { get; } = new();
 
     public bool DestroyOnFirstEvent { get; set; }
 

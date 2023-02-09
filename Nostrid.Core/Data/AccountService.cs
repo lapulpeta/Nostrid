@@ -82,7 +82,7 @@ public class AccountService
         else
         {
             MainAccountMentionsFilter = new MentionSubscriptionFilter(mainAccount.Id);
-            MainAccountMentionsFilter.limitFilterData.Limit = 1;
+            MainAccountMentionsFilter.LimitFilterData.Limit = 1;
             mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
             relayService.AddFilters(mainFilters);
         }

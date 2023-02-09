@@ -23,7 +23,7 @@ public class TagSubscriptionFilter : SubscriptionFilter
     {
         return new[] {
             new NostrSubscriptionFilter() { ExtensionData = new Dictionary<string, JToken>(){["#t"] = ConvertStringArrayToJsonElement(tags) },
-                Kinds = new[]{ NostrKind.Text }, Limit = limitFilterData?.Limit, Since = limitFilterData?.Since, Until = limitFilterData?.Until }
+                Kinds = new[]{ NostrKind.Text }, Limit = LimitFilterData?.Limit, Since = LimitFilterData?.Since, Until = LimitFilterData?.Until }
         };
     }
 

@@ -16,7 +16,7 @@ public class ChannelListSubscriptionFilter : SubscriptionFilter
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { Kinds = new[]{ NostrKind.ChannelCreation, NostrKind.ChannelMetadata }, Limit = limitFilterData?.Limit, Since = limitFilterData?.Since, Until = limitFilterData?.Until },
+            new NostrSubscriptionFilter() { Kinds = new[]{ NostrKind.ChannelCreation, NostrKind.ChannelMetadata }, Limit = LimitFilterData?.Limit, Since = LimitFilterData?.Since, Until = LimitFilterData?.Until },
         };
     }
 

@@ -93,7 +93,7 @@ else
             return;
         }
 
-        oldFilter.limitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(treeItem.Tree.Note.CreatedAtCurated);
+        oldFilter.LimitFilterData.Until = DateTimeOffset.FromUnixTimeSeconds(treeItem.Tree.Note.CreatedAtCurated);
         relayService.RefreshFilters(oldFilter);
 
         requestDisabled = true;
@@ -147,9 +147,9 @@ else
 
         newFilter = BaseFilter.Clone();
         oldFilter = BaseFilter.Clone();
-        oldFilter.limitFilterData.Limit = RelayQueryLimit;
-        oldFilter.limitFilterData.Until = DateTimeOffset.UtcNow;
-        newFilter.limitFilterData.Limit = 1;
+        oldFilter.LimitFilterData.Limit = RelayQueryLimit;
+        oldFilter.LimitFilterData.Until = DateTimeOffset.UtcNow;
+        newFilter.LimitFilterData.Limit = 1;
         dbLimit = 0;
 
         relayService.AddFilters(newFilter, oldFilter);

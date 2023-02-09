@@ -15,7 +15,7 @@ public class FollowersSubscriptionFilter : SubscriptionFilter
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { PublicKey = new[] { id }, Kinds = new[]{ NostrKind.Metadata, NostrKind.Contacts }, Limit = limitFilterData?.Limit, Since = limitFilterData?.Since, Until = limitFilterData?.Until }
+            new NostrSubscriptionFilter() { PublicKey = new[] { id }, Kinds = new[]{ NostrKind.Metadata, NostrKind.Contacts }, Limit = LimitFilterData?.Limit, Since = LimitFilterData?.Since, Until = LimitFilterData?.Until }
         };
     }
 

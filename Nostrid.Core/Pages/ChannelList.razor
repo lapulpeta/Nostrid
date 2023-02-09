@@ -46,7 +46,7 @@
         channelService.ChannelReceivedMessage += ChannelReceivedMessage;
 
         messageFilter = new ChannelSubscriptionFilter((string[])null) { DestroyOnEose = true };
-        messageFilter.limitFilterData.Limit = 100;
+        messageFilter.LimitFilterData.Limit = 100;
         detailsFilter = new ChannelListSubscriptionFilter() { DestroyOnEose = true };
         relayService.AddFilters(messageFilter, detailsFilter);
 

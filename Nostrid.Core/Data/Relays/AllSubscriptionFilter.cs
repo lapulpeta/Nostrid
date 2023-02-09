@@ -12,7 +12,7 @@ public class AllSubscriptionFilter : SubscriptionFilter
 
     public override NostrSubscriptionFilter[] GetFilters()
     {
-        return new[] { new NostrSubscriptionFilter() { Kinds = new[] { NostrKind.Text, NostrKind.Relay, NostrKind.Deletion, NostrKind.Repost, NostrKind.Reaction }, Limit = limitFilterData?.Limit, Since = limitFilterData?.Since, Until = limitFilterData?.Until } };
+        return new[] { new NostrSubscriptionFilter() { Kinds = new[] { NostrKind.Text, NostrKind.Relay, NostrKind.Deletion, NostrKind.Repost, NostrKind.Reaction }, Limit = LimitFilterData?.Limit, Since = LimitFilterData?.Since, Until = LimitFilterData?.Until } };
     }
 
     public override SubscriptionFilter Clone()

@@ -496,7 +496,7 @@ public class FeedService
             return 0;
 
         var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
-        mentionsFilter.limitFilterData.Since = accountService.MainAccount.LastNotificationRead;
+        mentionsFilter.LimitFilterData.Since = accountService.MainAccount.LastNotificationRead;
         return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
     }
 

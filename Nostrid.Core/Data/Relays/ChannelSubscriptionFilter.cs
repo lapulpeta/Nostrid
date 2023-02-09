@@ -23,7 +23,7 @@ public class ChannelSubscriptionFilter : SubscriptionFilter
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { EventId = ids, Kinds = new[]{ NostrKind.ChannelMessage }, Limit = limitFilterData?.Limit, Since = limitFilterData?.Since, Until = limitFilterData?.Until },
+            new NostrSubscriptionFilter() { EventId = ids, Kinds = new[]{ NostrKind.ChannelMessage }, Limit = LimitFilterData?.Limit, Since = LimitFilterData?.Since, Until = LimitFilterData?.Until },
         };
     }
 
@@ -35,7 +35,7 @@ public class ChannelSubscriptionFilter : SubscriptionFilter
         while (index < ids.Length)
         {
             var filter = new ChannelSubscriptionFilter(segment.Slice(index, Math.Min(batchSize, ids.Length - index)).ToArray());
-            filter.limitFilterData.Limit = limit;
+            filter.LimitFilterData.Limit = limit;
             filter.DestroyOn = destroyOn;
             filter.DestroyOnEose = destroyEose;
             ret.Add(filter);
