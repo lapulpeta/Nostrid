@@ -3,6 +3,8 @@
 @using Nostrid.Model;
 @using Nostrid.Data.Relays;
 
+@inject AllSubscriptionFilterFactory allSubscriptionFilterFactory;
+
 <h2>Global</h2>
 
 <div class="d-none d-md-flex pb-2">
@@ -18,6 +20,6 @@
 
     protected override void OnParametersSet()
     {
-        filter = new AllSubscriptionFilter();
+        filter = allSubscriptionFilterFactory.Create();
     }
 }

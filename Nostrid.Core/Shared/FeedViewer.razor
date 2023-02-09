@@ -75,10 +75,7 @@ else
     private void LoadMore()
     {
         dbLimit += RelayQueryLimit;
-        var rawFilters = BaseFilter.GetFilters();
-        foreach (var rawFilter in rawFilters)
-            rawFilter.Kinds = MessageKinds;
-        EventExtension.Merge(renderedN, feedService.GetNotesFeed(rawFilters, dbLimit));
+        EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
     }
 
     private async Task LoadMoreFromNoteAsync()

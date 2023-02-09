@@ -1,5 +1,6 @@
 ﻿using Ganss.Xss;
 using Nostrid.Data;
+using Nostrid.Data.Relays;
 using Nostrid.Externals;
 using Nostrid.Interfaces;
 using Nostrid.Misc;
@@ -44,6 +45,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMediaService, VoidCatMediaService>();
         builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
         builder.Services.AddSingleton<ChannelService>();
+        builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
 
 		var app = builder.Build();
 

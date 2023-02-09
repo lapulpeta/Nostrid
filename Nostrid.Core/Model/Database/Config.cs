@@ -18,6 +18,8 @@ public class Config
 
     public bool ManualRelayManagement { get; set; }
 
+    public int MaxAutoRelays { get; set; }
+
     public string? ProxyUri { get; set; }
 
     public string? ProxyUser { get; set; }

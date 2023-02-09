@@ -1,31 +1,32 @@
-using Nostrid.Misc;
 using NNostr.Client;
+using Nostrid.Misc;
 
 namespace Nostrid.Data.Relays;
 
 public class Subscription : IDisposable
 {
-    private bool disposedValue;
     private readonly NostrClient client;
-    private readonly SubscriptionFilter filter;
+    private readonly NostrSubscriptionFilter[] nostrFilters;
+    private readonly string filterId;
     private readonly string id;
 
     private bool subscribed;
+    private bool disposedValue;
 
-    public string SubscriptionId { get { return id; } }
+    public string SubscriptionId => id;
+    public string FilterId => filterId;
 
-    public Subscription(NostrClient client, SubscriptionFilter filter)
+    public Subscription(NostrClient client, NostrSubscriptionFilter[] nostrFilters, string filterId)
     {
         this.client = client;
-        this.filter = filter;
+        this.nostrFilters = nostrFilters;
+        this.filterId = filterId;
         id = IdGenerator.Generate();
     }
 
-    public SubscriptionFilter Filter { get { return filter; } }
-
     public async void Subscribe()
     {
-        await client.CreateSubscription(SubscriptionId, filter.GetFilters());
+        await client.CreateSubscription(SubscriptionId, nostrFilters);
         subscribed = true;
     }
 

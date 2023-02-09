@@ -25,7 +25,7 @@
 
         filter = new MentionSubscriptionFilter(accountService.MainAccount.Id);
 
-        var notesFeed = feedService.GetNotesFeed(filter.GetFilters(), 1);
+        var notesFeed = feedService.GetNotesFeed(filter, 1);
         if (notesFeed.Any())
         {
             var newestNoteDate = DateTimeOffset.FromUnixTimeSeconds(notesFeed.Max(n => n.CreatedAtCurated)).UtcDateTime;

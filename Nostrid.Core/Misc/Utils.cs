@@ -115,6 +115,16 @@ namespace Nostrid.Misc
             return RuntimeInformation.ProcessArchitecture == Architecture.Wasm;
         }
 
+        public static string? GetRelayMainAddress(string relayUri)
+        {
+            relayUri = relayUri.Replace("wss://", "https://");
+            if (Uri.IsWellFormedUriString(relayUri, UriKind.Absolute))
+            {
+                return relayUri;
+            }
+            return null;
+        }
+
         [GeneratedRegex("#([a-zA-Z0-9_]+)", RegexOptions.Compiled)]
         private static partial Regex HashtagRegex();
 

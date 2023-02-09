@@ -40,7 +40,7 @@
                 <div class="col-lg-6">
                     <div class="d-flex">
                         <span class="me-3 badge text-bg-light">@configModel.MinDiffIncoming</span>
-                        <input type="range" class="form-range" min="0" max="255" step="1" id="rangeMinimumPow"
+                        <input type="range" class="form-range" min="0" max="50" step="1" id="rangeMinimumPow"
                                 @bind-value="@configModel.MinDiffIncoming" @bind-value:event="oninput" @onchange="@Save" />
                     </div>
                 </div>
@@ -189,6 +189,23 @@
                 </div>
             </div>
         </li>
+        @if (!configModel.ManualRelayManagement)
+        {
+            <li class="list-group-item py-3">
+                <div class="row align-items-center">
+                    <label class="col-sm-6 col-lg-8" for="rangeMaxAutoRelays">
+                        Maximum simultaneous relay connections
+                    </label>
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="d-flex">
+                            <span class="me-3 badge text-bg-light">@configModel.MaxAutoRelays</span>
+                            <input type="range" class="form-range" min="0" max="50" step="1" id="rangeMaxAutoRelays"
+                                   @bind-value="@configModel.MaxAutoRelays" @bind-value:event="oninput" @onchange="@Save" />
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
         <li class="list-group-item py-3">
             <div class="input-group">
                 <span class="align-self-center me-3">New Relay</span>
@@ -200,10 +217,16 @@
         {
             <li class="list-group-item">
                 <div class="row g-2 align-items-center">
-                    <label class="col-sm-6 col-lg-8">
-                        <span class="bi bi-circle-fill @(IsRelayConnected(relay.Id) ? "text-success" : "text-danger")"></span>
-                        @relay.Uri
-                    </label>
+                    <div class="col-sm-6 col-lg-8">
+                        <label>
+                            <span class="bi bi-circle-fill @(IsRelayConnected(relay.Id) ? "text-success" : "text-danger")"></span>
+                            @relay.Uri
+                        </label>
+                        @if (relay.IsPaid)
+                        {
+                            <a class="ms-3 btn btn-sm btn-outline-secondary" href="@Utils.GetRelayMainAddress(relay.Uri)">Paid relay</a>
+                        }
+                    </div>
                     <div class="col-sm-6 col-lg-4 d-flex flex-row">
                         <div class="d-flex flex-row flex-grow-1 align-items-center justify-content-sm-end justify-content-md-end">
                             @if (configModel.ManualRelayManagement)
@@ -223,9 +246,9 @@
                             }
                             else
                             {
-                                <label class="form-check-label" for="relayPriority@(relay.Id)">Priority</label>
+                                <label class="me-1" for="relayPriority@(relay.Id)">Priority</label>
                                 <span class="me-3 badge text-bg-light">@relay.Priority</span>
-                                <input class="flex-grow-1 me-4" type="range"  min="0" max="10" step="1" id="relayPriority@(relay.Id)"
+                                <input class="flex-grow-1 me-4 form-range" type="range" min="0" max="10" step="1" id="relayPriority@(relay.Id)"
                                         @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
                             }
                         </div>
