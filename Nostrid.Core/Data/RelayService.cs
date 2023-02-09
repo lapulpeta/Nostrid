@@ -30,7 +30,7 @@ public class RelaysMonitor
 public class RelayService
 {
     private readonly string[] DefaultFreeRelays = new[] { "wss://relay.snort.social", "wss://nostr.developer.li", "wss://nostr-relay.alekberg.net", "wss://nostr.mom", "wss://relay.nostr.ch", "wss://nostr.sandwich.farm", "wss://nostr.oxtr.dev", "wss://nostr.zaprite.io", "wss://relay.minds.com/nostr/v1/ws", "wss://nostr.drss.io", "wss://nostr-verified.wellorder.net", "wss://nostr.semisol.dev", "wss://nostr-relay.untethr.me", "wss://nostr.onsats.org", "wss://nostr.cercatrova.me", "wss://nostr.swiss-enigma.ch", "wss://nostr-pub.semisol.dev", "wss://relay.nostr.info", "wss://nostr.zebedee.cloud", "wss://relay.damus.io", "wss://nostr-pub.wellorder.net" };
-    private readonly string[] DefaultPaidRelays = new[] { "wss://nostr.milou.lol", "wss://eden.nostr.land", "wss://puravida.nostr.land", "wss://nostr.wine" };
+    private readonly string[] DefaultPaidRelays = new[] { "wss://nostr.milou.lol", "wss://eden.nostr.land", "wss://puravida.nostr.land", "wss://nostr.wine", "wss://nostr.uselessshit.co" };
 
     private const int MinRelays = 8;
     private const int PriorityLowerBound = 0;
@@ -610,7 +610,7 @@ public class RelayService
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/nostr+json"));
-            using var httpResponse = await httpClient.GetAsync(uri.Replace("wss://", "https://"), cancellationToken);
+            using var httpResponse = await httpClient.GetAsync(Utils.GetRelayMainAddress(uri), cancellationToken);
             if (httpResponse.IsSuccessStatusCode)
             {
                 var response = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
