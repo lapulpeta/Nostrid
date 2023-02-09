@@ -30,7 +30,7 @@
                             <div class="text-center">
                                 <span class="fs-5">Amount</span>
                                 <div class="d-flex flex-row align-items-end position-relative border-bottom border-secondary border-opacity-25">
-                                    <input type="number" min="@Min" max="@Max" class="form-control fw-bold glow-0 bg-body fs-5 text-center border-0" style="padding: 0px 35px 0 50px;"
+                                    <input type="number" min="@Min" max="@Max" class="form-control fw-bold glow-0 fs-5 text-center border-0" style="padding: 0px 35px 0 50px;"
                                            value="@amount" @oninput="@(args => { long value; amount = long.TryParse(args.Value?.ToString(), out value) ? value : Min; })">
                                     <span class="position-absolute" style="bottom: 0; right: 0">sats</span>
                                 </div>

@@ -179,6 +179,11 @@ a, .btn-link {
 }
 
 /* BOOTSTRAP EXTENSIONS */
+[data-bs-theme=dark] {
+    --bs-body-bg: 1e1e1e;
+    --bs-body-bg-rgb: 30,30,30
+}
+
 .fs-7 {
     font-size: .85rem;
 }
