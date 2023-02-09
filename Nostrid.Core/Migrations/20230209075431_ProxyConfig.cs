@@ -5,7 +5,7 @@
 namespace Nostrid.Migrations
 {
     /// <inheritdoc />
-    public partial class RelayFilters : Migration
+    public partial class ProxyConfig : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

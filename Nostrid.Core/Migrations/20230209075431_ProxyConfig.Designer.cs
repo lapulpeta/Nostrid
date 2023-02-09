@@ -11,8 +11,8 @@ using Nostrid.Model;
 namespace Nostrid.Migrations
 {
     [DbContext(typeof(Context))]
-    [Migration("20230208180012_RelayFilters")]
-    partial class RelayFilters
+    [Migration("20230209075431_ProxyConfig")]
+    partial class ProxyConfig
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
