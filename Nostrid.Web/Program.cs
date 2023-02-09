@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Nostrid;
 using Nostrid.Data;
+using Nostrid.Data.Relays;
 using Nostrid.Externals;
 using Nostrid.Interfaces;
 using Nostrid.Web;
@@ -30,6 +31,7 @@ builder.Services.AddSingleton<IClipboardService, ClipboardService>();
 builder.Services.AddSingleton<MediaServiceProvider>();
 builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
 builder.Services.AddSingleton<ChannelService>();
+builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
 
 var host = builder.Build();
 
