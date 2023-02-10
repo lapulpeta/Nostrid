@@ -5,7 +5,7 @@
 
 ---
 
-Nostrid is a multi-platform, open-source Nostr client. It is written in .NET and runs in Windows and Android (in theory it should run in iOS and macOS too but it hasn't been tested yet).
+Nostrid is a multi-platform, open-source Nostr client. It is written in .NET and runs in Android, Windows and MacOS (it should run in iOS too but there are no binaries yet).
 
 Also a [web version](https://web.nostrid.app/) is available. It runs completely on the browser, and it can even be installed locally as a [PWA](https://en.wikipedia.org/wiki/Progressive_web_app).
 
@@ -33,8 +33,8 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] Display embedded images, videos and audios
 - [x] Reposts (aka Boosts)
 - [x] Embedded mentions of other accounts and notes - PARTIAL (only links, no previews)
+- [x] Channels - PARTIAL (can join and participate but can't create channels yet)
 - [ ] Direct messages - SOON
-- [ ] Channels - SOON
 - [ ] NIP-26 delegation - SOON
 
 ## Supported NIPs
@@ -60,7 +60,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - NIP-22: Event created_at Limits
 - NIP-25: Reactions ✅
 - NIP-26: Delegated Event Signing
-- NIP-28: Public Chat
+- NIP-28: Public Chat ✅
 - NIP-33: Parameterized Replaceable Events
 - NIP-36: Sensitive Content
 - NIP-40: Expiration Timestamp
@@ -104,21 +104,27 @@ Alternatively you can support the project by donating here:
 
 ### Requirements
 
+* Android
+    * 7.0 or higher
+
 * Windows
     * 10.0.19041.0 or higher
 
-* Android
-    * Android 7.0 or higher
+* MacOS
+    * 11 or higher
 
 ### Installation
 
 You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid/releases) section.
 
+* Android
+    * Download APK and install.
+
 * Windows
     * Download ZIP package, unzip and run `Install.ps1` in PowerShell. Follow instructions.
 
-* Android
-    * Download APK and install.
+* MacOS
+    * Download PKG and install. Since the package is unsigned you may have to control-click and choose `Open with...` > `Installer`.
 
 ### Building
 
@@ -128,6 +134,7 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 4. Run `git submodule update` to restore custom libraries
 5. Open solution in Visual Studio and run
 6. For Android: run `dotnet build -c Release -f net7.0-android` in `Nostrid` inner project
+7. For MacOS: run `dotnet publish -c Release -f net7.0-maccatalyst` in `Nostrid` inner project
 
 ## Authors
 
