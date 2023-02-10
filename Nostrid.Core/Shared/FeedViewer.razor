@@ -173,12 +173,24 @@ else
 
     private void TrimOlder()
     {
-        while (renderedN?.Count > dbLimit)
+        if (renderedN == null || renderedN.Count <= dbLimit)
         {
-            var oldest = renderedN.Values.OrderBy(n => n.CreatedAtCurated).FirstOrDefault();
-            if (oldest == null)
-                break;
-            renderedN.TryRemove(oldest.Id, out _);
+            return;
+        }
+
+        if (renderedN.Count > dbLimit * 2)
+        {
+            // Better to create a new list
+            renderedN = new(renderedN.OrderByDescending(n => n.Value.CreatedAtCurated).Take(dbLimit));
+        }
+        else
+        {
+            // Better to remove older items
+            var toRemove = renderedN.Values.OrderByDescending(n => n.CreatedAtCurated).Select(n => n.Id).Skip(dbLimit).ToList();
+            foreach (var item in toRemove)
+            {
+                renderedN.TryRemove(item, out _);
+            }
         }
     }
 
