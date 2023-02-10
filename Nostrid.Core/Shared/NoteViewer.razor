@@ -184,6 +184,7 @@
                             <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
                             <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
                             <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
+                            <li><a role="button" class="dropdown-item" @onclick="@(() => feedService.ResendExistingEvent(Tree.Note))" @onclick:stopPropagation="true">Broadcast</a></li>
                         </ul>
                     </div>
                 </BottomPlaceholder>

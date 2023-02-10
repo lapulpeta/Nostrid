@@ -3,7 +3,6 @@ using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
-using System.Collections.Generic;
 
 namespace Nostrid.Data;
 
@@ -473,6 +472,14 @@ public class FeedService
             return false;
         relayService.SendEvent(nostrEvent);
         return true;
+    }
+
+    public void ResendExistingEvent(Event? ev)
+    {
+        if (ev != null)
+        {
+            relayService.SendEvent(ev.ToNostrEvent(), false);
+        }
     }
 
     public FeedSource GetFeedSource(long id)

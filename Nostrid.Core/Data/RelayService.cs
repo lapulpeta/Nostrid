@@ -637,9 +637,12 @@ public class RelayService
         }
     }
 
-    public void SendEvent(NostrEvent nostrEvent)
+    public void SendEvent(NostrEvent nostrEvent, bool save = true)
     {
-        eventDatabase.SaveOwnEvents(nostrEvent, RelaysMonitor.IsAuto);
+        if (save)
+        {
+            eventDatabase.SaveOwnEvents(nostrEvent, RelaysMonitor.IsAuto);
+        }
         lock (lockObj)
         {
             foreach (var (relay, client) in clientByRelay)
