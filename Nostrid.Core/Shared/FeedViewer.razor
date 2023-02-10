@@ -19,12 +19,16 @@
     public string? ChannelId { get; set; }
 }
 
-@if (newN.Count > 0)
-{
-    <div class="text-center px-3 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
-        <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
-    </div>
-}
+<UpdatabableElement @ref="@labelShowNewPosts">
+    <Content>
+        @if (newN.Count > 0)
+        {
+            <div class="text-center px-3 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
+                <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
+            </div>
+        }
+    </Content>
+</UpdatabableElement>
 @if (renderedN.Count == 0)
 {
     <div class="text-center px-3 py-2 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
@@ -58,10 +62,10 @@ else
     private ConcurrentDictionary<string, Event> renderedN = new(), newN = new(), oldN = new();
     private int dbLimit;
     private SubscriptionFilter? newFilter, oldFilter;
-    private Timer? refreshPageTimer;
     private string[]? renderedIds;
     private NoteTreeViewer? noteTreeViewer;
     private bool requestDisabled;
+    private UpdatabableElement? labelShowNewPosts;
 
     private const int RelayQueryLimit = 13;
     private const int SecondsForDetailsFilters = 30;
@@ -130,6 +134,7 @@ else
         else
         {
             EventExtension.Merge(newN, notes);
+            labelShowNewPosts?.Update();
         }
     }
 
@@ -155,17 +160,6 @@ else
 
         feedService.NotesReceived += ReceivedNotes;
         feedService.NoteReceivedChild += NoteReceivedChild;
-
-        if (!inChannel) // Channel auto refreshes
-        {
-            refreshPageTimer = new Timer(new TimerCallback(_ =>
-            {
-                InvokeAsync(() =>
-                {
-                    StateHasChanged();
-                });
-            }), null, 0, 5000);
-        }
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
@@ -212,7 +206,6 @@ else
         feedService.NotesReceived -= ReceivedNotes;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
-        refreshPageTimer?.Dispose();
     }
     #endregion
 
