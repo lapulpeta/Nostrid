@@ -117,7 +117,7 @@ namespace Nostrid.Misc
 
         public static string? GetRelayMainAddress(string relayUri)
         {
-            relayUri = relayUri.Replace("wss://", "https://");
+            relayUri = relayUri.Replace("wss://", "https://").Replace("ws://", "http://");
             if (Uri.IsWellFormedUriString(relayUri, UriKind.Absolute))
             {
                 return relayUri;
