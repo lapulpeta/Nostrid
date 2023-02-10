@@ -404,8 +404,10 @@ public class RelayService
         foreach (var ev in eventDatabase.ListOwnEvents(accountId))
         {
             ev.Content ??= string.Empty;
-            await client.PublishEvent(ev.ToNostrEvent(), clientThreadsCancellationTokenSource.Token);
-            eventDatabase.AddSeenBy(ev.Id, relay.Id);
+            if (await client.PublishEvent(ev.ToNostrEvent(), clientThreadsCancellationTokenSource.Token))
+            {
+                eventDatabase.AddSeenBy(ev.Id, relay.Id);
+            }
         }
     }
 
@@ -420,8 +422,10 @@ public class RelayService
         foreach (var ev in eventDatabase.ListOwnEvents(relay.Id))
         {
             ev.Content ??= string.Empty;
-            await client.PublishEvent(ev.ToNostrEvent(), cancellationToken);
-            eventDatabase.AddSeenBy(ev.Id, relay.Id);
+            if (await client.PublishEvent(ev.ToNostrEvent(), cancellationToken))
+            {
+                eventDatabase.AddSeenBy(ev.Id, relay.Id);
+            }
         }
     }
 
@@ -651,8 +655,13 @@ public class RelayService
                 {
                     try
                     {
-                        _ = client.PublishEvent(nostrEvent);
-                        eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
+                        _ = Task.Run(async () =>
+                        {
+                            if (await client.PublishEvent(nostrEvent))
+                            {
+                                eventDatabase.AddSeenBy(nostrEvent.Id, relay.Id);
+                            }
+                        });
                     }
                     catch
                     {
