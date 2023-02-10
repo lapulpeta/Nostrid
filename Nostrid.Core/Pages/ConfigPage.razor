@@ -464,7 +464,7 @@
         }
         canBroadcast = false;
         Task.Run(() => relayService.EventDispatcherAsync(relayId, accountService.MainAccount.Id))
-            .ContinueWith((_) => canBroadcast = true);
+            .ContinueWith((_) => { canBroadcast = true; InvokeAsync(() => StateHasChanged()); } );
     }
 
     #region Dispose
