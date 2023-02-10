@@ -386,7 +386,30 @@ public class RelayService
         return eventDatabase.ListRelays();
     }
 
-    private async Task EventDispatcher(Relay relay)
+    public async Task EventDispatcherAsync(long relayId, string accountId)
+    {
+        Relay? relay;
+        lock (lockObj)
+        {
+            relay = clientByRelay.Keys.FirstOrDefault(r => r.Id == relayId);
+        }
+        if (relay == null)
+        {
+            return;
+        }
+
+        if (!clientByRelay.TryGetValue(relay, out var client))
+            return;
+
+        foreach (var ev in eventDatabase.ListOwnEvents(accountId))
+        {
+            ev.Content ??= string.Empty;
+            await client.PublishEvent(ev.ToNostrEvent(), clientThreadsCancellationTokenSource.Token);
+            eventDatabase.AddSeenBy(ev.Id, relay.Id);
+        }
+    }
+
+    private async Task EventDispatcherAsync(Relay relay, CancellationToken cancellationToken)
     {
         if (!RelaysMonitor.IsAuto)
             return;
@@ -397,7 +420,7 @@ public class RelayService
         foreach (var ev in eventDatabase.ListOwnEvents(relay.Id))
         {
             ev.Content ??= string.Empty;
-            await client.PublishEvent(ev.ToNostrEvent());
+            await client.PublishEvent(ev.ToNostrEvent(), cancellationToken);
             eventDatabase.AddSeenBy(ev.Id, relay.Id);
         }
     }
@@ -501,7 +524,7 @@ public class RelayService
                 }
                 catch { }
                 UpdateSubscriptions(relay);
-                _ = EventDispatcher(relay);
+                _ = Task.Run(() => EventDispatcherAsync(relay, cancellationToken));
                 await client.ListenForMessages();
             }
             finally

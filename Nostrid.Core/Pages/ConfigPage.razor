@@ -7,6 +7,7 @@
 @inject ConfigService configService
 @inject RelayService relayService
 @inject EventDatabase eventDatabase
+@inject AccountService accountService
 
 @implements IDisposable
 
@@ -208,6 +209,13 @@
         }
         <li class="list-group-item py-3">
             <div class="input-group">
+                In the following section you can see all the available relays. The 'Pay' button appears for paid relays
+                and will take you to their website to complete the payment. The 'Upload all' appears for online relays if you
+                are logged in, and will push all your data to that relay.
+            </div>
+        </li>
+        <li class="list-group-item py-3">
+            <div class="input-group">
                 <span class="align-self-center me-3">New Relay</span>
                 <InputText class="form-control" placeholder="Relay uri" @bind-Value="@newRelayUri" />
                 <button class="btn btn-sm py-1 btn-outline-secondary" type="button" @onclick="@AddNewRelay">Add</button>
@@ -224,7 +232,11 @@
                         </label>
                         @if (relay.IsPaid)
                         {
-                            <a class="ms-3 btn btn-sm btn-outline-secondary" href="@Utils.GetRelayMainAddress(relay.Uri)">Paid relay</a>
+                            <a class="ms-3 btn btn-sm btn-outline-secondary" href="@Utils.GetRelayMainAddress(relay.Uri)">Pay</a>
+                        }
+                        @if (accountService.MainAccount != null && canBroadcast && IsRelayConnected(relay.Id))
+                        {
+                            <a class="ms-3 btn btn-sm btn-outline-secondary" @onclick="@(() => Broadcast(relay.Id))">Upload all</a>
                         }
                     </div>
                     <div class="col-sm-6 col-lg-4 d-flex flex-row">
@@ -333,6 +345,7 @@
     private List<Relay> relays = new();
     private string newRelayUri = string.Empty;
     private ConcurrentDictionary<long, bool> relayStatus = new();
+    private bool canBroadcast = true;
 
     // Proxy
     private bool isUriValid = true;
@@ -441,6 +454,17 @@
             {
                 eventDatabase.Clean();
             })));
+    }
+
+    private void Broadcast(long relayId)
+    {
+        if (accountService.MainAccount == null || !canBroadcast || !IsRelayConnected(relayId))
+        {
+            return;
+        }
+        canBroadcast = false;
+        Task.Run(() => relayService.EventDispatcherAsync(relayId, accountService.MainAccount.Id))
+            .ContinueWith((_) => canBroadcast = true);
     }
 
     #region Dispose

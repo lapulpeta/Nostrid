@@ -426,6 +426,15 @@ namespace Nostrid.Data
                 .ToList();
         }
 
+        public List<Event> ListOwnEvents(string accountId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Events
+                .Include(e => e.Tags)
+                .Where(e => e.PublicKey == accountId)
+                .ToList();
+        }
+
         public void SaveOwnEvents(NostrEvent nostrEvent, bool broadcast)
         {
             using var db = new Context(_dbfile);
