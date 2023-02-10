@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Net.WebSockets;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace NNostr.Client
@@ -153,6 +154,10 @@ namespace NNostr.Client
             if (_proxy != null)
             {
                 websocket.Options.Proxy = _proxy;
+            }
+            if (RuntimeInformation.ProcessArchitecture != Architecture.Wasm)
+            {
+                websocket.Options.SetRequestHeader("origin", _relay.ToString());
             }
             var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             await websocket.ConnectAsync(_relay, cts.Token);
