@@ -5,6 +5,7 @@ using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 
 namespace Nostrid.Data;
@@ -243,6 +244,15 @@ public class RelayService
                 {
                     newEvents.Add(ev);
                 }
+
+                //Check repost
+                if (ev.Kind == NostrKind.Repost && TryGetEventFromRepost(ev, out var repostedEvent))
+                {
+                    if (filter.DontSaveInLocalCache || eventDatabase.SaveNewEvent(repostedEvent, relay))
+                    {
+                        newEvents.Add(repostedEvent);
+                    }
+                }
             }
 
             if (newEvents.Count > 0)
@@ -259,6 +269,28 @@ public class RelayService
                 DeleteFilter(filter);
             }
         }
+    }
+
+    private static bool TryGetEventFromRepost(Event repostEvent, [NotNullWhen(true)] out Event? ev)
+    {
+        try
+        {
+            if (repostEvent.Content.IsNotNullOrEmpty())
+            {
+                var repostedEvent = JsonConvert.DeserializeObject<NostrEvent>(repostEvent.Content);
+                if (repostedEvent != null && repostedEvent.Verify())
+                {
+                    ev = repostedEvent.FromNostrEvent();
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+            // Do nothing
+        }
+        ev = null;
+        return false;
     }
 
     public void AddFilter(SubscriptionFilter filter)
