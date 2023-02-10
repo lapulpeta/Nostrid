@@ -235,17 +235,11 @@ namespace Nostrid.Data
 
         public void SaveSeen(string eventId, long relayId, Context db)
         {
-            if (db.EventSeen.Any(es => es.EventId == eventId && es.RelayId == relayId))
-                return;
-
-            db.Add(new EventSeen() { EventId = eventId, RelayId = relayId });
-            try
-            {
-                db.SaveChanges();
-            }
-            catch (DbUpdateException ex)
-            {
-            }
+            db.EventSeen
+                .Upsert(new EventSeen() { EventId = eventId, RelayId = relayId })
+                .On(es => new { es.EventId, es.RelayId })
+                .NoUpdate()
+                .Run();
         }
 
         public bool SaveNewEvent(Event ev, Relay relay)
