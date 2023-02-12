@@ -8,8 +8,6 @@ public abstract class SubscriptionFilter
 {
     public string Id { get; private set; }
 
-    public List<int> RequiredNips { get; private set; }
-
     public LimitFilterData LimitFilterData { get; } = new();
 
     public bool DestroyOnFirstEvent { get; set; }
@@ -20,10 +18,9 @@ public abstract class SubscriptionFilter
 
     public bool DontSaveInLocalCache { get; set; }
 
-    protected SubscriptionFilter(params int[] requiredNips)
+    protected SubscriptionFilter()
     {
         Id = IdGenerator.Generate();
-        RequiredNips = new(requiredNips);
     }
 
     public abstract NostrSubscriptionFilter[] GetFilters();

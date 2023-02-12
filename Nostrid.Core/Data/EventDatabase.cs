@@ -364,20 +364,13 @@ namespace Nostrid.Data
             {
                 notes = notes.Where(e => filter.Kinds.Contains(e.Kind));
             }
-            return notes.Where(e => !e.Deleted);
-        }
-
-        private List<Event> ListAncestorNotesUntilRoot(string rootEventId, Context db) // That this tweet replies to
-        {
-            var ret = new List<Event>();
-            while (rootEventId != null)
+            if (filter.Search.IsNotNullOrEmpty())
             {
-                var tw = db.Events.Include(e => e.Tags).Where(tw => tw.Id == rootEventId).FirstOrDefault();
-                if (tw == null) break;
-                ret.Add(tw);
-                rootEventId = tw.ReplyToId;
+                var words = filter.Search.Split(" ");
+                notes = notes.Where(words.Aggregate(PredicateBuilder.New<Event>(),
+                    (current, temp) => current.Or(e => e.Content!.Contains(temp))));
             }
-            return ret;
+            return notes.Where(e => !e.Deleted);
         }
 
         private List<Event> ListChildrenNotes(string rootEventId, int levels, out bool maxReached, Context db) // That reply to this tweet

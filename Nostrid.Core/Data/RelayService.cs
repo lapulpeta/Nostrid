@@ -610,16 +610,16 @@ public class RelayService
         //lock (lockObj)
         {
             // Add new filters
-            var supportedFilters = filters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
-            foreach (var f in supportedFilters)
+            foreach (var f in filters)
             {
                 if (!subs.Any(s => s.FilterId == f.Id))
                 {
                     // Auto mode uses per-relay filters if supported
                     var nostrFilters = RelaysMonitor.IsAuto && f is IRelayFilter relayFilter ? relayFilter.GetFiltersForRelay(relay.Id) : f.GetFilters();
-                    if (nostrFilters.Any())
+                    var supportedNostrFilters = nostrFilters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
+                    if (supportedNostrFilters.Any())
                     {
-                        var sub = new Subscription(client, nostrFilters, f.Id);
+                        var sub = new Subscription(client, supportedNostrFilters.ToArray(), f.Id);
                         filterBySubscriptionId[sub.SubscriptionId] = f;
                         sub.Subscribe();
                         subs.Add(sub);
