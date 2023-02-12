@@ -152,8 +152,8 @@
                 state = State.ShowInvoice;
                 invoice = t.Result;
 
-                var bgColor = scripts?.Invoke<string>("getCssVariable", "--bs-body-bg");
-                var color = scripts?.Invoke<string>("getCssVariable", "--bs-emphasis-color");
+                var bgColor = scripts?.Invoke<string>("getCssVariable", "--bs-body-bg")?.Replace("#", "")?.Trim();
+                var color = scripts?.Invoke<string>("getCssVariable", "--bs-emphasis-color")?.Replace("#", "")?.Trim();
                 
                 var qrData = QRCodeGenerator.GenerateQrCode(t.Result, QRCodeGenerator.ECCLevel.Q);
                 invoiceQR = $"data:image/png;base64,{Convert.ToBase64String(new BitmapByteQRCode(qrData).GetGraphic(10, color ?? "000000", bgColor ?? "ffffff"))}";
