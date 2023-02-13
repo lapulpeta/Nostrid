@@ -20,14 +20,12 @@
 }
 
 <UpdatabableElement @ref="@labelShowNewPosts">
-    <Content>
-        @if (newN.Count > 0)
-        {
-            <div class="text-center px-3 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
-                <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
-            </div>
-        }
-    </Content>
+    @if (newN.Count > 0)
+    {
+        <div class="text-center px-3 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
+            <button class="btn btn-link btn-sm mx-3 my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
+        </div>
+    }
 </UpdatabableElement>
 @if (renderedN.Count == 0)
 {
@@ -52,11 +50,9 @@ else
 <div class="position-absolute" style="height: 44px; width: 44px; @(!inChannel ? "bottom" : "top"): 1rem; right: 1rem;">
     <div class="position-fixed">
         <UpdatabableElement @ref="@labelLoadMore">
-            <Content>
-                <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4">
-                    <i class="bi bi-arrow-repeat"></i>
-                </button>
-            </Content>
+            <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4">
+                <i class="bi bi-arrow-repeat"></i>
+            </button>
         </UpdatabableElement>
     </div>
 </div>

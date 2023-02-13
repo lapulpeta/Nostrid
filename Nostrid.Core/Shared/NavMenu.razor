@@ -31,33 +31,37 @@
 							<span class="bi bi-house-fill" aria-hidden="true"></span> Global
 						</NavLink>
 					</li>
-					@if (accountService.MainAccount != null)
-					{
-						@foreach (var feedSource in feedService.GetFeedSources(accountService.MainAccount.Id))
+					<UpdatabableElement @ref="@loggedInElements">
+						@if (accountService.MainAccount != null)
 						{
+							@foreach (var feedSource in feedService.GetFeedSources(accountService.MainAccount.Id))
+							{
+								<li class="nav-item pb-2">
+									<NavLink class="nav-link text-nowrap" href="@($"feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
+										<span class="bi bi-house-heart-fill" aria-hidden="true"></span> @string.Join(", ", feedSource.Hashtags.ToArray())
+									</NavLink>
+								</li>
+							}
 							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap" href="@($"feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
-									<span class="bi bi-house-heart-fill" aria-hidden="true"></span> @string.Join(", ", feedSource.Hashtags.ToArray())
+								<NavLink class="nav-link text-nowrap" href="feed/follow" @onclick="HideOffCanvasMenu">
+									<span class="bi bi-house-check-fill" aria-hidden="true"></span> Following
+								</NavLink>
+							</li>
+							<li class="nav-item pb-2">
+								<NavLink class="nav-link text-nowrap" href="feed/mention" @onclick="HideOffCanvasMenu">
+									<span class="bi bi-house-exclamation-fill" aria-hidden="true"></span> Mentions
+									<UpdatabableElement @ref="mentionsElement2">
+										@if (mentionsCount > 0)
+										{
+											<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
+												@mentionsCount
+											</span>
+										}
+									</UpdatabableElement>
 								</NavLink>
 							</li>
 						}
-						<li class="nav-item pb-2">
-							<NavLink class="nav-link text-nowrap" href="feed/follow" @onclick="HideOffCanvasMenu">
-								<span class="bi bi-house-check-fill" aria-hidden="true"></span> Following
-							</NavLink>
-						</li>
-						<li class="nav-item pb-2">
-							<NavLink class="nav-link text-nowrap" href="feed/mention" @onclick="HideOffCanvasMenu">
-								<span class="bi bi-house-exclamation-fill" aria-hidden="true"></span> Mentions
-								@if (mentionsCount > 0)
-								{
-									<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
-										@mentionsCount
-									</span>
-								}
-							</NavLink>
-						</li>
-					}
+					</UpdatabableElement>
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap" href="explore" @onclick="HideOffCanvasMenu">
 							<span class="bi bi-search" aria-hidden="true"></span> Explore
@@ -73,14 +77,16 @@
 							<span class="bi bi-gear" aria-hidden="true"></span> Settings
 						</NavLink>
 					</li>
-					@if (accountService.MainAccount != null)
-					{
-						<li class="nav-item pb-2">
-							<NavLink class="nav-link text-nowrap" href="@($"account/{accountService.MainAccount.Id}")" @onclick="HideOffCanvasMenu">
-								<span class="bi bi-person-fill" aria-hidden="true"></span> Me
-							</NavLink>
-						</li>
-					}
+					<UpdatabableElement @ref="loggedInElements2">
+						@if (accountService.MainAccount != null)
+						{
+							<li class="nav-item pb-2">
+								<NavLink class="nav-link text-nowrap" href="@($"account/{accountService.MainAccount.Id}")" @onclick="HideOffCanvasMenu">
+									<span class="bi bi-person-fill" aria-hidden="true"></span> Me
+								</NavLink>
+							</li>
+						}
+					</UpdatabableElement>
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap" href="accounts" @onclick="HideOffCanvasMenu">
 							<span class="bi bi-people-fill" aria-hidden="true"></span> Accounts
@@ -90,22 +96,24 @@
 			</nav>
 			<div class="fs-7 text-muted text-left">
 				<div>
-					Relays
-					@if (relayService.RelaysMonitor.IsAuto)
-					{
-						<span> (Auto)</span>
-					}
-					<br />
-					-Connected: @relayService.ConnectedRelays/@relayService.RelaysMonitor.MaxRelays
-					@if (!relayService.IsRestarting)
-					{
-						<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button>
-					}
-					<br />
-					-Available: @relayService.RelaysMonitor.PendingRelays <br />
-					-Rate Limited: @relayService.RateLimitedRelays <br />
-					Filters: @relayService.FiltersCount <br />
-					Version: @Utils.GetCurrentVersion()
+					<UpdatabableElement @ref="relayElements">
+						Relays
+						@if (relayService.RelaysMonitor.IsAuto)
+						{
+							<span> (Auto)</span>
+						}
+						<br />
+						-Connected: @relayService.ConnectedRelays/@relayService.RelaysMonitor.MaxRelays
+						@if (!relayService.IsRestarting)
+						{
+							<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button>
+						}
+						<br />
+						-Available: @relayService.RelaysMonitor.PendingRelays <br />
+						-Rate Limited: @relayService.RateLimitedRelays <br />
+						Filters: @relayService.FiltersCount <br />
+						Version: @Utils.GetCurrentVersion()
+					</UpdatabableElement>
 				</div>
 			</div>
 		</div>
@@ -116,19 +124,23 @@
 		<nav class="navbar navbar-light bg-body-tertiary d-md-none m-0 px-2 py-1 border-bottom bg-opacity-95">
 			<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
 				<NavLink class="nav-link" href="#">
-					<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
+					<UpdatabableElement @ref="loggedInElements3">
+						<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
+					</UpdatabableElement>
 				</NavLink>
 				<div class="flex-grow-1 text-center">
 					<a class="navbar-brand m-0" href="/">Nostrid</a>
 				</div>
 				<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
 					<span class="navbar-toggler-icon"></span>
-					@if (mentionsCount > 0)
-					{
-						<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
-							@mentionsCount
-						</span>
-					}
+					<UpdatabableElement @ref="mentionsElement">
+						@if (mentionsCount > 0)
+						{
+							<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
+								@mentionsCount
+							</span>
+						}
+					</UpdatabableElement>
 				</button>
 			</div>
 		</nav>
@@ -164,35 +176,35 @@
 
 @code {
 
-	private Timer? refreshTimer;
 	private int mentionsCount;
 	private Scripts? scripts;
-
-	protected override void OnInitialized()
-	{
-		base.OnInitialized();
-
-		refreshTimer = new Timer(new TimerCallback(_ =>
-		{
-			InvokeAsync(() =>
-			{
-				StateHasChanged();
-			});
-		}), null, 0, 2000);
-	}
+	private UpdatabableElement? mentionsElement, mentionsElement2, loggedInElements, loggedInElements2, loggedInElements3, relayElements;
 
 	private void NotificationNumberChanged(object? sender, int mentionsCount)
 	{
 		this.mentionsCount = mentionsCount;
+		mentionsElement?.Update();
+		mentionsElement2?.Update();
 	}
 
-	protected override async Task OnAfterRenderAsync(bool firstRender)
+	private void MainAccountChanged(object? sender, EventArgs args)
 	{
-		await base.OnAfterRenderAsync(firstRender);
-		if (firstRender)
-		{
-			notificationService.NotificationNumberChanged += NotificationNumberChanged;
-		}
+		loggedInElements?.Update();
+		loggedInElements2?.Update();
+		loggedInElements3?.Update();
+	}
+
+	private void ClientStatusChanged(object? sender, (long, bool) data)
+	{
+		relayElements?.Update();
+	}
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+		notificationService.NotificationNumberChanged += NotificationNumberChanged;
+		accountService.MainAccountChanged += MainAccountChanged;
+		relayService.ClientStatusChanged += ClientStatusChanged;
 	}
 
 	private void ChangeRelays()
@@ -229,6 +241,8 @@
 	private void Cleanup()
 	{
 		notificationService.NotificationNumberChanged -= NotificationNumberChanged;
+		accountService.MainAccountChanged -= MainAccountChanged;
+		relayService.ClientStatusChanged -= ClientStatusChanged;
 	}
 	#endregion
 }

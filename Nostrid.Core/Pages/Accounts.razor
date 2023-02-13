@@ -191,6 +191,7 @@
 
     protected override void OnInitialized()
     {
+        LoadAccounts();
         accountDetailsChangedEventHandler = (sender, eventArgs) =>
         {
             Account account;
@@ -204,7 +205,6 @@
             }
         };
         accountService.AccountDetailsChanged += accountDetailsChangedEventHandler;
-        LoadAccounts();
         base.OnInitialized();
     }
 
