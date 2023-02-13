@@ -101,6 +101,13 @@ public static class EventExtension
                 .Select(t => t.Data1)
                 .LastOrDefault();
         }
+        else if (ev.Kind == NostrKind.DM)
+        {
+			return ev.Tags
+				.Where(t => t.Data0 == "e" && t.Data1 != null)
+				.Select(t => t.Data1)
+				.FirstOrDefault();
+		}
         return null;
     }
 

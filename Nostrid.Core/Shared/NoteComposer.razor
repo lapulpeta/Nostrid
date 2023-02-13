@@ -203,6 +203,30 @@
         selectedService = mediaServiceProvider.GetMediaServices().FirstOrDefault();
     }
 
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (ReplyTo != null)
+        {
+            switch (ReplyTo.Kind)
+            {
+                case NostrKind.ChannelMessage:
+                    ChannelId = ReplyTo.ChannelId;
+                    break;
+                case NostrKind.DM:
+                    if (accountService.MainAccount.Id == ReplyTo.PublicKey)
+                    {
+                        DmWith = ReplyTo.GetMentionsIds('p').First();
+                    }
+                    else
+                    {
+                        DmWith = ReplyTo.PublicKey;
+                    }
+                    break;
+            }
+        }
+    }
+
     private void MainAccountChanged(object? sender, EventArgs args)
     {
         InvokeAsync(() => StateHasChanged());
