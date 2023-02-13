@@ -9,6 +9,8 @@ Nostrid is a multi-platform, open-source Nostr client. It is written in .NET and
 
 Also a [web version](https://web.nostrid.app/) is available. It runs completely on the browser, and it can even be installed locally as a [PWA](https://en.wikipedia.org/wiki/Progressive_web_app).
 
+For a quick start check out the [Installation](#Installation) section below.
+
 ## Features
 
 - [x] Multiaccount with simple switching
@@ -16,7 +18,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - [x] NIP-05 profiles
 - [x] Lightning Network (pay button and profile setup)
 - [x] Text notes with support for markdown (receive and send)
-- [x] Upload media files (uses third-party services [nostr.build](https://nostr.build/) and [void.cat](https://void.cat/)) (Not available in Web version due to CORS)
+- [x] Upload media files (uses third-party services [nostr.build](https://nostr.build/), [void.cat](https://void.cat/) and [nostrimg.com](https://nostrimg.com/))
 - [x] Delete notes
 - [x] NIP-13 PoW (receive/filter and send)
 - [x] Reactions (receive and send)
@@ -57,6 +59,7 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - NIP-16: Event Treatment
 - NIP-19: bech32-encoded entities ✅
 - NIP-20: Command Results
+- NIP-21: nostr: URL scheme
 - NIP-22: Event created_at Limits
 - NIP-25: Reactions ✅
 - NIP-26: Delegated Event Signing
@@ -65,6 +68,9 @@ Also a [web version](https://web.nostrid.app/) is available. It runs completely 
 - NIP-36: Sensitive Content
 - NIP-40: Expiration Timestamp
 - NIP-42: Authentication of clients to relays
+- NIP-50: Keywords filter ✅
+- NIP-56: Reporting
+- NIP-65: Relay List Metadata
 
 ## Screenshots
 
