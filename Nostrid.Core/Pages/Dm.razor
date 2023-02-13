@@ -1,0 +1,34 @@
+﻿@page "/dm/{id}"
+
+@code {
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = null!;
+}
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Interfaces;
+@using Nostrid.Model;
+
+@inject IClipboardService clipboardService
+@inject AccountService accountService
+
+<div class="d-flex flex-column flex-grow-1">
+    <div class="fs-4 fw-bolder">Direct Messages with <AccountName Id="@Id" /> </div>
+    <div class="position-relative d-flex flex-column flex-column-reverse flex-grow-1 overflow-y-auto px-3"
+         style="margin: 0 -1rem; flex-basis:0;">
+        <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.DM})" ShowAsMessages="true" />
+    </div>
+    <div>
+        <NoteComposer Rows="1" />
+    </div>
+</div>
+
+@code {
+    private SubscriptionFilter? filter;
+
+    protected override void OnParametersSet()
+    {
+        filter = new DmSubscriptionFilter(accountService.MainAccount.Id, Id);
+    }
+}

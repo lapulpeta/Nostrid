@@ -51,6 +51,11 @@
             <div class="btn-group mb-3 me-3" role="group">
                 <FollowButton AccountId="@PubKey" />
             </div>
+            <div class="btn-group mb-3 me-3" role="group">
+                <a class="btn btn-sm btn-primary" href="\dm\@PubKey">
+                    Message
+                </a>
+            </div>
         }
         @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
         {
