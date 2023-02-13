@@ -65,9 +65,19 @@ public class LocalSigner : ISigner
         }
     }
 
-    public Task<string?> EncryptNip04(string pubkey, string content)
+    public async Task<string?> EncryptNip04(string pubkey, string content)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var pubkeyBytes = NBitcoin.Secp256k1.Context.Instance.CreateXOnlyPubKey(pubkey.DecodHexData());
+            var sharedKey = GetSharedPubkey(pubkeyBytes, _ecPrivKey).ToBytes().Skip(1).ToArray();
+            var (cipherText, iv) = await _encryptor.Value.Encrypt(content, sharedKey);
+            return $"{cipherText}?iv={iv}";
+        }
+        catch (Exception ex)
+        {
+            return string.Empty;
+        }
     }
 
     public async Task<string?> GetPubKey()
@@ -80,7 +90,7 @@ public class LocalSigner : ISigner
         if (ev.PublicKey != _pubKey)
             return false;
 
-        await ev.ComputeIdAndSign(_ecPrivKey);
+        await ev.ComputeIdAndSign(_ecPrivKey, false);
         return true;
     }
 

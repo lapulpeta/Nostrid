@@ -198,9 +198,18 @@ public class FeedService
         return rootTrees;
     }
 
-    public async Task<bool> SendNoteWithPow(string content, bool inChannel, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds, int diff, CancellationToken cancellationToken)
+    public async Task<bool> SendNoteWithPow(string content, int kind, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds, int diff, CancellationToken cancellationToken)
     {
-        var unsignedNote = AssembleNote(content, inChannel, replyToId, rootId, accountMentionIds);
+        NostrEvent? unsignedNote;
+
+        if (kind == NostrKind.DM)
+        {
+            unsignedNote = await AssembleDm(content, replyToId, accountMentionIds.First());
+        }
+        else
+        {
+            unsignedNote = AssembleNote(content, kind == NostrKind.ChannelMessage, replyToId, rootId, accountMentionIds);
+        }
 
         if (diff > 0)
         {
@@ -257,6 +266,27 @@ public class FeedService
             return false;
         relayService.SendEvent(unsignedNote);
         return true;
+    }
+
+    private async Task<NostrEvent> AssembleDm(string content, string? replyToId, string dmWith)
+    {
+        content = await accountService.MainAccountSigner.EncryptNip04(dmWith, content);
+        var nostrEvent = new NostrEvent()
+        {
+            CreatedAt = DateTimeOffset.UtcNow,
+            Kind = NostrKind.DM,
+            PublicKey = accountService.MainAccount.Id,
+            Tags = new(),
+            Content = content,
+        };
+
+        if (replyToId.IsNotNullOrEmpty())
+        {
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new() { replyToId } });
+        }
+        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new() { dmWith } });
+
+        return nostrEvent;
     }
 
     private NostrEvent AssembleNote(string content, bool inChannel, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds)
