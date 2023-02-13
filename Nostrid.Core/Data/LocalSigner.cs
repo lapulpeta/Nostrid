@@ -61,7 +61,7 @@ public class LocalSigner : ISigner
         }
         catch (Exception ex)
         {
-            return string.Empty;
+            return null;
         }
     }
 
@@ -76,7 +76,7 @@ public class LocalSigner : ISigner
         }
         catch (Exception ex)
         {
-            return string.Empty;
+            return null;
         }
     }
 

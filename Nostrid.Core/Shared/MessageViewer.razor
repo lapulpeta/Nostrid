@@ -52,16 +52,18 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Event.Kind == NostrKind.DM)
+        string? rawContent;
+
+        if (Event?.Kind == NostrKind.DM)
         {
             var pubkey = Event.PublicKey == accountService.MainAccount.Id ? Event.GetMentionsIds('p').FirstOrDefault() : Event.PublicKey;
-            var decryptedText = await accountService.MainAccountSigner.DecryptNip04(pubkey, Event.Content);
-            content = noteProcessor.GetContent(decryptedText, Event?.GetMentions());
+            rawContent = await accountService.MainAccountSigner.DecryptNip04(pubkey, Event.Content);
         }
         else
         {
-            content = noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions());
+            rawContent = Event?.Content;
         }
+        content = noteProcessor.GetContent(rawContent ?? string.Empty, Event?.GetMentions());
         await base.OnParametersSetAsync();
     }
 

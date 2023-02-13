@@ -210,6 +210,10 @@ public class FeedService
         {
             unsignedNote = AssembleNote(content, kind == NostrKind.ChannelMessage, replyToId, rootId, accountMentionIds);
         }
+        if (unsignedNote == null)
+        {
+            return false;
+        }
 
         if (diff > 0)
         {
@@ -270,14 +274,18 @@ public class FeedService
 
     private async Task<NostrEvent> AssembleDm(string content, string? replyToId, string dmWith)
     {
-        content = await accountService.MainAccountSigner.EncryptNip04(dmWith, content);
+        var encryptedContent = await accountService.MainAccountSigner.EncryptNip04(dmWith, content);
+        if (encryptedContent == null)
+        {
+            return null;
+        }
         var nostrEvent = new NostrEvent()
         {
             CreatedAt = DateTimeOffset.UtcNow,
             Kind = NostrKind.DM,
             PublicKey = accountService.MainAccount.Id,
             Tags = new(),
-            Content = content,
+            Content = encryptedContent,
         };
 
         if (replyToId.IsNotNullOrEmpty())
