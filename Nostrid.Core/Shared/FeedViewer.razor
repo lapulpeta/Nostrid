@@ -34,13 +34,13 @@
     </UpdatabableElement>
     
     @{
-        var trees = inChannel ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
+        var trees = ShowAsMessages ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
         // Root nodes are sorted newest on top
         trees.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
     }
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@inChannel" />
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@ShowAsMessages" />
     
-    <div class="text-center px-3 py-2 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
+    <div class="text-center px-3 py-2 @(!ShowAsMessages ? "border-top" : "")" style="margin: 0 -1rem;">
         <UpdatabableElement @ref="@labelLoadMore">
             @if (loading)
             {
