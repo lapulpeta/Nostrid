@@ -32,6 +32,7 @@ builder.Services.AddSingleton<MediaServiceProvider>();
 builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
 builder.Services.AddSingleton<ChannelService>();
 builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
+builder.Services.AddSingleton<DmService>();
 
 var host = builder.Build();
 

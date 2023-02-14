@@ -1,0 +1,95 @@
+﻿@page "/dms"
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using System.Collections.Concurrent;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject DmService dmService
+@inject AccountService accountService
+@inject NavigationManager navigationManager
+@inject RelayService relayService
+
+<h4>Direct Messages</h4>
+<div style="margin-bottom: -1rem;">
+    @foreach (var partnerId in dmPartners)
+    {
+        <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+         @onclick="@(() => navigationManager.NavigateTo($"/dm/{partnerId}"))" style="margin: 0 -1rem;">
+            <div class="flex-shrink-0">
+                <AccountPicture Id="@partnerId" />
+            </div>
+            <div class="flex-grow-1 px-2 text-break">
+                <div class="fw-bold">
+                    <AccountName Id="@partnerId" />
+                </div>
+                <div class="fs-7 text-secondary">@partnerId</div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private HashSet<string> dmPartners = new();
+    private SubscriptionFilter? filter;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+
+        relayService.AddFilter(filter = new DmSubscriptionFilter(accountService.MainAccount.Id));
+        dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
+        accountService.AddDetailsNeeded(dmPartners);
+        dmService.NewDmPair += NewDmPair;
+    }
+    private void NewDmPair(object? sender, (string accountL, string accountH) data)
+    {
+        if (data.accountL == accountService.MainAccount!.Id)
+        {
+            dmPartners.Add(data.accountH);
+            accountService.AddDetailsNeeded(data.accountH);
+        }
+        else if (data.accountH == accountService.MainAccount.Id)
+        {
+            dmPartners.Add(data.accountL);
+            accountService.AddDetailsNeeded(data.accountL);
+        }
+        else
+        {
+            return;
+        }
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        dmService.NewDmPair -= NewDmPair;
+        relayService.DeleteFilters(filter);
+    }
+    #endregion
+}

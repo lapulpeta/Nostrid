@@ -46,6 +46,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
         builder.Services.AddSingleton<ChannelService>();
         builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
+        builder.Services.AddSingleton<DmService>();
 
 		var app = builder.Build();
 

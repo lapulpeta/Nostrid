@@ -12,17 +12,19 @@ public class FeedService
     private readonly RelayService relayService;
     private readonly AccountService accountService;
     private readonly ChannelService channelService;
+    private readonly DmService dmService;
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
     public event EventHandler<Event> NoteUpdated;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
-    public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService)
+    public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService, DmService dmService)
     {
         this.eventDatabase = eventDatabase;
         this.relayService = relayService;
         this.accountService = accountService;
         this.channelService = channelService;
+        this.dmService = dmService;
         this.relayService.ReceivedEvents += ReceivedEvents;
     }
 
@@ -44,6 +46,9 @@ public class FeedService
                 break;
             case NostrKind.Contacts:
                 accountService.HandleKind3(eventToProcess, filterId);
+                break;
+            case NostrKind.DM:
+                dmService.HandleDm(eventToProcess);
                 break;
             case NostrKind.Deletion:
                 HandleKind5(eventToProcess);
@@ -559,5 +564,6 @@ public class FeedService
     {
         return eventDatabase.AccountReacted(eventId, accountId);
     }
+
 }
 

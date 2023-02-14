@@ -16,6 +16,7 @@ public class Context : DbContext
     public DbSet<TagData> TagDatas { get; set; }
     public DbSet<Channel> Channels { get; set; }
     public DbSet<ChannelDetails> ChannelDetails { get; set; }
+    public DbSet<DmPair> DmPairs { get; set; }
 
     public string _dbfile { get; }
 
@@ -51,6 +52,9 @@ public class Context : DbContext
         builder.Entity<Follow>().HasIndex(f => f.AccountId);
         builder.Entity<Follow>().HasIndex(f => f.FollowId);
         builder.Entity<Follow>().HasIndex(f => new { f.AccountId, f.FollowId });
+        builder.Entity<DmPair>().HasIndex(p => p.AccountL);
+        builder.Entity<DmPair>().HasIndex(p => p.AccountH);
+        builder.Entity<DmPair>().HasIndex(p => new { p.AccountL, p.AccountH }).IsUnique();
         builder.Entity<Channel>().HasIndex(e => e.Id);
         builder.Entity<ChannelDetails>().HasIndex(e => e.Id);
     }
