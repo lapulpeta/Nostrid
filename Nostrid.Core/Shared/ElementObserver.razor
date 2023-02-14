@@ -1,0 +1,54 @@
+﻿@implements IAsyncDisposable
+
+@code{
+    [Parameter, EditorRequired]
+    public EventHandler<bool> OnIntersecting { get; set; } = null!;
+
+    [Parameter]
+    public string Margin { get; set; } = "0px";
+}
+
+<div @ref="_element" class="invisible"></div>
+<Scripts @ref="_scripts" OnAfterFirstRenderAsync="Initialize" />
+
+@code {
+    private Scripts? _scripts;
+    private ElementReference _element;
+    private IJSObjectReference? _observer;
+
+    private async Task Initialize()
+    {
+        if (_scripts == null) return;
+        _observer = await _scripts.InvokeAsync<IJSObjectReference>(
+            "createIntersectionObserver", _element, DotNetObjectReference.Create(this), "LoadMore", Margin);
+    }
+
+    [JSInvokable]
+    public void LoadMore(bool intersecting)
+    {
+        this.OnIntersecting?.Invoke(this, intersecting);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    async ValueTask IAsyncDisposable.DisposeAsync() => await Dispose(true);
+
+    protected virtual async Task Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                if (_observer != null)
+                {
+                    await _observer.InvokeVoidAsync("dispose");
+                    await _observer.DisposeAsync();
+                }
+            }
+
+            _disposed = true;
+        }
+    }
+    #endregion
+}

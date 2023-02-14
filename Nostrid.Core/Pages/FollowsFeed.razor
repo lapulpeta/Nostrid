@@ -24,9 +24,7 @@
 }
 else
 {
-    <div style="margin-bottom: -1rem;">
-        <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
-    </div>
+    <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 }
 
 @code {
