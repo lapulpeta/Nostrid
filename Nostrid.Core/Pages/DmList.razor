@@ -3,6 +3,7 @@
 @using Nostrid.Data.Relays;
 @using Nostrid.Data;
 @using System.Collections.Concurrent;
+@using Nostrid.Misc;
 @using Nostrid.Model;
 
 @implements IDisposable
@@ -14,10 +15,18 @@
 
 <h4>Direct Messages</h4>
 <div style="margin-bottom: -1rem;">
+    <div class="px-3 py-3 border-top" style="margin: 0 -1rem;">
+        <EditForm Model="@searchText" OnValidSubmit="@Search">
+            <div class="input-group">
+                <input type="text" class="form-control @(invalidInput ? "is-invalid" : "")" @bind-value="searchText.Text" />
+                <button class="btn btn-primary" type="submit">Go</button>
+            </div>
+        </EditForm>
+    </div>
     @foreach (var partnerId in dmPartners)
     {
         <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
-         @onclick="@(() => navigationManager.NavigateTo($"/dm/{partnerId}"))" style="margin: 0 -1rem;">
+            @onclick="@(() => NavigateTo(partnerId))" style="margin: 0 -1rem;">
             <div class="flex-shrink-0">
                 <AccountPicture Id="@partnerId" />
             </div>
@@ -34,6 +43,8 @@
 @code {
     private HashSet<string> dmPartners = new();
     private SubscriptionFilter? filter;
+    private TextInput searchText = new();
+    private bool invalidInput = false;
 
     protected override void OnInitialized()
     {
@@ -66,6 +77,27 @@
             return;
         }
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private void Search()
+    {
+        if (Utils.IsValidNostrId(searchText.Text))
+        {
+            NavigateTo(searchText.Text);
+            return;
+        }
+        var (prefix, hex) = ByteTools.DecodeBech32(searchText.Text);
+        if (prefix == "npub" && hex != null)
+        {
+            NavigateTo(hex);   
+            return;
+        }
+        invalidInput = true;
+    }
+
+    private void NavigateTo(string hex)
+    {
+        navigationManager.NavigateTo($"/dm/{hex}");
     }
 
     #region Dispose

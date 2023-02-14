@@ -22,8 +22,8 @@
 		<div class="offcanvas-header d-md-none">
 			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 		</div>
-		<div class="offcanvas-body d-flex flex-column flex-grow-1">
-			<a class="d-block pb-3 text-center text-decoration-none" href="/">Nostrid</a>
+		<div class="offcanvas-body d-flex flex-column flex-grow-1 pt-0">
+			<a class="d-sm-none d-md-block pb-3 text-center text-decoration-none " href="/">Nostrid</a>
 			<nav class="p-0 flex-grow-1 fs-5" style="min-width: 150px;">
 				<ul class="nav nav-pills flex-column">
 					<li class="nav-item pb-2">
@@ -62,7 +62,7 @@
 							</li>
 							<li class="nav-item pb-2">
 								<NavLink class="nav-link text-nowrap" href="dms" @onclick="HideOffCanvasMenu">
-									<span class="bi bi-chat-quote-fill" aria-hidden="true"></span> Messages
+									<span class="bi bi-envelope-fill" aria-hidden="true"></span> Messages
 								</NavLink>
 							</li>
 						}
@@ -169,6 +169,11 @@
 				<li class="nav-item flex-grow-1">
 					<NavLink class="nav-link fs-4 text-body" href="explore">
 						<div class="bi bi-search" aria-hidden="true"></div>
+					</NavLink>
+				</li>
+				<li class="nav-item flex-grow-1">
+					<NavLink class="nav-link fs-4 text-body" href="dms">
+						<div class="bi bi-envelope-fill" aria-hidden="true"></div>
 					</NavLink>
 				</li>
 			</ul>
