@@ -80,3 +80,47 @@ var findClosestScrollContainer = function (element) {
     }
     return null;
 }
+
+export async function encryptAes(plaintext, key, iv) {
+    const rawkey = await window.crypto.subtle.importKey(
+        "raw",
+        key,
+        "AES-CBC",
+        true,
+        ["encrypt", "decrypt"]
+    );
+
+    const encoder = new TextEncoder();
+    const decrypted = encoder.encode(plaintext);
+
+    const encrypted = await window.crypto.subtle.encrypt(
+        {
+            name: "AES-CBC",
+            iv: iv
+        },
+        rawkey,
+        decrypted
+    );
+    return new Uint8Array(encrypted);
+}
+
+export async function decryptAes(ciphertext, key, iv) {
+    const rawkey = await window.crypto.subtle.importKey(
+        "raw",
+        key,
+        "AES-CBC",
+        true,
+        ["encrypt", "decrypt"]
+    );
+    const decrypted = await window.crypto.subtle.decrypt(
+        {
+            name: "AES-CBC",
+            iv: iv
+        },
+        rawkey,
+        ciphertext
+    );
+    const decoder = new TextDecoder();
+    const plaintext = decoder.decode(decrypted);
+    return plaintext;
+}
