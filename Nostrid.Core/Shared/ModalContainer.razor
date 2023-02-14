@@ -3,32 +3,32 @@
 @code {
     [Parameter, EditorRequired]
     public RenderFragment ChildContent { get; set; } = null!;
+
+    [CascadingParameter]
+    public Scripts? Scripts { get; set; }
 }
 
 <div @ref="container">
 	@ChildContent
 </div>
 
-<Scripts @ref="scripts" />
-
 @code {
 
-    private Scripts? scripts;
     private ElementReference container;
 
     public void Show()
     {
-        scripts?.InvokeVoid("showModal", container);
+        Scripts?.InvokeVoid("showModal", container);
     }
 
     public void Hide()
     {
-        scripts?.InvokeVoid("hideModal", container);
+        Scripts?.InvokeVoid("hideModal", container);
     }
 
     public bool IsVisible()
     {
-        return scripts?.Invoke<bool>("isModalShown", container) ?? false;
+        return Scripts?.Invoke<bool>("isModalShown", container) ?? false;
     }
 
     #region Dispose
@@ -42,9 +42,9 @@
         {
             if (disposing)
             {
-                if (scripts is not null)
+                if (Scripts is not null)
                 {
-                    await scripts.InvokeVoidAsync("hideModal", container);
+                    await Scripts.InvokeVoidAsync("hideModal", container);
                 }
             }
 

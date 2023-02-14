@@ -4,22 +4,19 @@
 
 @code {
 
-    [Parameter]
-    public Action? OnAfterFirstRender { get; set; }
-
-    [Parameter]
-    public Func<Task>? OnAfterFirstRenderAsync { get; set; }
-
     public IJSObjectReference? JSModule { get; private set; }
+    public bool rendered = false;
+    public Queue<Action> queue = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+
         if (firstRender)
         {
             JSModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "../scripts.js");
-            OnAfterFirstRender?.Invoke();
-            OnAfterFirstRenderAsync?.Invoke();
+            rendered = true;
+            while (queue.TryDequeue(out Action? action)) action?.Invoke();
         }
     }
 
@@ -58,6 +55,16 @@
         var task = Task.Run(async () => await JSModule.InvokeAsync<T>(identifier, args));
         task.Wait();
         return task.Result;
+    }
+
+    public void InvokeAfterRender(Action action)
+    {
+        if (!rendered)
+        {
+            queue.Enqueue(action);
+            return;
+        }
+        action();
     }
 
     #region Dispose

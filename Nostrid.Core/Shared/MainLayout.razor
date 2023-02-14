@@ -10,14 +10,16 @@
 
 <NavMenu>
 	<main class="d-flex flex-column flex-grow-1 p-3">
-		<CascadingValue Value="@alert">
-			@Body
+		<CascadingValue Value="@scripts">
+			<CascadingValue Value="@alert">
+				@Body
+			</CascadingValue>
 		</CascadingValue>
 	</main>
 </NavMenu>
 
 <Alert @ref="alert"></Alert>
-<Scripts @ref="scripts" OnAfterFirstRender="@SetTheme" />
+<Scripts @ref="scripts" />
 
 @code{
 	private Scripts? scripts;
@@ -44,14 +46,12 @@
 
 	protected override void OnAfterRender(bool firstRender)
 	{
-		if (firstRender)
+		if (scripts != null && firstRender)
 		{
-			StateHasChanged();
+			scripts.InvokeAfterRender(async () =>
+			{
+				await scripts.InvokeVoidAsync("setTheme", configService.MainConfig.Theme ?? ConfigPage.DARK_THEME);
+			});
 		}
-	}
-
-	private void SetTheme()
-	{
-		scripts?.InvokeVoid("setTheme", configService.MainConfig.Theme ?? ConfigPage.DARK_THEME);
 	}
 }

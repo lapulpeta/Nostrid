@@ -11,6 +11,11 @@
 
 @implements IDisposable
 
+@code{
+    [CascadingParameter]
+    public Scripts? Scripts { get; set; }
+}
+
 <h2 class="mb-0">Options</h2>
 
 <ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections">
@@ -327,8 +332,6 @@
 
 <ConfirmationModal @ref="confirmationModal" />
 
-<Scripts @ref="scripts" />
-
 @code {
     // General
     private List<ConfigSection> configSections = new List<ConfigSection>();
@@ -337,7 +340,6 @@
     private ConfirmationModal? confirmationModal;
 
     // Theme
-    private Scripts? scripts;
     public const string DARK_THEME = "dark";
     public const string LIGHT_THEME = "light";
 
@@ -356,7 +358,7 @@
         set
         { 
             configModel.Theme = (value ? DARK_THEME : LIGHT_THEME);
-            scripts?.InvokeVoid("setTheme", configModel.Theme);
+            Scripts?.InvokeVoid("setTheme", configModel.Theme);
         }
     }
 

@@ -15,6 +15,9 @@
 {
 	[Parameter]
 	public RenderFragment? ChildContent { get; set; }
+
+	[CascadingParameter]
+	public Scripts? Scripts { get; set; }
 }
 
 <div class="d-flex flex-row flex-grow-1">
@@ -191,12 +194,9 @@
 	</div>
 </div>
 
-<Scripts @ref="scripts" />
-
 @code {
 
 	private int mentionsCount, unreadDmCount;
-	private Scripts? scripts;
 	private UpdatabableElement? notificationsElement, mentionsElement, loggedInElements, loggedInElements2, loggedInElements3, relayElements, dmElement;
 
 	private void NotificationNumberChanged(object? sender, (int mentionsCount, int unreadDmCount) data)
@@ -243,9 +243,9 @@
 
 	private async Task HideOffCanvasMenu()
 	{
-		if (scripts != null)
+		if (Scripts != null)
 		{
-			await scripts.InvokeVoidAsync("hideOffcanvasMenu");
+			await Scripts.InvokeVoidAsync("hideOffcanvasMenu");
 		}
 	}
 
