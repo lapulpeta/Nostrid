@@ -1,0 +1,69 @@
+﻿@code {
+    [Parameter, EditorRequired]
+    public string AccountId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string OtherAccountId { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<int> ChildContent { get; set; }
+}
+
+@implements IDisposable
+
+@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@inject DmService dmService
+
+@if (unreadCounter > 0)
+{
+    @ChildContent(unreadCounter)
+}
+
+@code
+{
+    private int unreadCounter = 0;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        unreadCounter = dmService.GetUnreadCount(AccountId, OtherAccountId);
+        dmService.NewDm += NewDm;
+    }
+
+    private void NewDm(object? sender, (string senderId, string receiverId) data)
+    {
+        if ((data.senderId == AccountId && data.receiverId == OtherAccountId) || (data.senderId == OtherAccountId && data.receiverId == AccountId))
+        {
+            unreadCounter = dmService.GetUnreadCount(AccountId, OtherAccountId);
+            InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        dmService.NewDm -= NewDm;
+    }
+    #endregion
+}

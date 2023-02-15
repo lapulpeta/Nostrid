@@ -37,17 +37,11 @@
                 <div class="fs-7 text-secondary">@partnerId</div>
             </div>
             <div>
-                <AutoUpdateElement @ref="messageCounter">
-                    @{
-                        var count = dmService.GetUnreadCount(accountService.MainAccount!.Id, partnerId);
-                        if (count > 0)
-                        {
-                            <span class="badge text-bg-danger rounded-pill">
-                                @count
-                            </span>
-                        }
-                    }
-                </AutoUpdateElement>
+                <UnreadDmCounter AccountId="@accountService.MainAccount?.Id" OtherAccountId="@partnerId">
+                    <span class="badge text-bg-danger rounded-pill">
+                        @context
+                    </span>
+                </UnreadDmCounter>
             </div>
         </div>
     }
@@ -57,7 +51,6 @@
     private HashSet<string> dmPartners = new();
     private TextInput searchText = new();
     private bool invalidInput = false;
-    private AutoUpdateElement? messageCounter;
 
     protected override void OnInitialized()
     {
@@ -71,18 +64,6 @@
         dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
         accountService.AddDetailsNeeded(dmPartners);
         dmService.NewDmPair += NewDmPair;
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        base.OnAfterRender(firstRender);
-        if (firstRender && accountService.MainAccount != null)
-        {
-            messageCounter?.Setup(
-                start: () => dmService.NewDm += messageCounter.Handle,
-                dispose: () => dmService.NewDm -= messageCounter.Handle,
-                condition: ((string senderId, string receiverId) data) => data.senderId == accountService.MainAccount.Id || data.receiverId == accountService.MainAccount.Id);
-        }
     }
 
     private void NewDmPair(object? sender, (string accountL, string accountH) data)
