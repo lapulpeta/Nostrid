@@ -116,20 +116,19 @@
         lock (lockobj)
         {
             if (loading) return;
-
             loading = true;
-            InvokeAsync(() => labelLoadMore?.Update());
-
-            Task.Run(() =>
-            {
-                dbLimit += RelayQueryLimit;
-                var prevRenderedN = renderedN.Count;
-                EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
-                loading = false;
-                moreResults = renderedN.Count > prevRenderedN;
-                InvokeAsync(() => StateHasChanged());
-            });
         }
+        labelLoadMore?.Update();
+
+        Task.Run(() =>
+        {
+            dbLimit += RelayQueryLimit;
+            var prevRenderedN = renderedN.Count;
+            EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
+            loading = false;
+            moreResults = renderedN.Count > prevRenderedN;
+            InvokeAsync(() => StateHasChanged());
+        });
     }
 
     private async Task LoadMoreFromNoteAsync()
