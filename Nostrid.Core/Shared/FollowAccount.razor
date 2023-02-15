@@ -21,7 +21,7 @@
             </div>
             @if (accountService.MainAccount != null && accountService.MainAccount.Id != AccountId)
             {
-                <FollowButton AccountId="@AccountId" />
+                <FollowButton AccountId="@AccountId" Css="btn-sm" />
             }
         </div>
         <div class="fs-7 mt-1 lh-1 text-body-tertiary text-break">@ByteTools.PubkeyToNpub(AccountId)</div>

@@ -10,9 +10,12 @@
 @code {
     [Parameter, EditorRequired]
     public string AccountId { get; set; } = null!;
+
+    [Parameter]
+    public string? Css { get; set; }
 }
 
-<button class="btn btn-sm @(!accountService.IsFollowing(AccountId) ? "btn-primary" : "btn-danger")"
+<button class="btn @Css @(!accountService.IsFollowing(AccountId) ? "btn-primary" : "btn-danger")"
         @onclick="@(async () => await FollowUnfollow(AccountId))" @onclick:stopPropagation="true">
     @(!accountService.IsFollowing(AccountId) ? "Follow" : "Unfollow")
 </button>

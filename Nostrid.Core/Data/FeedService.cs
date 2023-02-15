@@ -12,17 +12,19 @@ public class FeedService
     private readonly RelayService relayService;
     private readonly AccountService accountService;
     private readonly ChannelService channelService;
+    private readonly DmService dmService;
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
     public event EventHandler<Event> NoteUpdated;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
-    public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService)
+    public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService, DmService dmService)
     {
         this.eventDatabase = eventDatabase;
         this.relayService = relayService;
         this.accountService = accountService;
         this.channelService = channelService;
+        this.dmService = dmService;
         this.relayService.ReceivedEvents += ReceivedEvents;
     }
 
@@ -44,6 +46,9 @@ public class FeedService
                 break;
             case NostrKind.Contacts:
                 accountService.HandleKind3(eventToProcess, filterId);
+                break;
+            case NostrKind.DM:
+                dmService.HandleDm(eventToProcess);
                 break;
             case NostrKind.Deletion:
                 HandleKind5(eventToProcess);
@@ -123,6 +128,19 @@ public class FeedService
         return eventDatabase.ListNotes(count).ToList();
     }
 
+    public IEnumerable<Event> FilterList(SubscriptionFilter filter, IEnumerable<Event> events, int[]? kinds = null)
+    {
+        if (kinds != null)
+        {
+            events = events.Where(e => kinds.Contains(e.Kind));
+        }
+        if (filter is IDbFilter dbFilter)
+        {
+            return dbFilter.ApplyDbFilter(events.AsQueryable());
+        }
+        return eventDatabase.ApplyFilters(events.AsQueryable(), filter.GetFilters());
+    }
+
     public List<Event> GetNotesFeed(SubscriptionFilter filter, int count, int[]? kinds = null)
     {
         if (filter is IDbFilter dbFilter)
@@ -198,9 +216,22 @@ public class FeedService
         return rootTrees;
     }
 
-    public async Task<bool> SendNoteWithPow(string content, bool inChannel, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds, int diff, CancellationToken cancellationToken)
+    public async Task<bool> SendNoteWithPow(string content, int kind, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds, int diff, CancellationToken cancellationToken)
     {
-        var unsignedNote = AssembleNote(content, inChannel, replyToId, rootId, accountMentionIds);
+        NostrEvent? unsignedNote;
+
+        if (kind == NostrKind.DM)
+        {
+            unsignedNote = await AssembleDm(content, replyToId, accountMentionIds.First());
+        }
+        else
+        {
+            unsignedNote = AssembleNote(content, kind == NostrKind.ChannelMessage, replyToId, rootId, accountMentionIds);
+        }
+        if (unsignedNote == null)
+        {
+            return false;
+        }
 
         if (diff > 0)
         {
@@ -257,6 +288,31 @@ public class FeedService
             return false;
         relayService.SendEvent(unsignedNote);
         return true;
+    }
+
+    private async Task<NostrEvent> AssembleDm(string content, string? replyToId, string dmWith)
+    {
+        var encryptedContent = await accountService.MainAccountSigner.EncryptNip04(dmWith, content);
+        if (encryptedContent == null)
+        {
+            return null;
+        }
+        var nostrEvent = new NostrEvent()
+        {
+            CreatedAt = DateTimeOffset.UtcNow,
+            Kind = NostrKind.DM,
+            PublicKey = accountService.MainAccount.Id,
+            Tags = new(),
+            Content = encryptedContent,
+        };
+
+        if (replyToId.IsNotNullOrEmpty())
+        {
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new() { replyToId } });
+        }
+        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new() { dmWith } });
+
+        return nostrEvent;
     }
 
     private NostrEvent AssembleNote(string content, bool inChannel, string? replyToId, string? rootId, IEnumerable<string>? accountMentionIds)
@@ -521,5 +577,6 @@ public class FeedService
     {
         return eventDatabase.AccountReacted(eventId, accountId);
     }
+
 }
 

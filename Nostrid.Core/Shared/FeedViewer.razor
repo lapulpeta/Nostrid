@@ -16,11 +16,11 @@
     public int[] MessageKinds { get; set; }
 
     [Parameter]
-    public string? ChannelId { get; set; }
+    public bool ShowAsMessages { get; set; }
 }
 
 <div @ref="container"
-     class="px-3 d-flex flex-column flex-grow-1 @(inChannel ? "position-relative flex-column-reverse overflow-y-auto" : "")"
+     class="px-3 d-flex flex-column flex-grow-1 @(ShowAsMessages ? "position-relative flex-column-reverse overflow-y-auto" : "")"
      style="margin: 0 -1rem -1rem -1rem; flex-basis: 0;">
     
     <ElementObserver OnIntersecting="@ShowNewPostsIntersecting" />
@@ -34,13 +34,13 @@
     </UpdatabableElement>
     
     @{
-        var trees = inChannel ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
+        var trees = ShowAsMessages ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
         // Root nodes are sorted newest on top
         trees.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
     }
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@inChannel" />
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@ShowAsMessages" />
     
-    <div class="text-center px-3 py-2 @(!inChannel ? "border-top" : "")" style="margin: 0 -1rem;">
+    <div class="text-center px-3 py-2 @(!ShowAsMessages ? "border-top" : "")" style="margin: 0 -1rem;">
         <UpdatabableElement @ref="@labelLoadMore">
             @if (loading)
             {
@@ -55,7 +55,7 @@
         </UpdatabableElement>
     </div>
 
-    <div class="position-absolute" style="height: 44px; width: 44px; @(!inChannel ? "bottom" : "top"): 1rem; right: 1rem;">
+    <div class="position-absolute" style="height: 44px; width: 44px; @(!ShowAsMessages ? "bottom" : "top"): 1rem; right: 1rem;">
         <div class="position-fixed">
             <UpdatabableElement @ref="@labelLoadMoreFromNote">
                 <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4">
@@ -70,7 +70,6 @@
 <Scripts @ref="scripts" />
 
 @code {
-    private bool inChannel => !ChannelId.IsNullOrEmpty();
     private ConcurrentDictionary<string, Event> renderedN = new(), newN = new(), oldN = new();
     private int dbLimit;
     private SubscriptionFilter? newFilter, oldFilter;
@@ -117,20 +116,19 @@
         lock (lockobj)
         {
             if (loading) return;
-
             loading = true;
-            InvokeAsync(() => labelLoadMore?.Update());
-
-            Task.Run(() =>
-            {
-                dbLimit += RelayQueryLimit;
-                var prevRenderedN = renderedN.Count;
-                EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
-                loading = false;
-                moreResults = renderedN.Count > prevRenderedN;
-                InvokeAsync(() => StateHasChanged());
-            });
         }
+        labelLoadMore?.Update();
+
+        Task.Run(() =>
+        {
+            dbLimit += RelayQueryLimit;
+            var prevRenderedN = renderedN.Count;
+            EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
+            loading = false;
+            moreResults = renderedN.Count > prevRenderedN;
+            InvokeAsync(() => StateHasChanged());
+        });
     }
 
     private async Task LoadMoreFromNoteAsync()
@@ -157,30 +155,34 @@
         });
     }
 
-    private void ReceivedNotes(object? sender, (string filterId, IEnumerable<Event> notes) data)
+    private void ReceivedNotes(object? sender, (string _, IEnumerable<Event> notes) data)
     {
-        if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
+        if (_disposed || renderedN == null || renderedIds == null || newFilter == null || oldFilter == null)
             return;
 
-        var notes = data.notes.Where(n => MessageKinds.Contains(n.Kind));
-        if (!notes.Any())
-            return;
+        var notesN = feedService.FilterList(newFilter, data.notes, MessageKinds);
+        var notesO = feedService.FilterList(oldFilter, data.notes, MessageKinds);
 
-        if (inChannel)
+        if (ShowAsMessages)
         {
-            EventExtension.Merge(renderedN, notes);
+            EventExtension.Merge(renderedN, notesN);
+            EventExtension.Merge(renderedN, notesO);
             TrimOlder();
             InvokeAsync(() => StateHasChanged());
         }
-        else if (data.filterId == oldFilter.Id)
-        {
-            EventExtension.Merge(renderedN, notes);
-            TrimOlder();
-        }
         else
         {
-            EventExtension.Merge(newN, notes);
-            labelShowNewPosts?.Update();
+            if (notesN.Any())
+            {
+                EventExtension.Merge(renderedN, notesN);
+                TrimOlder();
+            }
+            
+            if (notesO.Any())
+            {
+                EventExtension.Merge(newN, notesO);
+                labelShowNewPosts?.Update();
+            }
         }
     }
 

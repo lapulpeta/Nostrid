@@ -2,12 +2,13 @@ using Ganss.Xss;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
+using NNostr.Client;
 using Nostrid;
 using Nostrid.Data;
 using Nostrid.Data.Relays;
 using Nostrid.Externals;
 using Nostrid.Interfaces;
-using Nostrid.Web;
+using Nostrid.Model;
 using Nostrid.Web.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -32,6 +33,9 @@ builder.Services.AddSingleton<MediaServiceProvider>();
 builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
 builder.Services.AddSingleton<ChannelService>();
 builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
+builder.Services.AddSingleton<DmService>();
+builder.Services.AddSingleton<IAesEncryptor, AesSubtleCrypto>();
+builder.Services.AddSingleton<LocalSignerFactory>();
 
 var host = builder.Build();
 

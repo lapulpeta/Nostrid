@@ -1,0 +1,151 @@
+﻿@page "/dms"
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using System.Collections.Concurrent;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject DmService dmService
+@inject AccountService accountService
+@inject NavigationManager navigationManager
+@inject RelayService relayService
+
+<h4>Direct Messages</h4>
+<div style="margin-bottom: -1rem;">
+    <div class="px-3 py-3 border-top" style="margin: 0 -1rem;">
+        <EditForm Model="@searchText" OnValidSubmit="@Search">
+            <div class="input-group">
+                <input type="text" class="form-control @(invalidInput ? "is-invalid" : "")" @bind-value="searchText.Text" />
+                <button class="btn btn-primary" type="submit">Go</button>
+            </div>
+        </EditForm>
+    </div>
+    @foreach (var partnerId in dmPartners)
+    {
+        <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+            @onclick="@(() => NavigateTo(partnerId))" style="margin: 0 -1rem;">
+            <div class="flex-shrink-0">
+                <AccountPicture Id="@partnerId" />
+            </div>
+            <div class="flex-grow-1 px-2 text-break">
+                <div class="fw-bold">
+                    <AccountName Id="@partnerId" />
+                </div>
+                <div class="fs-7 text-secondary">@partnerId</div>
+            </div>
+            <div>
+                <AutoUpdateElement @ref="messageCounter">
+                    @{
+                        var count = dmService.GetUnreadCount(accountService.MainAccount!.Id, partnerId);
+                        if (count > 0)
+                        {
+                            <span class="badge text-bg-danger rounded-pill">
+                                @count
+                            </span>
+                        }
+                    }
+                </AutoUpdateElement>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private HashSet<string> dmPartners = new();
+    private TextInput searchText = new();
+    private bool invalidInput = false;
+    private AutoUpdateElement? messageCounter;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+
+        dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
+        accountService.AddDetailsNeeded(dmPartners);
+        dmService.NewDmPair += NewDmPair;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (firstRender && accountService.MainAccount != null)
+        {
+            messageCounter?.Setup(
+                start: () => dmService.NewDm += messageCounter.Handle,
+                dispose: () => dmService.NewDm -= messageCounter.Handle,
+                condition: ((string senderId, string receiverId) data) => data.senderId == accountService.MainAccount.Id || data.receiverId == accountService.MainAccount.Id);
+        }
+    }
+
+    private void NewDmPair(object? sender, (string accountL, string accountH) data)
+    {
+        if (data.accountL == accountService.MainAccount!.Id)
+        {
+            dmPartners.Add(data.accountH);
+            accountService.AddDetailsNeeded(data.accountH);
+        }
+        else if (data.accountH == accountService.MainAccount.Id)
+        {
+            dmPartners.Add(data.accountL);
+            accountService.AddDetailsNeeded(data.accountL);
+        }
+        else
+        {
+            return;
+        }
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void Search()
+    {
+        if (Utils.IsValidNostrId(searchText.Text))
+        {
+            NavigateTo(searchText.Text);
+            return;
+        }
+        var (prefix, hex) = ByteTools.DecodeBech32(searchText.Text);
+        if (prefix == "npub" && hex != null)
+        {
+            NavigateTo(hex);   
+            return;
+        }
+        invalidInput = true;
+    }
+
+    private void NavigateTo(string hex)
+    {
+        navigationManager.NavigateTo($"/dm/{hex}");
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        dmService.NewDmPair -= NewDmPair;
+    }
+    #endregion
+}

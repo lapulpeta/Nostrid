@@ -69,7 +69,6 @@ public class AccountService
             knownSigners[mainAccount.Id] = signer;
         }
 
-        MainAccountChanged?.Invoke(this, EventArgs.Empty);
         if (mainFilters != null)
         {
             relayService.DeleteFilters(mainFilters);
@@ -83,10 +82,10 @@ public class AccountService
         {
             MainAccountMentionsFilter = new MentionSubscriptionFilter(mainAccount.Id);
             MainAccountMentionsFilter.LimitFilterData.Limit = 1;
-            mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter };
+            mainFilters = new[] { new MainAccountSubscriptionFilter(mainAccount.Id), MainAccountMentionsFilter, new DmSubscriptionFilter(mainAccount.Id) };
             relayService.AddFilters(mainFilters);
         }
-        MentionsUpdated?.Invoke(this, EventArgs.Empty);
+        MainAccountChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public Account? MainAccount

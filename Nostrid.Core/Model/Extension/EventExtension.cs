@@ -37,7 +37,8 @@ public static class EventExtension
         ret.ReplyToRootId = GetReplyToRootId(ret);
         ret.ChannelId = GetChannelId(ret);
         ret.RepostEventId = GetRepostEventId(ret);
-        return ret;
+        ret.DmToId = GetDmToId(ret);
+		return ret;
     }
 
     public static NostrEvent ToNostrEvent(this Event ev)
@@ -101,6 +102,13 @@ public static class EventExtension
                 .Select(t => t.Data1)
                 .LastOrDefault();
         }
+        else if (ev.Kind == NostrKind.DM)
+        {
+			return ev.Tags
+				.Where(t => t.Data0 == "e" && t.Data1 != null)
+				.Select(t => t.Data1)
+				.FirstOrDefault();
+		}
         return null;
     }
 
@@ -156,7 +164,19 @@ public static class EventExtension
         return null;
     }
 
-    public static int CalculateDifficulty(string id)
+	public static string? GetDmToId(Event ev)
+	{
+		if (ev.Kind == NostrKind.DM)
+		{
+			return ev.Tags
+				.Where(t => t.Data0 == "p" && t.Data1 != null)
+				.Select(t => t.Data1)
+				.FirstOrDefault();
+		}
+		return null;
+	}
+
+	public static int CalculateDifficulty(string id)
     {
         var bytes = Convert.FromHexString(id);
         Trace.Assert(bytes.Length == 32, "Id should be 256 bits long");

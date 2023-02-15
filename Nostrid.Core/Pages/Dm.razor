@@ -1,0 +1,84 @@
+﻿@page "/dm/{id}"
+
+@code {
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = null!;
+}
+
+@using Nostrid.Data.Relays;
+@using Nostrid.Data;
+@using Nostrid.Interfaces;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject AccountService accountService
+@inject DmService dmService
+@inject NotificationService notificationService
+
+<div class="d-flex flex-column flex-grow-1">
+    <div class="fs-4 fw-bolder">Direct Messages with <AccountName Id="@Id" /> </div>
+    <div class="position-relative d-flex flex-column flex-column-reverse flex-grow-1 overflow-y-auto px-3"
+         style="margin: 0 -1rem; flex-basis:0;">
+        <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.DM})" ShowAsMessages="true" />
+    </div>
+    <div>
+        <NoteComposer Rows="1" DmWith="@Id" />
+    </div>
+</div>
+
+@code {
+    private SubscriptionFilter? filter;
+    private string? accountId;
+
+    protected override void OnParametersSet()
+    {
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+        accountId = accountService.MainAccount.Id;
+        UpdateLastRead();
+        notificationService.AddDmBlock(accountId, Id);
+        dmService.NewDm += NewDm;
+        filter = new DmSubscriptionFilter(accountId, Id);
+    }
+
+    private void NewDm(object? sender, (string senderId, string receiverId) data)
+    {
+        if ((data.senderId == accountId && data.receiverId == Id) || (data.senderId == Id && data.receiverId == accountId))
+        {
+            UpdateLastRead();
+        }
+    }
+
+    private void UpdateLastRead()
+    {
+        dmService.SetLastRead(accountService.MainAccount!.Id, Id);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        notificationService.RemoveDmBlock(accountId, Id);
+        dmService.NewDm -= NewDm;
+    }
+    #endregion
+}

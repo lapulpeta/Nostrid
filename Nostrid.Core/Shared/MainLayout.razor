@@ -4,6 +4,8 @@
 
 @inject AccountService accountService
 @inject ConfigService configService
+@inject LocalSignerFactory localSignerFactory
+
 @inherits LayoutComponentBase
 
 <NavMenu>
@@ -33,7 +35,7 @@
 			{
 				accountService.SetMainAccount(account);
 			}
-			else if (LocalSigner.TryFromPrivKey(account.PrivKey, out var signer))
+			else if (localSignerFactory.TryFromPrivKey(account.PrivKey, out var signer))
 			{
 				accountService.SetMainAccount(account, signer);
 			}

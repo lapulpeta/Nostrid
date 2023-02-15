@@ -10,6 +10,7 @@
 @inject AccountService accountService
 @inject EventDatabase eventDatabase
 @inject Lud06Service lud06Service
+@inject LocalSignerFactory localSignerFactory
 @implements IDisposable
 
 <h2>Accounts</h2>
@@ -228,7 +229,7 @@
             config.MainAccountId = account?.Id;
             configService.MainConfig = config;
         }
-        else if (LocalSigner.TryFromPrivKey(account.PrivKey, out var signer))
+        else if (localSignerFactory.TryFromPrivKey(account.PrivKey, out var signer))
         {
             accountService.SetMainAccount(account, signer);
             var config = configService.MainConfig;
@@ -325,7 +326,7 @@
             privkey = hex;
         }
 
-        if (privkey.IsNotNullOrEmpty() && LocalSigner.TryFromPrivKey(privkey, out var signer))
+        if (privkey.IsNotNullOrEmpty() && localSignerFactory.TryFromPrivKey(privkey, out var signer))
         {
             var account = new Model.Account()
                 {

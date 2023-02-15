@@ -36,6 +36,8 @@ public class Event
 
     public string? ChannelId { get; set; }
 
+    public string? DmToId { get; set; }
+
     #region Properties (move to extension when supported by C#)
 
     private Lazy<List<Mention>>? _mentions = null;

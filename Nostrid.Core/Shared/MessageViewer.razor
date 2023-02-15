@@ -42,12 +42,30 @@
         }
     }
     <div class="text-break note-content">
-        @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
+        @content
     </div>
 </div>
 
 @code {
     private SubscriptionFilter? subscriptionFilter;
+    private RenderFragment? content;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        string? rawContent;
+
+        if (Event?.Kind == NostrKind.DM)
+        {
+            var pubkey = Event.PublicKey == accountService.MainAccount.Id ? Event.GetMentionsIds('p').FirstOrDefault() : Event.PublicKey;
+            rawContent = await accountService.MainAccountSigner.DecryptNip04(pubkey, Event.Content);
+        }
+        else
+        {
+            rawContent = Event?.Content;
+        }
+        content = noteProcessor.GetContent(rawContent ?? string.Empty, Event?.GetMentions());
+        await base.OnParametersSetAsync();
+    }
 
     protected override void OnParametersSet()
     {

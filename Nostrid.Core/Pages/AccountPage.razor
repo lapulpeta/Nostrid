@@ -48,8 +48,11 @@
         </div>
         @if (IsMainAccountLoaded && !IsMainAccount)
         {
-            <div class="btn-group mb-3 me-3" role="group">
+            <div class="mb-3 me-3">
                 <FollowButton AccountId="@PubKey" />
+            </div>
+            <div class="mb-3 me-3">
+                <a class="btn btn-outline-primary" href="/dm/@PubKey">Message</a>
             </div>
         }
         @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())

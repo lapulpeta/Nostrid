@@ -1,9 +1,11 @@
 ﻿using Ganss.Xss;
+using NNostr.Client;
 using Nostrid.Data;
 using Nostrid.Data.Relays;
 using Nostrid.Externals;
 using Nostrid.Interfaces;
 using Nostrid.Misc;
+using Nostrid.Model;
 using Plugin.LocalNotification;
 
 namespace Nostrid;
@@ -46,6 +48,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
         builder.Services.AddSingleton<ChannelService>();
         builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
+        builder.Services.AddSingleton<DmService>();
+        builder.Services.AddSingleton<IAesEncryptor, AesEncryptor>();
+        builder.Services.AddSingleton<LocalSignerFactory>();
 
 		var app = builder.Build();
 

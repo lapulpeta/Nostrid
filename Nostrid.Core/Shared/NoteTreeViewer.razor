@@ -92,7 +92,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <NoteComposer ReplyTo="@replyingToEvent" ChannelId="@replyingToEvent?.ChannelId" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
+                            <NoteComposer ReplyTo="@replyingToEvent" OnSend="@(() => composeModal?.Hide())"></NoteComposer>
                         </div>
                     </div>
                 </div>

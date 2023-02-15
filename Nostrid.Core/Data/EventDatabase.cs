@@ -287,12 +287,12 @@ namespace Nostrid.Data
             List<Event> notes = new();
             foreach (var filter in filters)
             {
-                var query = ApplyFilter(db, db.Events.OrderByDescending(n => n.CreatedAtCurated), filter);
+                var query = ApplyFilter(db.Events.OrderByDescending(n => n.CreatedAtCurated), filter);
                 if (kinds != null)
                 {
                     query = query.Where(n => kinds.Contains(n.Kind));
                 }
-                var newNotes = query.Take(count).Include(e => e.Tags).ToList();
+                var newNotes = query.Take(count).Include(e => e.Tags);
                 notes.AddRange(newNotes);
             }
             return notes;
@@ -301,7 +301,7 @@ namespace Nostrid.Data
         public List<Event> ListNotes(IDbFilter dbFilter, int[]? kinds, int count)
         {
             using var db = new Context(_dbfile);
-            var query = dbFilter.ApplyDbFilter(db, db.Events);
+            var query = dbFilter.ApplyDbFilter(db.Events);
             if (kinds != null)
             {
                 query = query.Where(n => kinds.Contains(n.Kind));
@@ -316,18 +316,27 @@ namespace Nostrid.Data
             int count = 0;
             foreach (var filter in filters)
             {
-                count += ApplyFilter(db, db.Events.Where(e => e.Kind == 1)/*.OrderByDescending(n => n.CreatedAtCurated)*/, filter).Count();
+                count += ApplyFilter(db.Events.Where(e => e.Kind == 1), filter).Count();
             }
             return count;
         }
 
-        private IQueryable<Event> ApplyFilter(Context db, IQueryable<Event> notes, NostrSubscriptionFilter filter)
+        public IEnumerable<Event> ApplyFilters(IQueryable<Event> notes, NostrSubscriptionFilter[] filters)
+        {
+            List<Event> filtered = new();
+            foreach (var filter in filters)
+            {
+                var query = ApplyFilter(notes, filter);
+                filtered.AddRange(query);
+            }
+            return filtered;
+        }
+
+        private static IQueryable<Event> ApplyFilter(IQueryable<Event> notes, NostrSubscriptionFilter filter)
         {
             if (filter.PublicKey != null)
             {
-                var tags = db.TagDatas.Where(filter.PublicKey.Aggregate(PredicateBuilder.New<TagData>(),
-                    (current, temp) => current.Or(t => t.Data0 == "p" && t.Data1 == temp))).Select(t => t.Event.Id);
-                notes = notes.Where(n => tags.Contains(n.Id));
+                notes = notes.Where(e => e.Tags.Any(t => t.Data0 == "p" && filter.PublicKey.Contains(t.Data1)));
             }
             if (filter.Authors != null)
             {
@@ -339,16 +348,13 @@ namespace Nostrid.Data
             }
             if (filter.EventId != null)
             {
-                var tags = db.TagDatas.Where(filter.EventId.Aggregate(PredicateBuilder.New<TagData>(),
-                    (current, temp) => current.Or(t => t.Data0 == "e" && t.Data1 == temp))).Select(t => t.Event.Id);
-                notes = notes.Where(n => tags.Contains(n.Id));
+                notes = notes.Where(e => e.Tags.Any(t => t.Data0 == "e" && filter.EventId.Contains(t.Data1)));
             }
             if (filter.ExtensionData != null)
             {
                 var filterTags = filter.GetAdditionalTagFilters()["t"].Select(t => t.ToLower()).ToList();
-                var tags = db.TagDatas.Where(filterTags.Aggregate(PredicateBuilder.New<TagData>(),
-                    (current, temp) => current.Or(t => t.Data0 == "t" && t.Data1 == temp))).Select(t => t.Event.Id);
-                notes = notes.Where(n => tags.Contains(n.Id));
+                notes = notes.Where(e => e.Tags.Any(t => t.Data0 == "t" && filterTags.Contains(t.Data1)));
+
             }
             if (filter.Since.HasValue)
             {

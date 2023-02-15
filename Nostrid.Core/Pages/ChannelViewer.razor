@@ -23,7 +23,7 @@
         </button>
     </div>*@
     <div class="d-flex flex-grow-1 flex-column pb-3">
-        <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.ChannelMessage})" ChannelId="@Id" />
+        <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.ChannelMessage})" ShowAsMessages="true" />
     </div>
     <div>
         <NoteComposer ChannelId="@Id" Rows="1" />

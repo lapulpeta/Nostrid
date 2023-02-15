@@ -19,6 +19,9 @@
     public string? ChannelId { get; set; }
 
     [Parameter]
+    public string? DmWith { get; set; }
+
+    [Parameter]
     public int Rows { get; set; } = 4;
 
     [Parameter]
@@ -165,13 +168,17 @@
             textInput.Text = string.Empty;
 
             Task sendTask;
-            if (!string.IsNullOrEmpty(ChannelId))
+            if (DmWith.IsNotNullOrEmpty())
             {
-                sendTask = feedService.SendNoteWithPow(content, true, ReplyTo?.Id, ChannelId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
+                sendTask = feedService.SendNoteWithPow(content, NostrKind.DM, ReplyTo?.Id, null, new List<string>() { DmWith }, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
+            }
+            else if (ChannelId.IsNotNullOrEmpty())
+            {
+                sendTask = feedService.SendNoteWithPow(content, NostrKind.ChannelMessage , ReplyTo?.Id, ChannelId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
             }
             else
             {
-                sendTask = feedService.SendNoteWithPow(content, false, ReplyTo?.Id, ReplyTo?.ReplyToRootId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
+                sendTask = feedService.SendNoteWithPow(content, NostrKind.Text, ReplyTo?.Id, ReplyTo?.ReplyToRootId, mentions, configService.MainConfig.TargetDiffOutgoing, powCancelSource.Token);
             }
 
             files.Clear();
@@ -194,6 +201,30 @@
     {
         accountService.MainAccountChanged += MainAccountChanged;
         selectedService = mediaServiceProvider.GetMediaServices().FirstOrDefault();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (ReplyTo != null)
+        {
+            switch (ReplyTo.Kind)
+            {
+                case NostrKind.ChannelMessage:
+                    ChannelId = ReplyTo.ChannelId;
+                    break;
+                case NostrKind.DM:
+                    if (accountService.MainAccount.Id == ReplyTo.PublicKey)
+                    {
+                        DmWith = ReplyTo.GetMentionsIds('p').First();
+                    }
+                    else
+                    {
+                        DmWith = ReplyTo.PublicKey;
+                    }
+                    break;
+            }
+        }
     }
 
     private void MainAccountChanged(object? sender, EventArgs args)
