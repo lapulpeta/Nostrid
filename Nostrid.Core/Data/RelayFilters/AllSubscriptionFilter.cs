@@ -34,7 +34,7 @@ public class AllSubscriptionFilter : SubscriptionFilter, IRelayFilter, IDbFilter
         return Array.Empty<NostrSubscriptionFilter>();
     }
 
-    public IQueryable<Event> ApplyDbFilter(Context db, IQueryable<Event> events)
+    public IQueryable<Event> ApplyDbFilter(IQueryable<Event> events)
     {
         return events.Where(e => validKinds.Contains(e.Kind));
     }

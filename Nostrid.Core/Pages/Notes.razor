@@ -124,7 +124,7 @@ else
         });
     }
 
-    private void ReceivedNotes(object? sender, (string filterId, IEnumerable<Event> events) data)
+    private void ReceivedNotes(object? sender, (string _, IEnumerable<Event> events) data)
     {
         Task.Run(() =>
         {

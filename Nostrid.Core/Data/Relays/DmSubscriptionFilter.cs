@@ -40,7 +40,7 @@ public class DmSubscriptionFilter : SubscriptionFilter, IDbFilter
         return new DmSubscriptionFilter(account1, account2);
     }
 
-	public IQueryable<Event> ApplyDbFilter(Context db, IQueryable<Event> events)
+	public IQueryable<Event> ApplyDbFilter(IQueryable<Event> events)
 	{
         if (account2 == null)
         {

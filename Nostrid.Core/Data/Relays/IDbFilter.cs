@@ -4,6 +4,6 @@ namespace Nostrid.Data.Relays;
 
 public interface IDbFilter
 {
-    public IQueryable<Event> ApplyDbFilter(Context db, IQueryable<Event> events);
+    public IQueryable<Event> ApplyDbFilter(IQueryable<Event> events);
 }
 

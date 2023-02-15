@@ -128,6 +128,19 @@ public class FeedService
         return eventDatabase.ListNotes(count).ToList();
     }
 
+    public IEnumerable<Event> FilterList(SubscriptionFilter filter, IEnumerable<Event> events, int[]? kinds = null)
+    {
+        if (kinds != null)
+        {
+            events = events.Where(e => kinds.Contains(e.Kind));
+        }
+        if (filter is IDbFilter dbFilter)
+        {
+            return dbFilter.ApplyDbFilter(events.AsQueryable());
+        }
+        return eventDatabase.ApplyFilters(events.AsQueryable(), filter.GetFilters());
+    }
+
     public List<Event> GetNotesFeed(SubscriptionFilter filter, int count, int[]? kinds = null)
     {
         if (filter is IDbFilter dbFilter)

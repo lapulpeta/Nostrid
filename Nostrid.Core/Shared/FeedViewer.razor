@@ -156,30 +156,34 @@
         });
     }
 
-    private void ReceivedNotes(object? sender, (string filterId, IEnumerable<Event> notes) data)
+    private void ReceivedNotes(object? sender, (string _, IEnumerable<Event> notes) data)
     {
-        if (_disposed || renderedN == null || renderedIds == null || (data.filterId != oldFilter.Id && data.filterId != newFilter.Id))
+        if (_disposed || renderedN == null || renderedIds == null || newFilter == null || oldFilter == null)
             return;
 
-        var notes = data.notes.Where(n => MessageKinds.Contains(n.Kind));
-        if (!notes.Any())
-            return;
+        var notesN = feedService.FilterList(newFilter, data.notes, MessageKinds);
+        var notesO = feedService.FilterList(oldFilter, data.notes, MessageKinds);
 
         if (ShowAsMessages)
         {
-            EventExtension.Merge(renderedN, notes);
+            EventExtension.Merge(renderedN, notesN);
+            EventExtension.Merge(renderedN, notesO);
             TrimOlder();
             InvokeAsync(() => StateHasChanged());
         }
-        else if (data.filterId == oldFilter.Id)
-        {
-            EventExtension.Merge(renderedN, notes);
-            TrimOlder();
-        }
         else
         {
-            EventExtension.Merge(newN, notes);
-            labelShowNewPosts?.Update();
+            if (notesN.Any())
+            {
+                EventExtension.Merge(renderedN, notesN);
+                TrimOlder();
+            }
+            
+            if (notesO.Any())
+            {
+                EventExtension.Merge(newN, notesO);
+                labelShowNewPosts?.Update();
+            }
         }
     }
 
