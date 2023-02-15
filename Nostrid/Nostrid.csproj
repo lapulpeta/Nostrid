@@ -20,7 +20,7 @@
         <ApplicationIdGuid>54CE2B71-4729-4D10-9612-12AA859379C6</ApplicationIdGuid>
 
         <!-- Versions -->
-        <ApplicationDisplayVersion>1.21.1</ApplicationDisplayVersion>
+        <ApplicationDisplayVersion>1.22</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
@@ -31,7 +31,7 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
         <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
         <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-        <PackageCertificateThumbprint>AEB704B9A9BB7DBCDF96E37EE7666027E7E12193</PackageCertificateThumbprint>
+        <PackageCertificateThumbprint>F810FA79E9A669C22A9266E6001C192B4F7DCFBB</PackageCertificateThumbprint>
         <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
         <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
         <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
