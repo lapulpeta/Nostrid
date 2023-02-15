@@ -10,8 +10,8 @@
 @using Nostrid.Interfaces;
 @using Nostrid.Model;
 
-@inject IClipboardService clipboardService
 @inject AccountService accountService
+@inject DmService dmService
 
 <div class="d-flex flex-column flex-grow-1">
     <div class="fs-4 fw-bolder">Direct Messages with <AccountName Id="@Id" /> </div>
@@ -26,9 +26,54 @@
 
 @code {
     private SubscriptionFilter? filter;
+    private string? accountId;
 
     protected override void OnParametersSet()
     {
-        filter = new DmSubscriptionFilter(accountService.MainAccount.Id, Id);
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+        accountId = accountService.MainAccount.Id;
+        UpdateLastRead();
+        dmService.NewDm += NewDm;
+        filter = new DmSubscriptionFilter(accountId, Id);
     }
+
+    private void NewDm(object? sender, (string senderId, string receiverId) data)
+    {
+        if ((data.senderId == accountId && data.receiverId == Id) || (data.senderId == Id && data.receiverId == accountId))
+        {
+            UpdateLastRead();
+        }
+    }
+
+    private void UpdateLastRead()
+    {
+        dmService.SetLastRead(accountService.MainAccount!.Id, Id);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        dmService.NewDm -= NewDm;
+    }
+    #endregion
 }

@@ -8,5 +8,8 @@ public class DmPair
 
     public string AccountH { get; set; }
 
+    public DateTime LastReadL { get; set; }
+
+    public DateTime LastReadH { get; set; }
 }
 

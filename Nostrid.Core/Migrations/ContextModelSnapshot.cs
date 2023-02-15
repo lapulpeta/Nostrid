@@ -185,6 +185,12 @@ namespace Nostrid.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastReadH")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastReadL")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccountH");

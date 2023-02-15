@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -17,7 +18,9 @@ namespace Nostrid.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     AccountL = table.Column<string>(type: "TEXT", nullable: false),
-                    AccountH = table.Column<string>(type: "TEXT", nullable: false)
+                    AccountH = table.Column<string>(type: "TEXT", nullable: false),
+                    LastReadL = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastReadH = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

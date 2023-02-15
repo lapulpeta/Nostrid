@@ -11,7 +11,7 @@ using Nostrid.Model;
 namespace Nostrid.Migrations
 {
     [DbContext(typeof(Context))]
-    [Migration("20230214135003_DirectMessages")]
+    [Migration("20230215075547_DirectMessages")]
     partial class DirectMessages
     {
         /// <inheritdoc />
@@ -186,6 +186,12 @@ namespace Nostrid.Migrations
 
                     b.Property<string>("AccountL")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastReadH")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastReadL")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

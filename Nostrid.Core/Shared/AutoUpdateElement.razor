@@ -1,0 +1,57 @@
+﻿@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+}
+
+@ChildContent
+
+@code
+{
+    private Action? dispose;
+    private object? condition;
+
+    public void Setup<T>(Action start, Action dispose, Func<T, bool>? condition = null)
+    {
+        this.condition = condition;
+        this.dispose = dispose;
+        start();
+    }
+
+    public void Handle<T>(object? sender, T data)
+    {
+        if (condition is Func<T, bool> conditionCall && !conditionCall(data))
+        {
+            return;
+        }
+        Handle(sender);
+    }
+
+    public void Handle(object? sender)
+    {
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        dispose?.Invoke();
+    }
+    #endregion
+}

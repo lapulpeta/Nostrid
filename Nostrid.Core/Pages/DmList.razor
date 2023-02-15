@@ -36,6 +36,19 @@
                 </div>
                 <div class="fs-7 text-secondary">@partnerId</div>
             </div>
+            <div>
+                <span class="badge text-bg-danger rounded-pill">
+                    <AutoUpdateElement @ref="messageCounter">
+                        @{
+                            var count = dmService.GetUnreadCount(accountService.MainAccount!.Id, partnerId);
+                            if (count > 0)
+                            {
+                                @count
+                            }
+                        }
+                    </AutoUpdateElement>
+                </span>
+            </div>
         </div>
     }
 </div>
@@ -45,6 +58,7 @@
     private SubscriptionFilter? filter;
     private TextInput searchText = new();
     private bool invalidInput = false;
+    private AutoUpdateElement? messageCounter;
 
     protected override void OnInitialized()
     {
@@ -60,6 +74,19 @@
         accountService.AddDetailsNeeded(dmPartners);
         dmService.NewDmPair += NewDmPair;
     }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (firstRender && accountService.MainAccount != null)
+        {
+            messageCounter?.Setup(
+                start: () => dmService.NewDm += messageCounter.Handle,
+                dispose: () => dmService.NewDm -= messageCounter.Handle,
+                condition: ((string senderId, string receiverId) data) => data.senderId == accountService.MainAccount.Id || data.receiverId == accountService.MainAccount.Id);
+        }
+    }
+
     private void NewDmPair(object? sender, (string accountL, string accountH) data)
     {
         if (data.accountL == accountService.MainAccount!.Id)
