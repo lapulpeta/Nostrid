@@ -11,6 +11,12 @@ namespace Nostrid.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "DmToId",
+                table: "Events",
+                type: "TEXT",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "DmPairs",
                 columns: table => new
@@ -28,6 +34,11 @@ namespace Nostrid.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Events_Kind_DmToId",
+                table: "Events",
+                columns: new[] { "Kind", "DmToId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DmPairs_AccountH",
                 table: "DmPairs",
                 column: "AccountH");
@@ -43,14 +54,22 @@ namespace Nostrid.Migrations
                 columns: new[] { "AccountL", "AccountH" },
                 unique: true);
 
-            migrationBuilder.Sql("DELETE FROM Events WHERE Kind = 4");
-        }
+			migrationBuilder.Sql("DELETE FROM Events WHERE Kind = 4");
+		}
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
                 name: "DmPairs");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Events_Kind_DmToId",
+                table: "Events");
+
+            migrationBuilder.DropColumn(
+                name: "DmToId",
+                table: "Events");
         }
     }
 }

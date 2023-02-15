@@ -7,6 +7,7 @@
 @inject EventDatabase eventDatabase
 @inject AccountService accountService
 @inject NotificationService notificationService
+@inject DmService dmService
 @inject IJSRuntime jsRuntime
 @implements IDisposable
 
@@ -50,7 +51,7 @@
 							<li class="nav-item pb-2">
 								<NavLink class="nav-link text-nowrap" href="feed/mention" @onclick="HideOffCanvasMenu">
 									<span class="bi bi-house-exclamation-fill" aria-hidden="true"></span> Mentions
-									<UpdatabableElement @ref="mentionsElement2">
+									<UpdatabableElement @ref="mentionsElement">
 										@if (mentionsCount > 0)
 										{
 											<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
@@ -63,6 +64,14 @@
 							<li class="nav-item pb-2">
 								<NavLink class="nav-link text-nowrap" href="dms" @onclick="HideOffCanvasMenu">
 									<span class="bi bi-envelope-fill" aria-hidden="true"></span> Messages
+									<UpdatabableElement @ref="dmElement">
+										@if (unreadDmCount > 0)
+										{
+											<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
+												@unreadDmCount
+											</span>
+										}
+									</UpdatabableElement>
 								</NavLink>
 							</li>
 						}
@@ -138,11 +147,11 @@
 				</div>
 				<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
 					<span class="navbar-toggler-icon"></span>
-					<UpdatabableElement @ref="mentionsElement">
-						@if (mentionsCount > 0)
+					<UpdatabableElement @ref="notificationsElement">
+						@if (mentionsCount + unreadDmCount > 0)
 						{
 							<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
-								@mentionsCount
+								@(mentionsCount + unreadDmCount)
 							</span>
 						}
 					</UpdatabableElement>
@@ -186,15 +195,17 @@
 
 @code {
 
-	private int mentionsCount;
+	private int mentionsCount, unreadDmCount;
 	private Scripts? scripts;
-	private UpdatabableElement? mentionsElement, mentionsElement2, loggedInElements, loggedInElements2, loggedInElements3, relayElements;
+	private UpdatabableElement? notificationsElement, mentionsElement, loggedInElements, loggedInElements2, loggedInElements3, relayElements, dmElement;
 
-	private void NotificationNumberChanged(object? sender, int mentionsCount)
+	private void NotificationNumberChanged(object? sender, (int mentionsCount, int unreadDmCount) data)
 	{
-		this.mentionsCount = mentionsCount;
+		mentionsCount = data.mentionsCount;
+		unreadDmCount = data.unreadDmCount;
+		notificationsElement?.Update();
 		mentionsElement?.Update();
-		mentionsElement2?.Update();
+		dmElement?.Update();
 	}
 
 	private void MainAccountChanged(object? sender, EventArgs args)
@@ -215,6 +226,14 @@
 		notificationService.NotificationNumberChanged += NotificationNumberChanged;
 		accountService.MainAccountChanged += MainAccountChanged;
 		relayService.ClientStatusChanged += ClientStatusChanged;
+	}
+
+	protected override void OnAfterRender(bool firstRender)
+	{
+		if (firstRender)
+		{
+			notificationService.Update();
+		}
 	}
 
 	private void ChangeRelays()

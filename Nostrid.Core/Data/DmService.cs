@@ -12,7 +12,7 @@ public class DmService
 
     public event EventHandler<(string accountL, string accountH)>? NewDmPair;
     public event EventHandler<(string senderId, string receiverId)>? NewDm;
-
+    public event EventHandler<(string accountId, string otherAccountId)>? LastReadUpdated;
 
     public DmService(EventDatabase eventDatabase)
     {
@@ -65,11 +65,25 @@ public class DmService
             lastRead = db.DmPairs.Where(p => p.AccountH == accountId && p.AccountL == otherAccountId).Select(p => p.LastReadH).FirstOrDefault();
         }
         return db.Events.Count(e => e.Kind == NostrKind.DM && e.CreatedAt > lastRead &&
-            ((e.PublicKey == accountId && e.Tags.Any(t => t.Data1 == otherAccountId)) ||
-             (e.PublicKey == otherAccountId && e.Tags.Any(t => t.Data1 == accountId))));
+            ((e.PublicKey == accountId && e.DmToId == otherAccountId) ||
+             (e.PublicKey == otherAccountId && e.DmToId == accountId)));
     }
 
-    public void SetLastRead(string accountId, string otherAccountId)
+	public int GetUnreadCount(string accountId)
+	{
+		using var db = eventDatabase.CreateContext();
+
+        var lastReads =
+            db.DmPairs.Where(p => p.AccountL == accountId).Select(p => new { Account = p.AccountH, LastRead = p.LastReadL }).Union(
+            db.DmPairs.Where(p => p.AccountH == accountId).Select(p => new { Account = p.AccountL, LastRead = p.LastReadH }));
+
+        var dms = db.Events.Where(e => e.Kind == NostrKind.DM && (e.PublicKey == accountId || e.DmToId == accountId));
+		var query1 = lastReads.Join(dms, lr => lr.Account, e => e.PublicKey, (lr, e) => new { e.CreatedAt, lr.LastRead }).Where(x =>  x.CreatedAt > x.LastRead);
+        var query2 = lastReads.Join(dms, lr => lr.Account, e => e.DmToId, (lr, e) => new { e.CreatedAt, lr.LastRead }).Where(x => x.CreatedAt > x.LastRead);
+        return query1.Count() + query2.Count();
+	}
+
+	public void SetLastRead(string accountId, string otherAccountId)
     {
         using var db = eventDatabase.CreateContext();
         var accountIsL = accountId.CompareTo(otherAccountId) < 0;
@@ -87,6 +101,7 @@ public class DmService
                 .Where(p => p.AccountH == accountId && p.AccountL == otherAccountId)
                 .ExecuteUpdate(p => p.SetProperty(p => p.LastReadH, now));
         }
-    }
+        LastReadUpdated?.Invoke(this, (accountId, otherAccountId));
+	}
 }
 

@@ -3,7 +3,7 @@ using Nostrid.Model;
 
 namespace Nostrid.Data.Relays;
 
-public class DmSubscriptionFilter : SubscriptionFilter
+public class DmSubscriptionFilter : SubscriptionFilter, IDbFilter
 {
     private readonly string account1;
     private readonly string? account2;
@@ -39,5 +39,14 @@ public class DmSubscriptionFilter : SubscriptionFilter
     {
         return new DmSubscriptionFilter(account1, account2);
     }
+
+	public IQueryable<Event> ApplyDbFilter(Context db, IQueryable<Event> events)
+	{
+        if (account2 == null)
+        {
+			return events.Where(e => e.Kind == NostrKind.DM && (e.PublicKey == account1 || e.DmToId == account1));
+		}
+		return events.Where(e => e.Kind == NostrKind.DM && ((e.PublicKey == account1 && e.DmToId == account2) || (e.PublicKey == account2 && e.DmToId == account1)));
+	}
 }
 

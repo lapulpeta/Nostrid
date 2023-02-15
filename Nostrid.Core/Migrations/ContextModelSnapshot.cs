@@ -232,6 +232,9 @@ namespace Nostrid.Migrations
                     b.Property<int>("Difficulty")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("DmToId")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("HasPow")
                         .HasColumnType("INTEGER");
 
@@ -266,6 +269,8 @@ namespace Nostrid.Migrations
                     b.HasIndex("PublicKey");
 
                     b.HasIndex("Kind", "ChannelId");
+
+                    b.HasIndex("Kind", "DmToId");
 
                     b.HasIndex("Kind", "ReplyToId");
 

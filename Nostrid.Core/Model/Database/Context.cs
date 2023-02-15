@@ -45,6 +45,7 @@ public class Context : DbContext
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToId });
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToRootId });
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ChannelId });
+        builder.Entity<Event>().HasIndex(e => new { e.Kind, e.DmToId });
         builder.Entity<Account>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => new { e.Id, e.DetailsLastReceived });

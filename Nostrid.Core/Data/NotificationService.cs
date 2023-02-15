@@ -2,40 +2,68 @@
 
 namespace Nostrid
 {
-    public interface INotificationCounter
-    {
-        void SetNotificationCount(int count);
-    }
+	public interface INotificationCounter
+	{
+		void SetNotificationCount(int count);
+	}
 
-    public class NotificationService
-    {
-        private readonly INotificationCounter notificationCounter;
-        private readonly AccountService accountService;
-        private readonly FeedService feedService;
+	public class NotificationService
+	{
+		private readonly INotificationCounter notificationCounter;
+		private readonly AccountService accountService;
+		private readonly FeedService feedService;
+		private readonly DmService dmService;
 
-        public event EventHandler<int> NotificationNumberChanged;
+		public event EventHandler<(int, int)>? NotificationNumberChanged;
 
-        public NotificationService(INotificationCounter notificationCounter, AccountService accountService, FeedService feedService)
-        {
-            this.notificationCounter = notificationCounter;
-            this.accountService = accountService;
-            this.feedService = feedService;
-            accountService.MentionsUpdated += MentionsUpdated;
-        }
+		private int mentionsCount, unreadDmCount;
 
-        private void MentionsUpdated(object sender, EventArgs e)
-        {
-            int mentionsCount;
-            if (accountService.MainAccount != null)
-            {
-                mentionsCount = feedService.GetUnreadMentionsCount();
-            }
-            else
-            {
-                mentionsCount = 0;
-            }
-            notificationCounter.SetNotificationCount(mentionsCount);
-            NotificationNumberChanged?.Invoke(this, mentionsCount);
+		public NotificationService(INotificationCounter notificationCounter, AccountService accountService, FeedService feedService, DmService dmService)
+		{
+			this.notificationCounter = notificationCounter;
+			this.accountService = accountService;
+			this.feedService = feedService;
+			this.dmService = dmService;
+			accountService.MentionsUpdated += (_, _) => SendUpdate(true, false);
+			accountService.MainAccountChanged += (_, _) => SendUpdate(true, true);
+			dmService.NewDm += NewDm;
+			dmService.LastReadUpdated += NewDm;
 		}
-    }
+
+		public void Update()
+		{
+			SendUpdate(true, true);
+		}
+
+		private void SendUpdate(bool mentions, bool dms)
+		{
+			int newMentionsCount, newUnreadDmCount;
+
+			if (accountService.MainAccount == null)
+			{
+				newMentionsCount = 0;
+				newUnreadDmCount = 0;
+			}
+			else
+			{
+				newMentionsCount = mentions ? feedService.GetUnreadMentionsCount() : mentionsCount;
+				newUnreadDmCount = dms ? dmService.GetUnreadCount(accountService.MainAccount.Id) : unreadDmCount;
+			}
+			if (mentionsCount != newMentionsCount || unreadDmCount != newUnreadDmCount)
+			{
+				mentionsCount = newMentionsCount;
+				unreadDmCount = newUnreadDmCount;
+				notificationCounter.SetNotificationCount(mentionsCount + unreadDmCount);
+				NotificationNumberChanged?.Invoke(this, (mentionsCount, unreadDmCount));
+			}
+		}
+
+		private void NewDm(object? sender, (string senderId, string receiverId) data)
+		{
+			if (data.senderId == accountService.MainAccount?.Id || data.receiverId == accountService.MainAccount?.Id)
+			{
+				SendUpdate(false, true);
+			}
+		}
+	}
 }

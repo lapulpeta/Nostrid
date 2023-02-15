@@ -37,17 +37,17 @@
                 <div class="fs-7 text-secondary">@partnerId</div>
             </div>
             <div>
-                <span class="badge text-bg-danger rounded-pill">
-                    <AutoUpdateElement @ref="messageCounter">
-                        @{
-                            var count = dmService.GetUnreadCount(accountService.MainAccount!.Id, partnerId);
-                            if (count > 0)
-                            {
+                <AutoUpdateElement @ref="messageCounter">
+                    @{
+                        var count = dmService.GetUnreadCount(accountService.MainAccount!.Id, partnerId);
+                        if (count > 0)
+                        {
+                            <span class="badge text-bg-danger rounded-pill">
                                 @count
-                            }
+                            </span>
                         }
-                    </AutoUpdateElement>
-                </span>
+                    }
+                </AutoUpdateElement>
             </div>
         </div>
     }
@@ -55,7 +55,6 @@
 
 @code {
     private HashSet<string> dmPartners = new();
-    private SubscriptionFilter? filter;
     private TextInput searchText = new();
     private bool invalidInput = false;
     private AutoUpdateElement? messageCounter;
@@ -69,7 +68,6 @@
             return;
         }
 
-        relayService.AddFilter(filter = new DmSubscriptionFilter(accountService.MainAccount.Id));
         dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
         accountService.AddDetailsNeeded(dmPartners);
         dmService.NewDmPair += NewDmPair;
@@ -148,7 +146,6 @@
     private void Cleanup()
     {
         dmService.NewDmPair -= NewDmPair;
-        relayService.DeleteFilters(filter);
     }
     #endregion
 }
