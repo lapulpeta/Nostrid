@@ -13,6 +13,7 @@ namespace Nostrid
 		private readonly AccountService accountService;
 		private readonly FeedService feedService;
 		private readonly DmService dmService;
+		private readonly HashSet<(string, string)> blockedDmNotifications = new();
 
 		public event EventHandler<(int, int)>? NotificationNumberChanged;
 
@@ -60,10 +61,24 @@ namespace Nostrid
 
 		private void NewDm(object? sender, (string senderId, string receiverId) data)
 		{
+			if (blockedDmNotifications.Contains((data.senderId, data.receiverId)) || blockedDmNotifications.Contains((data.receiverId, data.senderId)))
+			{
+				return;
+			}
 			if (data.senderId == accountService.MainAccount?.Id || data.receiverId == accountService.MainAccount?.Id)
 			{
 				SendUpdate(false, true);
 			}
 		}
-	}
+
+		public void AddDmBlock(string account1, string account2)
+		{
+			blockedDmNotifications.Add((account1, account2));
+        }
+
+        public void RemoveDmBlock(string account1, string account2)
+        {
+            blockedDmNotifications.Remove((account1, account2));
+        }
+    }
 }

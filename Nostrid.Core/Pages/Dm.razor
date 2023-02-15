@@ -10,8 +10,11 @@
 @using Nostrid.Interfaces;
 @using Nostrid.Model;
 
+@implements IDisposable
+
 @inject AccountService accountService
 @inject DmService dmService
+@inject NotificationService notificationService
 
 <div class="d-flex flex-column flex-grow-1">
     <div class="fs-4 fw-bolder">Direct Messages with <AccountName Id="@Id" /> </div>
@@ -36,6 +39,7 @@
         }
         accountId = accountService.MainAccount.Id;
         UpdateLastRead();
+        notificationService.AddDmBlock(accountId, Id);
         dmService.NewDm += NewDm;
         filter = new DmSubscriptionFilter(accountId, Id);
     }
@@ -73,6 +77,7 @@
 
     private void Cleanup()
     {
+        notificationService.RemoveDmBlock(accountId, Id);
         dmService.NewDm -= NewDm;
     }
     #endregion
