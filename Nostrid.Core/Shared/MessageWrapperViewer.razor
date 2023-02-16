@@ -38,6 +38,9 @@
 
     [Parameter]
     public Action<Event>? OnDelete { get; set; }
+
+    [CascadingParameter]
+    public Scripts? Scripts { get; set; }
 }
 
 <div @ref="referenceElement" class="d-flex flex-row mb-3 @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "flex-row-reverse align-self-end" : string.Empty)">
@@ -130,11 +133,8 @@
     }
 </div>
 
-<Scripts @ref="scripts" />
-
 @code {
     private ElementReference? referenceElement;
-    private Scripts? scripts;
 
     protected override void OnInitialized()
     {
@@ -178,8 +178,8 @@
 
     public async Task<bool> IsVisibleAsync()
     {
-        if (scripts == null || referenceElement == null) return false;
-        return await scripts.InvokeAsync<bool>("isElementVisible", referenceElement);
+        if (Scripts == null || referenceElement == null) return false;
+        return await Scripts.InvokeAsync<bool>("isElementVisible", referenceElement);
     }
 
     public IEnumerable<ITreeItem> GetTreeItems()

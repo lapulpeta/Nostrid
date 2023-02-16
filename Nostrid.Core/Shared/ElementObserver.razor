@@ -6,25 +6,31 @@
 
     [Parameter]
     public string Margin { get; set; } = "0px";
+
+    [CascadingParameter]
+    public Scripts? Scripts { get; set; }
 }
 
-<div @ref="_element" class="invisible"></div>
-<Scripts @ref="_scripts" OnAfterFirstRenderAsync="Initialize" />
+<div @ref="element" class="invisible"></div>
 
 @code {
-    private Scripts? _scripts;
-    private ElementReference _element;
-    private IJSObjectReference? _observer;
+    private ElementReference element;
+    private IJSObjectReference? observer;
 
-    private async Task Initialize()
+    protected override void OnAfterRender(bool firstRender)
     {
-        if (_scripts == null) return;
-        _observer = await _scripts.InvokeAsync<IJSObjectReference>(
-            "createIntersectionObserver", _element, DotNetObjectReference.Create(this), "LoadMore", Margin);
+        if (Scripts != null && firstRender)
+        {
+            Scripts.InvokeAfterRender(async () =>
+            {
+                observer = await Scripts.InvokeAsync<IJSObjectReference>(
+                    "createIntersectionObserver", element, DotNetObjectReference.Create(this), "Intersect", Margin);    
+            });
+        }
     }
 
     [JSInvokable]
-    public void LoadMore(bool intersecting)
+    public void Intersect(bool intersecting)
     {
         this.OnIntersecting?.Invoke(this, intersecting);
     }
@@ -40,10 +46,10 @@
         {
             if (disposing)
             {
-                if (_observer != null)
+                if (observer != null)
                 {
-                    await _observer.InvokeVoidAsync("dispose");
-                    await _observer.DisposeAsync();
+                    await observer.InvokeVoidAsync("dispose");
+                    await observer.DisposeAsync();
                 }
             }
 
