@@ -89,7 +89,19 @@ public class DmService
         var accountIsL = accountId.CompareTo(otherAccountId) < 0;
 
         var now = DateTime.UtcNow;
-        if (accountIsL)
+
+        if (accountId == otherAccountId)
+        {
+            // you can dm yourself, this fixes the message counts.
+            db.DmPairs
+                .Where(p => p.AccountL == accountId && p.AccountH == otherAccountId)
+                .ExecuteUpdate(p => p.SetProperty(p => p.LastReadL, now));
+
+            db.DmPairs
+                .Where(p => p.AccountH == accountId && p.AccountL == otherAccountId)
+                .ExecuteUpdate(p => p.SetProperty(p => p.LastReadH, now));
+        }
+        else if (accountIsL)
         {
             db.DmPairs
                 .Where(p => p.AccountL == accountId && p.AccountH == otherAccountId)
