@@ -8,15 +8,17 @@
 
 @inherits LayoutComponentBase
 
-<NavMenu>
-	<main class="d-flex flex-column flex-grow-1 p-3">
-		<CascadingValue Value="@scripts">
-			<CascadingValue Value="@alert">
-				@Body
-			</CascadingValue>
+<UpdatabableElement>
+	<CascadingValue Value="@scripts">
+		<CascadingValue Value="@alert">
+			<NavMenu>
+				<main class="d-flex flex-column flex-grow-1 p-3">
+					@Body
+				</main>
+			</NavMenu>
 		</CascadingValue>
-	</main>
-</NavMenu>
+	</CascadingValue>
+</UpdatabableElement>
 
 <Alert @ref="alert"></Alert>
 <Scripts @ref="scripts" />
