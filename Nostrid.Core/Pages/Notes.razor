@@ -49,7 +49,6 @@ else
 
 @code {
     private List<NoteTree> noteTrees = new();
-    private SubscriptionFilter? eventFilter;
     private bool noteNotFound;
     private string? rootId;
 
@@ -78,7 +77,6 @@ else
         {
             var notes = feedService.GetNotesThread(EventId, out rootId);
             TruncateTreeIfNeeded(notes);
-            UpdateEventFilters();
             InvokeAsync(() => StateHasChanged());
         },
         cancellationTokenSource.Token);
@@ -118,7 +116,6 @@ else
         var waitFor = lastUpdate.AddSeconds(MinSecondsBetweenUpdates) < DateTime.UtcNow ? 0 : MinSecondsBetweenUpdates;
         updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
         {
-            UpdateEventFilters();
             InvokeAsync(() => StateHasChanged());
             updateTask = null;
         });
@@ -155,24 +152,6 @@ else
         cancellationTokenSource.Token);
     }
 
-    private static object atomicSwap = new object();
-    private void UpdateEventFilters()
-    {
-        SubscriptionFilter addedFilter, oldFilter;
-        List<Event> renderedNValues;
-        lock (lockTree)
-        {
-            renderedNValues = noteTrees.AllNotes();
-        }
-        var ids = renderedNValues.SelectMany(t => new[] { t.Id, t.ReplyToId, t.ReplyToRootId }).Union(new[] { EventId }).Where(t => !string.IsNullOrEmpty(t)).Distinct();
-        relayService.AddFilter(addedFilter = new EventSubscriptionFilter(ids.ToArray()));
-        lock (atomicSwap)
-        {
-            (eventFilter, oldFilter) = (addedFilter, eventFilter);
-        }
-        relayService.DeleteFilter(oldFilter);
-    }
-
     #region Dispose
     private bool _disposed;
 
@@ -194,7 +173,6 @@ else
     private void Cleanup()
     {
         feedService.NotesReceived -= ReceivedNotes;
-        if (eventFilter != null) relayService.DeleteFilter(eventFilter);
         cancellationTokenSource.Cancel();
     }
     #endregion

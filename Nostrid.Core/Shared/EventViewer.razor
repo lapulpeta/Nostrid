@@ -11,6 +11,7 @@
 @inject EventDatabase eventDatabase
 @inject RelayService relayService
 @inject NavigationManager navigationManager
+@inject FeedService feedService
 
 @code{
     [Parameter, EditorRequired]
@@ -115,11 +116,10 @@
             relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
         }
 
-        if (Event != null)
-        {
-            var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
-            accountService.AddDetailsNeeded(accountIds);
-        }
+        feedService.AddDetailsNeeded(Event.Id);
+
+        var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
+        accountService.AddDetailsNeeded(accountIds);
     }
 
     #region Dispose
