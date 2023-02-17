@@ -3,7 +3,7 @@
 @implements IAsyncDisposable
 
 @code {
-
+    public IJSRuntime? JSRuntime { get => jsRuntime; }
     public IJSObjectReference? JSModule { get; private set; }
     public bool rendered = false;
     public Queue<Action> queue = new();

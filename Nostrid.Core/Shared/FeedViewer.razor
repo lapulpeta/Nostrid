@@ -33,7 +33,7 @@
     }
     <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@ShowAsMessages" />
     
-    <div class="text-center px-3 py-2 @(!ShowAsMessages ? "border-top" : "")" style="margin: 0 -1rem;">
+    <div class="text-center px-3 py-2" style="margin: 0 -1rem;">
         <UpdatabableElement @ref="@labelLoadMore">
             @if (loading)
             {
@@ -48,25 +48,22 @@
         </UpdatabableElement>
     </div>
 
-    <div class="position-absolute" style="height: 40px; width: 40px; @(!ShowAsMessages ? "bottom" : "top"): 1rem; right: 1rem;">
-        <UpdatabableElement @ref="@labelLoadMoreFromNote">
+    <div class="position-absolute" style="height: 40px; width: 40px; @(!ShowAsMessages ? "bottom" : "top"): 1.5rem; right: 1.5rem;">
+        <UpdatabableElement @ref="@buttonLoadMoreFromNote">
             <div class="position-fixed">
-                <button type="button" @onclick="@(async () => await LoadMoreFromNoteAsync())" disabled="@requestDisabled"
-                        class="btn btn-secondary rounded-5 shadow fs-4" style="right: 1rem;">
+                <button type="button" @onclick="@(async () => await LoadMoreFromNoteAsync())" disabled="@(requestDisabled && newN.Count == 0)"
+                        class="position-relative btn btn-secondary rounded-5 shadow fs-4">
                     <i class="bi bi-arrow-repeat"></i>
+                    @if (newN.Count > 0)
+                    {
+                        <span class="position-absolute top-0 start-100 translate-middle fs-8 bg-primary border rounded-circle d-flex align-items-center justify-content-center"
+                              style="width: 20px; height: 20px;">
+                            @(newN.Count > 99 ? "99+" : newN.Count)
+                            <span class="visually-hidden">New alerts</span>
+                        </span>
+                    }
                 </button>
             </div>
-        </UpdatabableElement>
-        <UpdatabableElement @ref="@labelShowNewPosts">
-            @if (newN.Count > 0)
-            {
-                <div class="position-fixed" style="left: 50%;">
-                    <button type="button" @onclick="ShowNewPosts"
-                            class="btn btn-primary my-2" style="margin-left: -50%; margin-top: -3px;">
-                            Show @newN.Count new posts
-                    </button>
-                </div>
-            }
         </UpdatabableElement>
     </div>
 
@@ -79,7 +76,7 @@
     private string[]? renderedIds;
     private NoteTreeViewer? noteTreeViewer;
     private bool requestDisabled;
-    private UpdatabableElement? labelShowNewPosts, labelLoadMore, labelLoadMoreFromNote;
+    private UpdatabableElement? labelLoadMore, buttonLoadMoreFromNote;
     private ElementReference? container;
     private static object lockobj = new();
     private bool loading = false;
@@ -130,6 +127,12 @@
 
     private async Task LoadMoreFromNoteAsync()
     {
+        if (newN.Count > 0)
+        {
+            ShowNewPosts();
+            return;
+        }
+
         if (noteTreeViewer == null)
         {
             return;
@@ -148,7 +151,7 @@
         _ = Task.Delay(5000).ContinueWith((_) =>
         {
             requestDisabled = false;
-            labelLoadMoreFromNote?.Update();
+            buttonLoadMoreFromNote?.Update();
         });
     }
 
@@ -174,7 +177,7 @@
         else
         {
             EventExtension.Merge(newN, notes);
-            labelShowNewPosts?.Update();
+            buttonLoadMoreFromNote?.Update();
         }
     }
 

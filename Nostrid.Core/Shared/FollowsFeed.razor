@@ -1,5 +1,4 @@
-﻿@page "/feed/follow"
-@implements IDisposable
+﻿@implements IDisposable
 
 @using Nostrid.Data
 @using Nostrid.Data.Relays;
@@ -7,12 +6,6 @@
 @using Nostrid.Misc;
 @inject AccountService accountService
 @inject EventDatabase eventDatabase
-
-<h2>Following Feed</h2>
-
-<div class="d-none d-md-flex pb-2">
-    <NoteComposer />
-</div>
 
 @if (follows.Count == 0)
 {

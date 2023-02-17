@@ -1,3 +1,23 @@
+.display-active {
+    display: none;
+}
+
+.active .display-active {
+    display: initial;
+}
+
+.active .display-inactive {
+    display: none;
+}
+
+.top-navbar {
+    transition: margin-top ease-in-out .2s;
+}
+
+body.scrolled-down .top-navbar {
+    margin-top: -50px;
+}
+
 @media (min-width: 768px) {
     .offcanvas {
         position: inherit;
