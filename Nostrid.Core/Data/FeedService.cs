@@ -21,7 +21,7 @@ public class FeedService
     private bool detailsNeededIdsChanged;
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
-    public event EventHandler<Event> NoteUpdated;
+    public event EventHandler<(string eventId, bool deleted)> NoteUpdated;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
     public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService, DmService dmService)
@@ -59,8 +59,10 @@ public class FeedService
             case NostrKind.Deletion:
                 HandleKind5(eventToProcess);
                 break;
+            case NostrKind.Zap:
             case NostrKind.Reaction:
-                HandleKind7(eventToProcess);
+            case NostrKind.Repost:
+                HandleRepostReactionOrZap(eventToProcess);
                 break;
             case NostrKind.ChannelCreation:
             case NostrKind.ChannelMetadata:
@@ -106,8 +108,7 @@ public class FeedService
             if (Utils.IsValidNostrId(eventId))
             {
                 eventDatabase.MarkEventAsDeleted(eventId, eventToProcess.PublicKey);
-                var eventChanged = eventDatabase.GetEvent(eventId);
-                NoteUpdated?.Invoke(this, eventChanged);
+                NoteUpdated?.Invoke(this, (eventId, true));
             }
         }
     }
@@ -117,26 +118,14 @@ public class FeedService
         relayService.AddNewRelayIfUnknown(uri.ToLower());
     }
 
-    public void HandleKind6(Event eventToProcess)
-    {
-        var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).FirstOrDefault();
-        if (Utils.IsValidNostrId(etag.Data1))
-        {
-            var reactedNote = eventDatabase.GetEventOrNull(etag.Data1);
-            if (reactedNote != null)
-                NoteUpdated?.Invoke(this, reactedNote);
-        }
-    }
-
-    public void HandleKind7(Event eventToProcess)
+    public void HandleRepostReactionOrZap(Event eventToProcess)
     {
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
+        // NIP-57: https://github.com/nostr-protocol/nips/blob/master/57.md
         var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
         if (Utils.IsValidNostrId(etag.Data1))
         {
-            var reactedNote = eventDatabase.GetEventOrNull(etag.Data1);
-            if (reactedNote != null)
-                NoteUpdated?.Invoke(this, reactedNote);
+            NoteUpdated?.Invoke(this, (etag.Data1, false));
         }
     }
 
@@ -621,14 +610,24 @@ public class FeedService
         }
     }
 
-    public void AddDetailsNeeded(IEnumerable<string> eventIds)
+    public void AddDetailsNeeded(params string?[] eventIds)
+    {
+        AddDetailsNeeded((IEnumerable<string?>)eventIds);
+    }
+
+    public void AddDetailsNeeded(IEnumerable<string?> eventIds)
     {
         var expireOn = DateTime.UtcNow.AddSeconds(TtlSeconds);
         lock (detailsNeededIds)
         {
             detailsNeededIdsChanged = true;
             foreach (var eventId in eventIds)
-                detailsNeededIds[eventId] = expireOn;
+            {
+                if (eventId.IsNotNullOrEmpty())
+                {
+                    detailsNeededIds[eventId] = expireOn;
+                }
+            }
         }
     }
 

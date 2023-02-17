@@ -116,7 +116,7 @@
             relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
         }
 
-        feedService.AddDetailsNeeded(Event.Id);
+        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId);
 
         var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
         accountService.AddDetailsNeeded(accountIds);

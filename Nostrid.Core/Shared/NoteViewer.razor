@@ -313,12 +313,15 @@
         return (new ITreeItem[] { this }).Concat(NoteTreeViewerRef?.GetTreeItems() ?? Enumerable.Empty<ITreeItem>());
     }
 
-    private void NoteUpdated(object? sender, Event ev)
+    private void NoteUpdated(object? sender, (string eventId, bool deleted) data)
     {
-        if (Tree.Note.Id != ev.Id)
+        if (Tree.Note.Id != data.eventId)
             return;
 
-        Tree.Note.Deleted = ev.Deleted; // For now only the deleted status can be updated (reactions are loaded on the fly)
+        if (data.deleted)
+        {
+            Tree.Note.Deleted = true;
+        }
         InvokeAsync(() => StateHasChanged());
     }
 

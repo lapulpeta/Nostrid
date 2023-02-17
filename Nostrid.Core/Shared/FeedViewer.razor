@@ -199,6 +199,7 @@
         oldFilter = BaseFilter.Clone();
         oldFilter.LimitFilterData.Limit = RelayQueryLimit;
         oldFilter.LimitFilterData.Until = DateTimeOffset.UtcNow;
+        newFilter.LimitFilterData.Since = DateTimeOffset.UtcNow;
         newFilter.LimitFilterData.Limit = 1;
         dbLimit = 0;
 
