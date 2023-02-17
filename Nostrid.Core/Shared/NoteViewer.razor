@@ -113,17 +113,18 @@
                             </a>
                             <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                 <i class="bi bi-repeat"></i>
+                                @if (eventDetailsCount?.Reposts > 0)
+                                {
+                                    <span class="fs-7 lh-sm">&nbsp;@eventDetailsCount.Reposts</span>
+                                }
                             </a>
                             <a role="button" @onclick:stopPropagation="true"
                                 class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover"
                                 data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi @(!likeSent ? "bi-heart" : "bi-heart-fill")"></i>
                                 @{
-                                    var groupedReactions = feedService
-                                        .GetEventDetailsCount(Tree.Note.Id)
-                                        .ReactionGroups
-                                        .OrderByDescending(r => r.Count);
-                                    var groupedReactionsSum = groupedReactions.Sum(reaction => reaction.Count);
+                                    var groupedReactions = eventDetailsCount?.ReactionGroups.OrderByDescending(r => r.Count);
+                                    var groupedReactionsSum = groupedReactions?.Sum(reaction => reaction.Count);
                                     if (groupedReactionsSum > 0)
                                     {
                                         <span class="fs-7 lh-sm">&nbsp;@groupedReactionsSum</span>
@@ -134,7 +135,7 @@
                                 @if (groupedReactionsSum > 0)
                                 {
                                     <div class="d-flex flex-row" style="margin-right: -.25rem;">
-                                        @foreach (var reactionGroup in groupedReactions.Take(5))
+                                        @foreach (var reactionGroup in groupedReactions?.Take(5) ?? Enumerable.Empty<ReactionGroup>())
                                         {
                                             <a @onclick="@(() => Like(reactionGroup.Reaction))" @onclick:stopPropagation="true"
                                                class="p-1 me-1 d-flex flex-row align-items-center fs-4 text-decoration-none bg-primary-opacity-10-hover">
@@ -176,6 +177,10 @@
                             <a role="button" @onclick="@Pay" @onclick:stopPropagation="true"
                                class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                 <i class="bi bi-lightning-charge"></i>
+                                @if (eventDetailsCount?.Zaps > 0)
+                                {
+                                    <span class="fs-7 lh-sm">&nbsp;@eventDetailsCount.Zaps</span>
+                                }
                             </a>
                         </PayButton>
                         <a role="button" @onclick:stopPropagation="true"
@@ -233,6 +238,7 @@
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private ElementReference? referenceElement;
     private NoteTreeViewer? NoteTreeViewerRef;
+    private EventDetailsCount? eventDetailsCount;
 
     public const int MaxNestingLevel = 4;
     public const int MaxChildren = 5;
@@ -240,6 +246,12 @@
     protected override void OnInitialized()
     {
         feedService.NoteUpdated += NoteUpdated;
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
     }
 
     protected override void OnAfterRender(bool firstRender)
