@@ -117,6 +117,17 @@ public class FeedService
         relayService.AddNewRelayIfUnknown(uri.ToLower());
     }
 
+    public void HandleKind6(Event eventToProcess)
+    {
+        var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).FirstOrDefault();
+        if (Utils.IsValidNostrId(etag.Data1))
+        {
+            var reactedNote = eventDatabase.GetEventOrNull(etag.Data1);
+            if (reactedNote != null)
+                NoteUpdated?.Invoke(this, reactedNote);
+        }
+    }
+
     public void HandleKind7(Event eventToProcess)
     {
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
@@ -574,9 +585,9 @@ public class FeedService
         return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
     }
 
-    public List<ReactionGroup> GetReactionGroups(string eventId)
+    public EventDetailsCount GetEventDetailsCount(string eventId)
     {
-        return eventDatabase.ListReactionGroups(eventId);
+        return eventDatabase.GetEventDetailsCount(eventId);
     }
 
     public bool AccountReacted(string eventId, string accountId)

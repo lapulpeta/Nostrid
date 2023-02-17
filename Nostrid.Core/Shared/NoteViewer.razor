@@ -120,7 +120,8 @@
                                 <i class="bi @(!likeSent ? "bi-heart" : "bi-heart-fill")"></i>
                                 @{
                                     var groupedReactions = feedService
-                                        .GetReactionGroups(Tree.Note.Id)
+                                        .GetEventDetailsCount(Tree.Note.Id)
+                                        .ReactionGroups
                                         .OrderByDescending(r => r.Count);
                                     var groupedReactionsSum = groupedReactions.Sum(reaction => reaction.Count);
                                     if (groupedReactionsSum > 0)

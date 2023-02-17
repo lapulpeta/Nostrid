@@ -514,19 +514,31 @@ namespace Nostrid.Data
             DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public List<ReactionGroup> ListReactionGroups(string eventId)
+        public EventDetailsCount GetEventDetailsCount(string eventId)
         {
             using var db = new Context(_dbfile);
 
-            var reactions = db.TagDatas
-                .Where(d => d.Data0 == "e" && d.Data1 == eventId && d.Event.Kind == NostrKind.Reaction)
-                .GroupBy(d => d.Event.Content)
-                .Select(g => new ReactionGroup()
-                {
-                    Reaction = g.Key,
-                    Count = g.Count(),
-                });
-            return reactions.ToList();
+            var validKinds = new int[] { NostrKind.Reaction, NostrKind.Repost, NostrKind.Zap };
+
+            var query = db.TagDatas
+                .Where(d => d.Data0 == "e" && d.Data1 == eventId && validKinds.Contains(d.Event.Kind))
+                .GroupBy(d => new { d.Event.Kind, ReactionType = d.Event.Kind == NostrKind.Reaction ? d.Event.Content ?? string.Empty : string.Empty })
+                .Select(d => new { d.Key.Kind, d.Key.ReactionType, Count = d.Count() });
+            if (query.Any())
+            {
+
+            }
+            var counts = query
+                .ToList();
+            return new()
+            {
+                ReactionGroups = counts
+                    .Where(c => c.Kind == NostrKind.Reaction)
+                    .Select(c => new ReactionGroup() { Reaction = c.ReactionType, Count = c.Count })
+                    .ToList(),
+                Reposts = counts.Where(c => c.Kind == NostrKind.Repost).Sum(c => c.Count),
+                Zaps = counts.Where(c => c.Kind == NostrKind.Zap).Sum(c => c.Count),
+            };
         }
 
         public bool AccountReacted(string eventId, string accountId)

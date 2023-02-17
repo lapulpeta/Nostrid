@@ -105,7 +105,7 @@
             </div>
             @{
                 const int MAX_GROUPS = 1;
-                var groupedReactions = feedService.GetReactionGroups(Tree.Note?.Id ?? string.Empty);
+                var groupedReactions = feedService.GetEventDetailsCount(Tree.Note?.Id ?? string.Empty).ReactionGroups;
                 if (groupedReactions.Count > 0)
                 {
                     <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
