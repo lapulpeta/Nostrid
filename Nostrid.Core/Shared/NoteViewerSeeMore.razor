@@ -16,7 +16,7 @@
     public int ChildIndex { get; set; }
 }
 
-<div role="button" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top"
+<div role="button" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-bottom"
      @onclick="@(() => navigationManager.NavigateTo($"/note/{NoteTreeShowMore.ParentEventId}/{ChildIndex}"))" style="margin: 0 -1rem;">
 
     @for (var i = 1; i < TreeLayout.Length; i++)

@@ -9,6 +9,7 @@
 @inject NotificationService notificationService
 @inject DmService dmService
 @inject IJSRuntime jsRuntime
+
 @implements IDisposable
 
 @code
@@ -27,50 +28,51 @@
 			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
 		</div>
 		<div class="offcanvas-body d-flex flex-column flex-grow-1 pt-0">
-			<a class="d-sm-none d-md-block pb-3 text-center text-decoration-none " href="/">Nostrid</a>
-			<nav class="p-0 flex-grow-1 fs-5" style="min-width: 150px;">
-				<ul class="nav nav-pills flex-column">
+			<a class="d-none d-md-block py-3 text-center text-decoration-none " href="/">Nostrid</a>
+			<nav class="flex-grow-1" style="min-width: 150px;">
+				<ul class="nav nav-pills flex-column fs-5">
 					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap" href="/" Match="NavLinkMatch.All" @onclick="HideOffCanvasMenu">
-							<span class="bi bi-house-fill" aria-hidden="true"></span> Global
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="/feed" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-house display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-house-fill display-active" aria-hidden="true"></i>
+							<span>Feed</span>
+							<UpdatabableElement @ref="mentionsElement">
+								@if (mentionsCount > 0)
+								{
+									<span class="badge rounded-pill bg-danger fs-8" style="vertical-align: 2px;">
+										@mentionsCount
+									</span>
+								}
+							</UpdatabableElement>
 						</NavLink>
 					</li>
+					@*<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="/favorites" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-heart display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-heart-fill display-active" aria-hidden="true"></i>
+							<span>Favorites</span>
+						</NavLink>
+					</li>*@
 					<UpdatabableElement @ref="@loggedInElements">
 						@if (accountService.MainAccount != null)
 						{
 							@foreach (var feedSource in feedService.GetFeedSources(accountService.MainAccount.Id))
 							{
 								<li class="nav-item pb-2">
-									<NavLink class="nav-link text-nowrap" href="@($"feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
+									<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="@($"/favorite/feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
 										<span class="bi bi-house-heart-fill" aria-hidden="true"></span> @string.Join(", ", feedSource.Hashtags.ToArray())
 									</NavLink>
 								</li>
 							}
 							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap" href="feed/follow" @onclick="HideOffCanvasMenu">
-									<span class="bi bi-house-check-fill" aria-hidden="true"></span> Following
-								</NavLink>
-							</li>
-							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap" href="feed/mention" @onclick="HideOffCanvasMenu">
-									<span class="bi bi-house-exclamation-fill" aria-hidden="true"></span> Mentions
-									<UpdatabableElement @ref="mentionsElement">
-										@if (mentionsCount > 0)
-										{
-											<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
-												@mentionsCount
-											</span>
-										}
-									</UpdatabableElement>
-								</NavLink>
-							</li>
-							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap" href="dms" @onclick="HideOffCanvasMenu">
-									<span class="bi bi-envelope-fill" aria-hidden="true"></span> Messages
+								<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="dms" @onclick="HideOffCanvasMenu">
+									<i class="bi bi-envelope display-inactive" aria-hidden="true"></i>
+									<i class="bi bi-envelope-fill display-active" aria-hidden="true"></i>
+									<span>Messages</span>
 									<UpdatabableElement @ref="dmElement">
 										@if (unreadDmCount > 0)
 										{
-											<span style="font-size:0.6rem;" class="badge rounded-pill bg-danger">
+											<span class="badge rounded-pill bg-danger fs-8" style="vertical-align: 2px;">
 												@unreadDmCount
 											</span>
 										}
@@ -80,112 +82,161 @@
 						}
 					</UpdatabableElement>
 					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap" href="explore" @onclick="HideOffCanvasMenu">
-							<span class="bi bi-search" aria-hidden="true"></span> Explore
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="explore" @onclick="HideOffCanvasMenu">
+							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-inactive" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+							</svg>
+							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M 6.5 13 C 7.883 13.002 9.231 12.561 10.345 11.742 L 10.344 11.742 C 10.374 11.782 10.406 11.82 10.442 11.857 L 14.292 15.707 C 14.836 16.252 15.766 16.003 15.966 15.259 C 16.058 14.914 15.96 14.546 15.707 14.293 L 11.857 10.443 C 11.821 10.407 11.783 10.373 11.742 10.343 C 12.561 9.229 13.002 7.882 13 6.5 C 12.999 2.911 10.089 0.001 6.5 0 C 1.496 0 -1.631 5.417 0.871 9.75 C 2.032 11.761 4.178 13 6.5 13 Z" />
+							</svg>
+							<span>Explore</span>
 						</NavLink>
 					</li>
 					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap" href="channels" @onclick="HideOffCanvasMenu">
-							<span class="bi bi-tv-fill" aria-hidden="true"></span> Channels
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="channels" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-tv display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-tv-fill display-active" aria-hidden="true"></i>
+							<span>Channels</span>
 						</NavLink>
 					</li>
 					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap" href="config" @onclick="HideOffCanvasMenu">
-							<span class="bi bi-gear" aria-hidden="true"></span> Settings
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="config" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-gear display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-gear-fill display-active" aria-hidden="true"></i>
+							<span>Settings</span>
 						</NavLink>
 					</li>
 					<UpdatabableElement @ref="loggedInElements2">
 						@if (accountService.MainAccount != null)
 						{
 							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap" href="@($"account/{accountService.MainAccount.Id}")" @onclick="HideOffCanvasMenu">
-									<span class="bi bi-person-fill" aria-hidden="true"></span> Me
+								<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="@($"account/{accountService.MainAccount.Id}")" @onclick="HideOffCanvasMenu">
+									<i class="bi bi-person display-inactive" aria-hidden="true"></i>
+									<i class="bi bi-person-fill display-active" aria-hidden="true"></i>
+									<span>Me</span>
 								</NavLink>
 							</li>
 						}
 					</UpdatabableElement>
 					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap" href="accounts" @onclick="HideOffCanvasMenu">
-							<span class="bi bi-people-fill" aria-hidden="true"></span> Accounts
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="accounts" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-people display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-people-fill display-active" aria-hidden="true"></i>
+							<span>Accounts</span>
 						</NavLink>
 					</li>
 				</ul>
 			</nav>
-			<div class="fs-7 text-muted text-left">
-				<div>
+			<div>
+				<div class="text-nowrap">
 					<UpdatabableElement @ref="relayElements">
-						Relays
-						@if (relayService.RelaysMonitor.IsAuto)
-						{
-							<span> (Auto)</span>
+						@{
+							<text>Relays</text>
+							if (relayService.RelaysMonitor.IsAuto)
+							{
+								<span> (Auto)</span>
+							}
+							<text>: </text>
 						}
-						<br />
-						-Connected: @relayService.ConnectedRelays/@relayService.RelaysMonitor.MaxRelays
+						@relayService.ConnectedRelays/@relayService.RelaysMonitor.MaxRelays/@relayService.RelaysMonitor.PendingRelays
+						<i class="bi bi-question-circle-fill" data-bs-toggle="tooltip" data-bs-placement="top"
+							data-bs-title="connected / max to use / stand by"></i>
 						@if (!relayService.IsRestarting)
 						{
-							<button class="btn btn-sm btn-outline-secondary py-0 px-1" @onclick="@ChangeRelays"><i class="bi bi-arrow-clockwise"></i></button>
+							<div class="d-inline-block">
+								<button class="btn btn-sm btn-secondary rounded-circle d-flex align-items-center justify-content-center ms-1" 
+								@onclick="@ChangeRelays" style="width: 15px; height: 15px;"> 
+									<i class="bi bi-arrow-clockwise"></i>
+								</button>
+							</div>
 						}
-						<br />
-						-Available: @relayService.RelaysMonitor.PendingRelays <br />
-						-Rate Limited: @relayService.RateLimitedRelays <br />
-						Filters: @relayService.FiltersCount <br />
-						Version: @Utils.GetCurrentVersion()
+						@*<environment include="Development">
+							<div>
+								Rate Limited: @relayService.RateLimitedRelays<br />
+								Filters: @relayService.FiltersCount
+							</div>
+						</environment>*@
 					</UpdatabableElement>
 				</div>
+				<div class="fs-7 text-secondary">Version: @Utils.GetCurrentVersion()</div>
 			</div>
 		</div>
 	</div>
 
 	<div class="d-flex flex-column flex-grow-1">
 		
-		<nav class="navbar navbar-light bg-body-tertiary d-md-none m-0 px-2 py-1 border-bottom bg-opacity-95">
-			<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
-				<NavLink class="nav-link" href="#">
-					<UpdatabableElement @ref="loggedInElements3">
-						<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
-					</UpdatabableElement>
-				</NavLink>
-				<div class="flex-grow-1 text-center">
-					<a class="navbar-brand m-0" href="/">Nostrid</a>
+		<div>
+			<nav class="navbar top-navbar navbar-light bg-body-tertiary d-md-none px-2 py-1 border-bottom bg-opacity-95">
+				<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
+					<NavLink class="nav-link" href="#">
+						<UpdatabableElement @ref="loggedInElements3">
+							<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
+						</UpdatabableElement>
+					</NavLink>
+					<div class="flex-grow-1 text-center">
+						<a class="navbar-brand m-0" href="/">Nostrid</a>
+					</div>
+					<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
+						<span class="navbar-toggler-icon"></span>
+					</button>
 				</div>
-				<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
-					<span class="navbar-toggler-icon"></span>
-					<UpdatabableElement @ref="notificationsElement">
-						@if (mentionsCount + unreadDmCount > 0)
-						{
-							<span style="font-size:0.6rem;" class="position-absolute top-100 start-0 translate-middle badge rounded-pill bg-danger">
-								@(mentionsCount + unreadDmCount)
-							</span>
-						}
-					</UpdatabableElement>
-				</button>
-			</div>
-		</nav>
+			</nav>
+		</div>
 
-		<div class="position-relative d-flex flex-column flex-grow-1 overflow-y-auto">
+		<div @ref="container" class="position-relative d-flex flex-column flex-grow-1 overflow-y-auto">
 			@ChildContent
 		</div>
 
-		<nav class="navbar navbar-light bg-body-tertiary d-md-none p-0 m-0 border-top">
+		<nav class="navbar navbar-light bg-body-tertiary d-md-none p-0 border-top">
 			<ul class="nav flex-grow-1 d-flex text-center">
 				<li class="nav-item flex-grow-1">
-					<NavLink class="nav-link fs-4 text-body" href="/" Match="NavLinkMatch.All">
-						<span class="bi bi-house-fill" aria-hidden="true"></span>
+					<NavLink class="nav-link fs-4 text-body" href="/feed">
+						<span class="position-relative">
+							<i class="bi bi-house display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-house-fill display-active" aria-hidden="true"></i>
+							<UpdatabableElement @ref="mentionsElement2">
+							@if (mentionsCount > 0)
+							{
+								<span class="position-absolute top-100 start-100 p-1 translate-middle bg-danger border rounded-circle"
+									  style="transform: translate(-60%, -100%) !important;">
+									<span class="visually-hidden">New alerts</span>
+								</span>
+							}
+							</UpdatabableElement>
+						</span>
 					</NavLink>
 				</li>
 				<li class="nav-item flex-grow-1">
 					<NavLink class="nav-link fs-4 text-body" href="compose">
-						<div class="bi bi-chat-dots-fill" aria-hidden="true"></div>
+						<i class="bi bi-send display-inactive" aria-hidden="true"></i>
+						<i class="bi bi-send-fill display-active" aria-hidden="true"></i>
 					</NavLink>
 				</li>
 				<li class="nav-item flex-grow-1">
 					<NavLink class="nav-link fs-4 text-body" href="explore">
-						<div class="bi bi-search" aria-hidden="true"></div>
+						<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-inactive" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+							<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+						</svg>
+						<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
+							<path d="M 6.5 13 C 7.883 13.002 9.231 12.561 10.345 11.742 L 10.344 11.742 C 10.374 11.782 10.406 11.82 10.442 11.857 L 14.292 15.707 C 14.836 16.252 15.766 16.003 15.966 15.259 C 16.058 14.914 15.96 14.546 15.707 14.293 L 11.857 10.443 C 11.821 10.407 11.783 10.373 11.742 10.343 C 12.561 9.229 13.002 7.882 13 6.5 C 12.999 2.911 10.089 0.001 6.5 0 C 1.496 0 -1.631 5.417 0.871 9.75 C 2.032 11.761 4.178 13 6.5 13 Z" />
+						</svg>
 					</NavLink>
 				</li>
 				<li class="nav-item flex-grow-1">
 					<NavLink class="nav-link fs-4 text-body" href="dms">
-						<div class="bi bi-envelope-fill" aria-hidden="true"></div>
+						<span class="position-relative">
+							<i class="bi bi-envelope display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-envelope-fill display-active" aria-hidden="true"></i>
+							<UpdatabableElement @ref="dmElement2">
+								@if (unreadDmCount > 0)
+								{
+									<span class="position-absolute top-100 start-100 p-1 translate-middle bg-danger border rounded-circle"
+										  style="transform: translate(-60%, -100%) !important;">
+										<span class="visually-hidden">New alerts</span>
+									</span>
+								}
+							</UpdatabableElement>
+						</span>
 					</NavLink>
 				</li>
 			</ul>
@@ -197,15 +248,17 @@
 @code {
 
 	private int mentionsCount, unreadDmCount;
-	private UpdatabableElement? notificationsElement, mentionsElement, loggedInElements, loggedInElements2, loggedInElements3, relayElements, dmElement;
+	private UpdatabableElement? mentionsElement, mentionsElement2, loggedInElements, loggedInElements2, loggedInElements3, relayElements, dmElement, dmElement2;
+	private ElementReference? container;
 
 	private void NotificationNumberChanged(object? sender, (int mentionsCount, int unreadDmCount) data)
 	{
 		mentionsCount = data.mentionsCount;
 		unreadDmCount = data.unreadDmCount;
-		notificationsElement?.Update();
 		mentionsElement?.Update();
+		mentionsElement2?.Update();
 		dmElement?.Update();
+		dmElement2?.Update();
 	}
 
 	private void MainAccountChanged(object? sender, EventArgs args)
@@ -233,6 +286,11 @@
 		if (firstRender)
 		{
 			notificationService.Update();
+
+			if (container != null)
+			{
+				Scripts?.InvokeAfterRender(async () => await Scripts.InvokeVoidAsync("initializeNavMenu", container));
+			}
 		}
 	}
 

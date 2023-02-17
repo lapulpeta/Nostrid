@@ -1,15 +1,7 @@
-﻿@page "/"
-
-@using Nostrid.Model;
+﻿@using Nostrid.Model;
 @using Nostrid.Data.Relays;
 
 @inject AllSubscriptionFilterFactory allSubscriptionFilterFactory;
-
-<h2>Global</h2>
-
-<div class="d-none d-md-flex pb-2">
-    <NoteComposer />
-</div>
 
 <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
 

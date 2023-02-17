@@ -207,6 +207,10 @@ a, .btn-link {
     font-size: .85rem;
 }
 
+.fs-8 {
+    font-size: .65rem;
+}
+
 .bg-primary-opacity-10-hover {
     transition: background-color ease-in-out .1s;
 }
@@ -250,3 +254,46 @@ a, .btn-link {
 .form-range::-moz-range-track {
     background-color: var(--bs-secondary-bg) !important;
 }
+
+.mx--3 {
+    margin: 0 -1rem;
+}
+
+.nav-pills .nav-link {
+    color: rgba(var(--bs-body-color-rgb),var(--bs-text-opacity)) !important;
+}
+
+    .nav-pills .nav-link.active {
+        font-weight: bold;
+        background-color: initial !important;
+    }
+
+.nav-pills-2 .nav-link {
+    padding: 0;
+    color: rgba(var(--bs-body-color-rgb),var(--bs-text-opacity)) !important;
+    font-weight: bold;
+}
+
+    .nav-pills-2 .nav-link > span {
+        position: relative;
+        display: inline-block;
+        padding: var(--bs-nav-link-padding-y) 0;
+        margin: 0 var(--bs-nav-link-padding-x);
+    }
+
+        .nav-pills-2 .nav-link > span:before {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            width: 0%;
+            height: .25rem;
+            border-radius: .25rem;
+            background-color: var(--bs-primary);
+            left: 50%;
+            transform: translateX(-50%);
+            transition: width ease-in-out .1s;
+        }
+
+    .nav-pills-2 .nav-link.active > span:before {
+        width: 100%;
+    }

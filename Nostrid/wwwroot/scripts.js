@@ -71,6 +71,16 @@ export function scrollTop(element, value) {
     }
 }
 
+export function initializeNavMenu(element) {
+    let container = findClosestScrollContainer(element);
+    let lastScrollTop = 0;
+    let eventHandler = () => {
+        document.body.classList.toggle("scrolled-down", (container.scrollTop > lastScrollTop));
+        lastScrollTop = container.scrollTop;
+    };
+    container.addEventListener('touchmove', eventHandler);
+}
+
 var findClosestScrollContainer = function (element) {
     while (element) {
         if (getComputedStyle(element).overflowY !== 'visible') {
@@ -79,4 +89,9 @@ var findClosestScrollContainer = function (element) {
         element = element.parentElement;
     }
     return null;
-}
+};
+
+(() => {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+})();

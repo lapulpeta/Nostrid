@@ -1,17 +1,9 @@
-﻿@page "/feed/mention"
-
-@using Nostrid.Data
+﻿@using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
 @using System.Collections.Concurrent;
 @inject AccountService accountService
 @inject FeedService feedService
-
-<h2>Mentions Feed</h2>
-
-<div class="d-none d-md-flex pb-2">
-    <NoteComposer />
-</div>
 
 <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" OnLoaded="@OnLoaded" />
 
