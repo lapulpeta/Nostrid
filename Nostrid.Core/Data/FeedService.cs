@@ -123,7 +123,7 @@ public class FeedService
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
         // NIP-57: https://github.com/nostr-protocol/nips/blob/master/57.md
         var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
-        if (Utils.IsValidNostrId(etag.Data1))
+        if (etag != null && Utils.IsValidNostrId(etag.Data1))
         {
             NoteUpdated?.Invoke(this, (etag.Data1, false));
         }
