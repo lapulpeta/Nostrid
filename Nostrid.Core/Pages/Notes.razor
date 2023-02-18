@@ -114,11 +114,11 @@ else
     private void UpdateIfNeeded()
     {
         var waitFor = lastUpdate.AddSeconds(MinSecondsBetweenUpdates) < DateTime.UtcNow ? 0 : MinSecondsBetweenUpdates;
-        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
+        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor), cancellationTokenSource.Token).ContinueWith((_) =>
         {
             InvokeAsync(() => StateHasChanged());
             updateTask = null;
-        });
+        }, cancellationTokenSource.Token);
     }
 
     private void ReceivedNotes(object? sender, (string _, IEnumerable<Event> events) data)

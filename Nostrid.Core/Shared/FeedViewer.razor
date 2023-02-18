@@ -84,6 +84,11 @@
     private bool loading = false;
     private bool moreResults = false;
 
+    private DateTime lastUpdate;
+    private Task? updateTask;
+    private CancellationTokenSource cancellationTokenSource = new();
+
+    private const int MinSecondsBetweenUpdates = 3;
     private const int RelayQueryLimit = 13;
     private const int SecondsForDetailsFilters = 30;
 
@@ -163,12 +168,12 @@
         var notesN = feedService.FilterList(newFilter, data.notes, MessageKinds);
         var notesO = feedService.FilterList(oldFilter, data.notes, MessageKinds);
 
-        if (ShowAsMessages)
+        if (ShowAsMessages && (notesN.Any() || notesO.Any()))
         {
             EventExtension.Merge(renderedN, notesN);
             EventExtension.Merge(renderedN, notesO);
             TrimOlder();
-            InvokeAsync(() => StateHasChanged());
+            UpdateIfNeeded();
         }
         else
         {
@@ -177,7 +182,7 @@
                 EventExtension.Merge(renderedN, notesN);
                 TrimOlder();
             }
-            
+
             if (notesO.Any())
             {
                 EventExtension.Merge(newN, notesO);
@@ -189,6 +194,8 @@
     protected override void OnParametersSet()
     {
         Cleanup();
+
+        cancellationTokenSource = new();
 
         renderedN = new();
         newN = new();
@@ -218,7 +225,7 @@
 
         renderedN[data.Child.Id] = data.Child;
         TrimOlder();
-        InvokeAsync(() => StateHasChanged());
+        UpdateIfNeeded();
     }
 
     private void TrimOlder()
@@ -244,6 +251,16 @@
         }
     }
 
+    private void UpdateIfNeeded()
+    {
+        var waitFor = lastUpdate.AddSeconds(MinSecondsBetweenUpdates) < DateTime.UtcNow ? 0 : MinSecondsBetweenUpdates;
+        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor), cancellationTokenSource.Token).ContinueWith((_) =>
+        {
+            InvokeAsync(() => StateHasChanged());
+            updateTask = null;
+        }, cancellationTokenSource.Token);
+    }
+
     #region Dispose
     private bool _disposed;
 
@@ -267,6 +284,7 @@
         feedService.NotesReceived -= ReceivedNotes;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
+        cancellationTokenSource.Cancel();
     }
     #endregion
 
