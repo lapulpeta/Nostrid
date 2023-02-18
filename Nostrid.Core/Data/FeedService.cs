@@ -600,39 +600,48 @@ public class FeedService
         clientThreadsCancellationTokenSource.Cancel();
     }
 
-    public void AddDetailsNeeded(string eventId)
-    {
-        var expireOn = DateTime.UtcNow.AddSeconds(TtlSeconds);
-        lock (detailsNeededIds)
-        {
-            detailsNeededIdsChanged = true;
-            detailsNeededIds[eventId] = expireOn;
-        }
-    }
-
     public void AddDetailsNeeded(params string?[] eventIds)
     {
         AddDetailsNeeded((IEnumerable<string?>)eventIds);
     }
 
+    public void RemoveDetailsNeeded(params string?[] eventIds)
+    {
+        RemoveDetailsNeeded((IEnumerable<string?>)eventIds);
+    }
+
     public void AddDetailsNeeded(IEnumerable<string?> eventIds)
     {
-        var expireOn = DateTime.UtcNow.AddSeconds(TtlSeconds);
+        var expireOn = DateTime.MaxValue; // For now request doesn't expire and it has to manually be closed
         lock (detailsNeededIds)
         {
-            detailsNeededIdsChanged = true;
             foreach (var eventId in eventIds)
             {
                 if (eventId.IsNotNullOrEmpty())
                 {
                     detailsNeededIds[eventId] = expireOn;
+                    detailsNeededIdsChanged = true;
+                }
+            }
+        }
+    }
+
+    public void RemoveDetailsNeeded(IEnumerable<string?> eventIds)
+    {
+        lock (detailsNeededIds)
+        {
+            foreach (var eventId in eventIds)
+            {
+                if (eventId.IsNotNullOrEmpty())
+                {
+                    detailsNeededIds.TryRemove(eventId, out _);
+                    detailsNeededIdsChanged = true;
                 }
             }
         }
     }
 
     private const int SecondsForDetailsFilters = 10;
-    private const int TtlSeconds = 60;
     public async Task QueryDetails(CancellationToken cancellationToken)
     {
         List<string> willQuery = new();
@@ -662,7 +671,7 @@ public class FeedService
             if (mustUpdate && willQuery.Count > 0)
             {
                 relayService.DeleteFilters(filter);
-                filter = new EventSubscriptionFilter(willQuery.ToArray()) { DestroyOnEose = true };
+                filter = new EventSubscriptionFilter(willQuery.ToArray());
                 relayService.AddFilters(filter);
                 await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
             }

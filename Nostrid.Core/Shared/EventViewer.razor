@@ -146,6 +146,7 @@
         {
             relayService.DeleteFilter(subscriptionFilter);
         }
+        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId);
     }
     #endregion
 }

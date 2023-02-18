@@ -106,6 +106,9 @@
                 </LeftPlaceholder>
                 <BottomPlaceholder>
                     <div class="w-100 mt-1 d-flex flex-row" style="margin-right:-1.5rem;">
+                        @{
+                            var eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
+                        }
                         @if (accountService.MainAccount != null)
                         {
                             <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
@@ -238,7 +241,6 @@
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private ElementReference? referenceElement;
     private NoteTreeViewer? NoteTreeViewerRef;
-    private EventDetailsCount? eventDetailsCount;
 
     public const int MaxNestingLevel = 4;
     public const int MaxChildren = 5;
@@ -246,12 +248,6 @@
     protected override void OnInitialized()
     {
         feedService.NoteUpdated += NoteUpdated;
-    }
-
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
-        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
     }
 
     protected override void OnAfterRender(bool firstRender)
