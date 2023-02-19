@@ -35,8 +35,9 @@ For a quick start check out the [Installation](#Installation) section below.
 - [x] Display embedded images, videos and audios
 - [x] Reposts (aka Boosts)
 - [x] Embedded mentions of other accounts and notes - PARTIAL (only links, no previews)
+- [x] Direct messages
 - [x] Channels - PARTIAL (can join and participate but can't create channels yet)
-- [ ] Direct messages - SOON
+- [x] NIP-57 zaps - PARTIAL (can display zaps but can only send standard Lightning payments)
 - [ ] NIP-26 delegation - SOON
 
 ## Supported NIPs
@@ -44,7 +45,7 @@ For a quick start check out the [Installation](#Installation) section below.
 - NIP-01: Basic protocol flow description ✅
 - NIP-02: Contact List and Petnames ✅
 - NIP-03: OpenTimestamps Attestations for Events
-- NIP-04: Encrypted Direct Message
+- NIP-04: Encrypted Direct Message ✅
 - NIP-05: Mapping Nostr keys to DNS-based internet identifiers ✅
 - NIP-06: Basic key derivation from mnemonic seed phrase
 - NIP-07: window.nostr capability for web browsers ✅ (Web/PWA version only)
@@ -70,6 +71,7 @@ For a quick start check out the [Installation](#Installation) section below.
 - NIP-42: Authentication of clients to relays
 - NIP-50: Keywords filter ✅
 - NIP-56: Reporting
+- NIP-57: Lightning Zaps (PARTIAL)
 - NIP-65: Relay List Metadata
 
 ## Screenshots
