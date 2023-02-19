@@ -18,6 +18,8 @@ public abstract class SubscriptionFilter
 
     public bool DontSaveInLocalCache { get; set; }
 
+    public Action<IEnumerable<Event>>? Handler { get; set; }
+
     protected SubscriptionFilter()
     {
         Id = IdGenerator.Generate();

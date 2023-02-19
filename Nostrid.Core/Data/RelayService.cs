@@ -257,6 +257,7 @@ public class RelayService
 
             if (newEvents.Count > 0)
             {
+                filter.Handler?.Invoke(newEvents);
                 ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
                 if (filter.DestroyOnFirstEvent)
                 {

@@ -524,10 +524,6 @@ namespace Nostrid.Data
                 .Where(d => d.Data0 == "e" && d.Data1 == eventId && validKinds.Contains(d.Event.Kind))
                 .GroupBy(d => new { d.Event.Kind, ReactionType = d.Event.Kind == NostrKind.Reaction ? d.Event.Content ?? string.Empty : string.Empty })
                 .Select(d => new { d.Key.Kind, d.Key.ReactionType, Count = d.Count() });
-            if (query.Any())
-            {
-
-            }
             var counts = query
                 .ToList();
             return new()

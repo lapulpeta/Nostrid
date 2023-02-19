@@ -160,35 +160,29 @@
         });
     }
 
-    private void ReceivedNotes(object? sender, (string _, IEnumerable<Event> notes) data)
+    private void ReceivedNotes(IEnumerable<Event> notes, bool fromNew)
     {
-        if (_disposed || renderedN == null || renderedIds == null || newFilter == null || oldFilter == null)
-            return;
-
-        var notesN = feedService.FilterList(newFilter, data.notes, MessageKinds);
-        var notesO = feedService.FilterList(oldFilter, data.notes, MessageKinds);
-
-        if (ShowAsMessages && (notesN.Any() || notesO.Any()))
+        if (_disposed)
         {
-            EventExtension.Merge(renderedN, notesN);
-            EventExtension.Merge(renderedN, notesO);
+            return;
+        }
+
+        notes = notes.Where(n => MessageKinds.Contains(n.Kind));
+        if (!notes.Any())
+        {
+            return;
+        }
+
+        if (ShowAsMessages || !fromNew)
+        {
+            EventExtension.Merge(renderedN, notes);
             TrimOlder();
             UpdateIfNeeded();
         }
         else
         {
-            if (notesO.Any())
-            {
-                EventExtension.Merge(renderedN, notesO);
-                TrimOlder();
-                UpdateIfNeeded();
-            }
-
-            if (notesN.Any())
-            {
-                EventExtension.Merge(newN, notesN);
-                labelShowNewPosts?.Update();
-            }
+            EventExtension.Merge(newN, notes);
+            labelShowNewPosts?.Update();
         }
     }
 
@@ -204,10 +198,11 @@
         renderedIds = new string[0];
 
         newFilter = BaseFilter.Clone();
+        newFilter.Handler = (events) => ReceivedNotes(events, true);
         oldFilter = BaseFilter.Clone();
+        oldFilter.Handler = (events) => ReceivedNotes(events, false);
         oldFilter.LimitFilterData.Limit = RelayQueryLimit;
         oldFilter.LimitFilterData.Until = DateTimeOffset.UtcNow;
-        newFilter.LimitFilterData.Since = DateTimeOffset.UtcNow;
         newFilter.LimitFilterData.Limit = 1;
         dbLimit = 0;
 
@@ -215,7 +210,6 @@
 
         LoadMore();
 
-        feedService.NotesReceived += ReceivedNotes;
         feedService.NoteReceivedChild += NoteReceivedChild;
     }
 
@@ -282,7 +276,6 @@
 
     private void Cleanup()
     {
-        feedService.NotesReceived -= ReceivedNotes;
         feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
         cancellationTokenSource.Cancel();

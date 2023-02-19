@@ -20,7 +20,7 @@ public class EventSubscriptionFilter : SubscriptionFilter
     public override NostrSubscriptionFilter[] GetFilters()
     {
         return new[] {
-            new NostrSubscriptionFilter() { Ids = ids, Kinds = new[]{ NostrKind.Text } },
+            new NostrSubscriptionFilter() { Ids = ids, Kinds = new[]{ NostrKind.Text, NostrKind.ChannelMessage } },
             new NostrSubscriptionFilter() { EventId = ids, Kinds = new[]{ NostrKind.Text, NostrKind.Deletion, NostrKind.Repost, NostrKind.Reaction, NostrKind.Zap } }
         };
     }
