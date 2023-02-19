@@ -75,7 +75,7 @@
         
         if (ShowReplyTo && !string.IsNullOrEmpty(Event.ReplyToId))
         {
-            relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(Event.ReplyToId) 
+            relayService.AddFilters(subscriptionFilter = new SingleEventSubscriptionFilter(Event.ReplyToId) 
             { 
                 DestroyOnEose = true, 
                 DestroyOnFirstEvent = true 
@@ -111,7 +111,7 @@
     {
         if (subscriptionFilter != null)
         {
-            relayService.DeleteFilter(subscriptionFilter);
+            relayService.DeleteFilters(subscriptionFilter);
         }
     }
     #endregion

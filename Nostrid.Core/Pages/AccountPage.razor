@@ -177,8 +177,8 @@
         account = accountService.GetAccount(PubKey);
         feedFilter = new AuthorSubscriptionFilter(PubKey);
 
-        relayService.AddFilter(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
-        relayService.AddFilter(followersFilter = new FollowersSubscriptionFilter(PubKey) { DontSaveInLocalCache = true });
+        relayService.AddFilters(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
+        relayService.AddFilters(followersFilter = new FollowersSubscriptionFilter(PubKey) { DontSaveInLocalCache = true });
         accountService.RegisterFollowerRequestFilter(followersFilter.Id, PubKey);
 
         accountService.AccountFollowsChanged += AccountFollowsChanged;
@@ -195,7 +195,7 @@
         follows = null;
         eventDatabase.ClearFollows(PubKey);
         relayService.DeleteFilters(followsFilter);
-        relayService.AddFilter(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
+        relayService.AddFilters(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
     }
 
     private static object lockobj = new();

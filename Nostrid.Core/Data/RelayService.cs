@@ -47,6 +47,8 @@ public class RelayService
     private readonly ConcurrentDictionary<long, DateTimeOffset> relayRateLimited = new();
     private readonly ConcurrentDictionary<long, bool> connectedRelays = new();
     private readonly List<Task> runningTasks = new();
+    private readonly BlockingCollection<SubscriptionFilter> filtersToAdd = new();
+    private readonly BlockingCollection<SubscriptionFilter> filtersToDelete = new();
 
     private CancellationTokenSource clientThreadsCancellationTokenSource;
     private bool running;
@@ -83,9 +85,9 @@ public class RelayService
             return;
 
         running = true;
+        clientThreadsCancellationTokenSource = new CancellationTokenSource();
         Task.Run(() =>
         {
-            clientThreadsCancellationTokenSource = new CancellationTokenSource();
             if (configService.MainConfig.ManualRelayManagement)
             {
                 var relaysToUse = eventDatabase.ListRelays().Where(r => r.Read || r.Write).ToList();
@@ -121,6 +123,9 @@ public class RelayService
             }
             ClientsStateChanged?.Invoke(this, EventArgs.Empty);
         });
+
+        Task.Run(RunAddFilters);
+        Task.Run(RunDeleteFilters);
     }
 
     public void StopNostrClients()
@@ -209,7 +214,7 @@ public class RelayService
                 subs.RemoveAll(s => s.SubscriptionId == subscriptionId);
                 if (!subs.Any())
                 {
-                    DeleteFilter(filter);
+                    DeleteFilters(filter);
                 }
             }
         }
@@ -261,13 +266,13 @@ public class RelayService
                 ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
                 if (filter.DestroyOnFirstEvent)
                 {
-                    DeleteFilter(filter);
+                    DeleteFilters(filter);
                     destroyed = true;
                 }
             }
             if (!destroyed && filter.DestroyOn.HasValue && filter.DestroyOn < DateTimeOffset.UtcNow)
             {
-                DeleteFilter(filter);
+                DeleteFilters(filter);
             }
         }
     }
@@ -294,22 +299,10 @@ public class RelayService
         return false;
     }
 
-    public void AddFilter(SubscriptionFilter filter)
-    {
-        lock (lockObj)
-        {
-            filters.Add(filter);
-        }
-        UpdateSubscriptions();
-    }
-
     public void AddFilters(IEnumerable<SubscriptionFilter> fls)
     {
-        lock (lockObj)
-        {
-            filters.AddRange(fls);
-        }
-        UpdateSubscriptions();
+        foreach (var filter in fls)
+            filtersToAdd.Add(filter);
     }
 
     public void AddFilters(params SubscriptionFilter[] fls)
@@ -319,25 +312,8 @@ public class RelayService
 
     public void RefreshFilters(params SubscriptionFilter[] fls)
     {
-        lock (lockObj)
-        {
-            filters.RemoveAll(f => fls.Contains(f));
-        }
-        UpdateSubscriptions();
-        lock (lockObj)
-        {
-            filters.AddRange(fls);
-        }
-        UpdateSubscriptions();
-    }
-
-    public void DeleteFilter(SubscriptionFilter filter)
-    {
-        lock (lockObj)
-        {
-            filters.Remove(filter);
-        }
-        UpdateSubscriptions();
+        DeleteFilters(fls);
+        AddFilters(fls);
     }
 
     public void DeleteFilters(params SubscriptionFilter?[] fls)
@@ -347,11 +323,8 @@ public class RelayService
 
     public void DeleteFilters(IEnumerable<SubscriptionFilter?> fls)
     {
-        lock (lockObj)
-        {
-            filters.RemoveAll(f => fls.Contains(f));
-        }
-        UpdateSubscriptions();
+        foreach (var filter in fls)
+            filtersToDelete.Add(filter);
     }
 
     public string GetRecommendedRelayUri()
@@ -528,7 +501,7 @@ public class RelayService
                     ClientStatusChanged?.Invoke(this, (relay.Id, true));
                 }
                 catch { }
-                UpdateSubscriptions(relay);
+                SendAllFiltersToNewClient(relay, client);
                 _ = Task.Run(() => EventDispatcherAsync(relay, cancellationToken));
                 await client.ListenForMessages();
             }
@@ -579,65 +552,117 @@ public class RelayService
         eventDatabase.DeleteRelay(relayId);
     }
 
-    private void UpdateSubscriptions()
+    private void SendAllFiltersToNewClient(Relay relay, NostrClient client)
     {
         lock (lockObj)
         {
-            foreach (var relay in clientByRelay.Keys)
+            var subs = subscriptionsByClient.GetOrAdd(client, _ => new());
+
+            // Add all filters
+            foreach (var f in filters)
             {
-                UpdateSubscriptions(relay);
+                SendFilterToClient(relay, client, subs, f);
             }
         }
     }
 
-    private void UpdateSubscriptions(Relay relay)
+    private void SendFilterToClient(Relay relay, NostrClient client, List<Subscription> subs, SubscriptionFilter f)
     {
-        if (!RelaysMonitor.IsAuto && !relay.Read)
-            return;
-
-        var client = clientByRelay[relay];
-        var subs = subscriptionsByClient.GetOrAdd(client, _ => new());
-
-        if (relayRateLimited.TryGetValue(relay.Id, out var rateLimited))
+        // Auto mode uses per-relay filters if supported
+        var nostrFilters = RelaysMonitor.IsAuto && f is IRelayFilter relayFilter ? relayFilter.GetFiltersForRelay(relay.Id) : f.GetFilters();
+        var supportedNostrFilters = nostrFilters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
+        if (supportedNostrFilters.Any())
         {
-            if (rateLimited > DateTimeOffset.UtcNow)
-            {
-                return;
-            }
-            relayRateLimited.TryRemove(relay.Id, out _);
+            var sub = new Subscription(client, supportedNostrFilters.ToArray(), f.Id);
+            filterBySubscriptionId[sub.SubscriptionId] = f;
+            sub.Subscribe();
+            subs.Add(sub);
         }
+    }
 
-        lock (lockObj)
-        //lock (lockObj)
+    private void RunAddFilters()
+    {
+        while (!clientThreadsCancellationTokenSource.IsCancellationRequested)
         {
-            // Add new filters
-            foreach (var f in filters)
+            try
             {
-                if (!subs.Any(s => s.FilterId == f.Id))
+                var filterToAdd = filtersToAdd.Take(clientThreadsCancellationTokenSource.Token);
+                lock (lockObj)
                 {
-                    // Auto mode uses per-relay filters if supported
-                    var nostrFilters = RelaysMonitor.IsAuto && f is IRelayFilter relayFilter ? relayFilter.GetFiltersForRelay(relay.Id) : f.GetFilters();
-                    var supportedNostrFilters = nostrFilters.Where(f => f.RequiredNips.All(rn => relay.SupportedNips.Contains(rn)));
-                    if (supportedNostrFilters.Any())
+                    filters.Add(filterToAdd);
+                    foreach (var (relay, client) in clientByRelay)
                     {
-                        var sub = new Subscription(client, supportedNostrFilters.ToArray(), f.Id);
-                        filterBySubscriptionId[sub.SubscriptionId] = f;
-                        sub.Subscribe();
-                        subs.Add(sub);
+                        if (!RelaysMonitor.IsAuto && !relay.Read)
+                            continue;
+
+                        if (relayRateLimited.TryGetValue(relay.Id, out var rateLimited))
+                        {
+                            if (rateLimited > DateTimeOffset.UtcNow)
+                            {
+                                continue;
+                            }
+                            relayRateLimited.TryRemove(relay.Id, out _);
+                        }
+
+                        var subs = subscriptionsByClient.GetOrAdd(client, _ => new());
+
+                        if (!subs.Any(s => s.FilterId == filterToAdd.Id))
+                        {
+                            SendFilterToClient(relay, client, subs, filterToAdd);
+                        }
                     }
                 }
             }
-
-            // Remove unused filters
-            for (int i = subs.Count - 1; i >= 0; i--)
+            catch
             {
-                var sub = subs[i];
-                if (!filters.Any(f => f.Id == sub.FilterId))
+                // Retry
+            }
+        }
+    }
+
+    private void RunDeleteFilters()
+    {
+        while (!clientThreadsCancellationTokenSource.IsCancellationRequested)
+        {
+            try
+            {
+                var filterToRemove = filtersToDelete.Take(clientThreadsCancellationTokenSource.Token);
+                lock (lockObj)
                 {
-                    sub.Unsubscribe();
-                    filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _); // TODO: find out best way to cleanup this dictionary
-                    subs.RemoveAt(i);
+                    filters.Remove(filterToRemove);
+                    foreach (var (relay, client) in clientByRelay)
+                    {
+                        if (!RelaysMonitor.IsAuto && !relay.Read)
+                            continue;
+
+                        //if (relayRateLimited.TryGetValue(relay.Id, out var rateLimited))
+                        //{
+                        //    if (rateLimited > DateTimeOffset.UtcNow)
+                        //    {
+                        //        continue;
+                        //    }
+                        //    relayRateLimited.TryRemove(relay.Id, out _);
+                        //}
+
+                        var subs = subscriptionsByClient.GetOrAdd(client, _ => new());
+
+                        // Remove unused filters
+                        for (int i = subs.Count - 1; i >= 0; i--)
+                        {
+                            var sub = subs[i];
+                            if (!filters.Any(f => f.Id == sub.FilterId))
+                            {
+                                sub.Unsubscribe();
+                                filterBySubscriptionId.TryRemove(sub.SubscriptionId, out _); // TODO: find out best way to cleanup this dictionary
+                                subs.RemoveAt(i);
+                            }
+                        }
+                    }
                 }
+            }
+            catch
+            {
+                // Retry
             }
         }
     }

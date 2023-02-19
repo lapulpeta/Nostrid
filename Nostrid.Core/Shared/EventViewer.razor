@@ -113,7 +113,7 @@
         var repostEventId = Event.RepostEventId;
         if (repostEventId != null)
         {
-            relayService.AddFilter(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
+            relayService.AddFilters(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
         }
 
         feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId);
@@ -144,7 +144,7 @@
     {
         if (subscriptionFilter != null)
         {
-            relayService.DeleteFilter(subscriptionFilter);
+            relayService.DeleteFilters(subscriptionFilter);
         }
         feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId);
     }
