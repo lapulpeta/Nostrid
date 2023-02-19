@@ -26,12 +26,14 @@ public partial class App : Application
         {
             relayService.StartNostrClients();
             accountService.StartDetailsUpdater();
+            feedService.StartDetailsUpdater();
         };
 
         window.Destroying += (s, e) =>
         {
             relayService.StopNostrClients();
             accountService.StopDetailsUpdater();
+            feedService.StopDetailsUpdater();
         };
 
         return window;

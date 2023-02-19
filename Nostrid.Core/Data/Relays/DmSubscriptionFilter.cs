@@ -40,13 +40,24 @@ public class DmSubscriptionFilter : SubscriptionFilter, IDbFilter
         return new DmSubscriptionFilter(account1, account2);
     }
 
-	public IQueryable<Event> ApplyDbFilter(IQueryable<Event> events)
-	{
+    public IQueryable<Event> ApplyDbFilter(IQueryable<Event> events)
+    {
+        var query = events;
+        if (LimitFilterData.Since.HasValue)
+        {
+            var since = LimitFilterData.Since.Value.ToUnixTimeSeconds();
+            query = query.Where(e => e.CreatedAtCurated >= since);
+        }
+        if (LimitFilterData.Until.HasValue)
+        {
+            var until = LimitFilterData.Until.Value.ToUnixTimeSeconds();
+            query = query.Where(e => e.CreatedAtCurated <= until);
+        }
         if (account2 == null)
         {
-			return events.Where(e => e.Kind == NostrKind.DM && (e.PublicKey == account1 || e.DmToId == account1));
-		}
-		return events.Where(e => e.Kind == NostrKind.DM && ((e.PublicKey == account1 && e.DmToId == account2) || (e.PublicKey == account2 && e.DmToId == account1)));
-	}
+            return query.Where(e => e.Kind == NostrKind.DM && (e.PublicKey == account1 || e.DmToId == account1));
+        }
+        return query.Where(e => e.Kind == NostrKind.DM && ((e.PublicKey == account1 && e.DmToId == account2) || (e.PublicKey == account2 && e.DmToId == account1)));
+    }
 }
 

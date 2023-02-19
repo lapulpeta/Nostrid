@@ -15,5 +15,6 @@ public static class NostrKind
     public const int ChannelMessage = 42;
     public const int ChannelHideMessage = 43;
     public const int ChannelMuteUser = 44;
+    public const int Zap = 9735;
 }
 

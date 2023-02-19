@@ -18,11 +18,11 @@ namespace NNostr.Client.JsonConverters
             {
                 if (i == 0)
                 {
-                    result.TagIdentifier = StringEscaperJsonConverter.JavaScriptStringEncode(reader.Value.ToString(), false);
+                    result.TagIdentifier = reader.Value.ToString();
                 }
                 else
                 {
-                    result.Data.Add(StringEscaperJsonConverter.JavaScriptStringEncode(reader.Value.ToString(), false));
+                    result.Data.Add(reader.Value.ToString());
                 }
 
                 reader.Read();

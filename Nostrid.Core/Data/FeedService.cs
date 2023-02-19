@@ -3,6 +3,7 @@ using NNostr.Client;
 using Nostrid.Data.Relays;
 using Nostrid.Misc;
 using Nostrid.Model;
+using System.Collections.Concurrent;
 
 namespace Nostrid.Data;
 
@@ -13,9 +14,14 @@ public class FeedService
     private readonly AccountService accountService;
     private readonly ChannelService channelService;
     private readonly DmService dmService;
+    private readonly ConcurrentDictionary<string, DateTime> detailsNeededIds = new();
+
+    private bool running;
+    private CancellationTokenSource clientThreadsCancellationTokenSource;
+    private bool detailsNeededIdsChanged;
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
-    public event EventHandler<Event> NoteUpdated;
+    public event EventHandler<(string eventId, bool deleted)> NoteUpdated;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
     public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService, DmService dmService)
@@ -53,8 +59,10 @@ public class FeedService
             case NostrKind.Deletion:
                 HandleKind5(eventToProcess);
                 break;
+            case NostrKind.Zap:
             case NostrKind.Reaction:
-                HandleKind7(eventToProcess);
+            case NostrKind.Repost:
+                HandleRepostReactionOrZap(eventToProcess);
                 break;
             case NostrKind.ChannelCreation:
             case NostrKind.ChannelMetadata:
@@ -100,8 +108,7 @@ public class FeedService
             if (Utils.IsValidNostrId(eventId))
             {
                 eventDatabase.MarkEventAsDeleted(eventId, eventToProcess.PublicKey);
-                var eventChanged = eventDatabase.GetEvent(eventId);
-                NoteUpdated?.Invoke(this, eventChanged);
+                NoteUpdated?.Invoke(this, (eventId, true));
             }
         }
     }
@@ -111,15 +118,14 @@ public class FeedService
         relayService.AddNewRelayIfUnknown(uri.ToLower());
     }
 
-    public void HandleKind7(Event eventToProcess)
+    public void HandleRepostReactionOrZap(Event eventToProcess)
     {
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
+        // NIP-57: https://github.com/nostr-protocol/nips/blob/master/57.md
         var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
-        if (Utils.IsValidNostrId(etag.Data1))
+        if (etag != null && Utils.IsValidNostrId(etag.Data1))
         {
-            var reactedNote = eventDatabase.GetEventOrNull(etag.Data1);
-            if (reactedNote != null)
-                NoteUpdated?.Invoke(this, reactedNote);
+            NoteUpdated?.Invoke(this, (etag.Data1, false));
         }
     }
 
@@ -568,14 +574,114 @@ public class FeedService
         return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
     }
 
-    public List<ReactionGroup> GetReactionGroups(string eventId)
+    public EventDetailsCount GetEventDetailsCount(string eventId)
     {
-        return eventDatabase.ListReactionGroups(eventId);
+        return eventDatabase.GetEventDetailsCount(eventId);
     }
 
     public bool AccountReacted(string eventId, string accountId)
     {
         return eventDatabase.AccountReacted(eventId, accountId);
+    }
+
+    public void StartDetailsUpdater()
+    {
+        if (running)
+            return;
+
+        running = true;
+        clientThreadsCancellationTokenSource = new CancellationTokenSource();
+        Task.Run(async () => await QueryDetails(clientThreadsCancellationTokenSource.Token));
+    }
+
+    public void StopDetailsUpdater()
+    {
+        running = false;
+        clientThreadsCancellationTokenSource.Cancel();
+    }
+
+    public void AddDetailsNeeded(params string?[] eventIds)
+    {
+        AddDetailsNeeded((IEnumerable<string?>)eventIds);
+    }
+
+    public void RemoveDetailsNeeded(params string?[] eventIds)
+    {
+        RemoveDetailsNeeded((IEnumerable<string?>)eventIds);
+    }
+
+    public void AddDetailsNeeded(IEnumerable<string?> eventIds)
+    {
+        var expireOn = DateTime.MaxValue; // For now request doesn't expire and it has to manually be closed
+        lock (detailsNeededIds)
+        {
+            foreach (var eventId in eventIds)
+            {
+                if (eventId.IsNotNullOrEmpty())
+                {
+                    detailsNeededIds[eventId] = expireOn;
+                    detailsNeededIdsChanged = true;
+                }
+            }
+        }
+    }
+
+    public void RemoveDetailsNeeded(IEnumerable<string?> eventIds)
+    {
+        lock (detailsNeededIds)
+        {
+            foreach (var eventId in eventIds)
+            {
+                if (eventId.IsNotNullOrEmpty())
+                {
+                    detailsNeededIds.TryRemove(eventId, out _);
+                    detailsNeededIdsChanged = true;
+                }
+            }
+        }
+    }
+
+    private const int SecondsForDetailsFilters = 10;
+    public async Task QueryDetails(CancellationToken cancellationToken)
+    {
+        List<string> willQuery = new();
+        EventSubscriptionFilter? filter = null;
+        bool mustUpdate;
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var now = DateTime.UtcNow;
+            lock (detailsNeededIds)
+            {
+                if (detailsNeededIdsChanged)
+                {
+                    detailsNeededIdsChanged = false;
+                    detailsNeededIds.Where(d => d.Value < now).Select(d => d.Key).ToList().ForEach(id => detailsNeededIds.TryRemove(id, out _));
+                    var oldWillQuery = new List<string>(willQuery);
+                    willQuery = new(detailsNeededIds.Keys);
+                    mustUpdate = willQuery.Except(oldWillQuery).Any();
+                    if (!mustUpdate)
+                        willQuery = oldWillQuery;
+                }
+                else
+                {
+                    mustUpdate = false;
+                }
+            }
+
+            if (mustUpdate && willQuery.Count > 0)
+            {
+                relayService.DeleteFilters(filter);
+                filter = new EventSubscriptionFilter(willQuery.ToArray());
+                relayService.AddFilters(filter);
+                await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
+            }
+            else
+            {
+                await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
+            }
+        }
+
+        relayService.DeleteFilters(filter);
     }
 
 }
