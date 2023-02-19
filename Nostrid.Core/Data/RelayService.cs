@@ -7,6 +7,8 @@ using Nostrid.Model;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
+using System.Threading.Channels;
+using Channel = System.Threading.Channels.Channel;
 
 namespace Nostrid.Data;
 
@@ -47,8 +49,8 @@ public class RelayService
     private readonly ConcurrentDictionary<long, DateTimeOffset> relayRateLimited = new();
     private readonly ConcurrentDictionary<long, bool> connectedRelays = new();
     private readonly List<Task> runningTasks = new();
-    private readonly BlockingCollection<SubscriptionFilter> filtersToAdd = new();
-    private readonly BlockingCollection<SubscriptionFilter> filtersToDelete = new();
+    private readonly Channel<SubscriptionFilter> filtersToAdd = Channel.CreateUnbounded<SubscriptionFilter>();
+    private readonly Channel<SubscriptionFilter> filtersToDelete = Channel.CreateUnbounded<SubscriptionFilter>();
 
     private CancellationTokenSource clientThreadsCancellationTokenSource;
     private bool running;
@@ -302,7 +304,9 @@ public class RelayService
     public void AddFilters(IEnumerable<SubscriptionFilter> fls)
     {
         foreach (var filter in fls)
-            filtersToAdd.Add(filter);
+        {
+            filtersToAdd.Writer.TryWrite(filter);
+        }
     }
 
     public void AddFilters(params SubscriptionFilter[] fls)
@@ -324,7 +328,12 @@ public class RelayService
     public void DeleteFilters(IEnumerable<SubscriptionFilter?> fls)
     {
         foreach (var filter in fls)
-            filtersToDelete.Add(filter);
+        {
+            if (filter != null)
+            {
+                filtersToDelete.Writer.TryWrite(filter);
+            }
+        }
     }
 
     public string GetRecommendedRelayUri()
@@ -580,13 +589,13 @@ public class RelayService
         }
     }
 
-    private void RunAddFilters()
+    private async Task RunAddFilters()
     {
         while (!clientThreadsCancellationTokenSource.IsCancellationRequested)
         {
             try
             {
-                var filterToAdd = filtersToAdd.Take(clientThreadsCancellationTokenSource.Token);
+                var filterToAdd = await filtersToAdd.Reader.ReadAsync(clientThreadsCancellationTokenSource.Token);
                 lock (lockObj)
                 {
                     filters.Add(filterToAdd);
@@ -620,13 +629,13 @@ public class RelayService
         }
     }
 
-    private void RunDeleteFilters()
+    private async Task RunDeleteFilters()
     {
         while (!clientThreadsCancellationTokenSource.IsCancellationRequested)
         {
             try
             {
-                var filterToRemove = filtersToDelete.Take(clientThreadsCancellationTokenSource.Token);
+                var filterToRemove = await filtersToDelete.Reader.ReadAsync(clientThreadsCancellationTokenSource.Token);
                 lock (lockObj)
                 {
                     filters.Remove(filterToRemove);
