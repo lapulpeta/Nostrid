@@ -177,15 +177,16 @@
         }
         else
         {
-            if (notesN.Any())
-            {
-                EventExtension.Merge(renderedN, notesN);
-                TrimOlder();
-            }
-
             if (notesO.Any())
             {
-                EventExtension.Merge(newN, notesO);
+                EventExtension.Merge(renderedN, notesO);
+                TrimOlder();
+                UpdateIfNeeded();
+            }
+
+            if (notesN.Any())
+            {
+                EventExtension.Merge(newN, notesN);
                 labelShowNewPosts?.Update();
             }
         }

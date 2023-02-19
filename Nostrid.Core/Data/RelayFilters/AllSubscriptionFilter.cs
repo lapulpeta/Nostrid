@@ -40,12 +40,12 @@ public class AllSubscriptionFilter : SubscriptionFilter, IRelayFilter, IDbFilter
         var query = events.Where(e => validKinds.Contains(e.Kind));
         if (LimitFilterData.Since.HasValue)
         {
-            var since = LimitFilterData.Since.Value.ToUnixTimeMilliseconds();
+            var since = LimitFilterData.Since.Value.ToUnixTimeSeconds();
             query = query.Where(e => e.CreatedAtCurated >= since);
         }
         if (LimitFilterData.Until.HasValue)
         {
-            var until = LimitFilterData.Until.Value.ToUnixTimeMilliseconds();
+            var until = LimitFilterData.Until.Value.ToUnixTimeSeconds();
             query = query.Where(e => e.CreatedAtCurated <= until);
         }
         return query;
