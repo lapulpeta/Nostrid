@@ -105,8 +105,8 @@
             </div>
             @{
                 const int MAX_GROUPS = 1;
-                var groupedReactions = feedService.GetEventDetailsCount(Tree.Note?.Id ?? string.Empty).ReactionGroups;
-                if (groupedReactions.Count > 0)
+                var groupedReactions = eventDetailsCount?.ReactionGroups;
+                if (groupedReactions?.Count > 0)
                 {
                     <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
                         @{
@@ -135,10 +135,18 @@
 
 @code {
     private ElementReference? referenceElement;
+    private EventDetailsCount? eventDetailsCount;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note?.Id ?? string.Empty);
+    }
 
     protected override void OnInitialized()
     {
-        feedService.NoteUpdated += NoteUpdated;
+        feedService.NoteCountChanged += NoteCountChanged;
+        feedService.NoteDeleted += NoteDeleted;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -187,15 +195,21 @@
         return (new ITreeItem[] { this });
     }
 
-    private void NoteUpdated(object? sender, (string eventId, bool deleted) data)
+    private void NoteCountChanged(object? sender, (string eventId, EventDetailsCount delta) data)
     {
         if (Tree.Note.Id != data.eventId)
             return;
 
-        if (data.deleted)
-        {
-            Tree.Note.Deleted = true;
-        }
+        eventDetailsCount.Add(data.delta);
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void NoteDeleted(object? sender, string eventId)
+    {
+        if (Tree.Note.Id != eventId)
+            return;
+
+        Tree.Note.Deleted = true;
         InvokeAsync(() => StateHasChanged());
     }
 
@@ -223,6 +237,8 @@
         {
             OnComponentUnload(this);
         }
+        feedService.NoteCountChanged -= NoteCountChanged;
+        feedService.NoteDeleted -= NoteDeleted;
     }
     #endregion
 }

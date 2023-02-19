@@ -21,7 +21,8 @@ public class FeedService
     private bool detailsNeededIdsChanged;
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
-    public event EventHandler<(string eventId, bool deleted)> NoteUpdated;
+    public event EventHandler<(string eventId, EventDetailsCount delta)> NoteCountChanged;
+    public event EventHandler<string> NoteDeleted;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
     public FeedService(EventDatabase eventDatabase, RelayService relayService, AccountService accountService, ChannelService channelService, DmService dmService)
@@ -108,7 +109,7 @@ public class FeedService
             if (Utils.IsValidNostrId(eventId))
             {
                 eventDatabase.MarkEventAsDeleted(eventId, eventToProcess.PublicKey);
-                NoteUpdated?.Invoke(this, (eventId, true));
+                NoteDeleted?.Invoke(this, eventId);
             }
         }
     }
@@ -125,7 +126,14 @@ public class FeedService
         var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
         if (etag != null && Utils.IsValidNostrId(etag.Data1))
         {
-            NoteUpdated?.Invoke(this, (etag.Data1, false));
+            EventDetailsCount delta = eventToProcess.Kind switch
+            {
+                NostrKind.Repost => new() { Reposts = 1 },
+                NostrKind.Zap => new() { Zaps = 1 },
+                NostrKind.Reaction => new() { ReactionGroups = new() { new ReactionGroup() { Reaction = eventToProcess.Content, Count = 1 } } },
+                _ => new()
+            };
+            NoteCountChanged?.Invoke(this, (etag.Data1, delta));
         }
     }
 

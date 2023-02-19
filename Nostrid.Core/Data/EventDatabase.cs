@@ -520,18 +520,15 @@ namespace Nostrid.Data
 
             var validKinds = new int[] { NostrKind.Reaction, NostrKind.Repost, NostrKind.Zap };
 
-            var query = db.TagDatas
+            var counts = db.TagDatas
                 .Where(d => d.Data0 == "e" && d.Data1 == eventId && validKinds.Contains(d.Event.Kind))
                 .GroupBy(d => new { d.Event.Kind, ReactionType = d.Event.Kind == NostrKind.Reaction ? d.Event.Content ?? string.Empty : string.Empty })
                 .Select(d => new { d.Key.Kind, d.Key.ReactionType, Count = d.Count() });
-            var counts = query
-                .ToList();
             return new()
             {
-                ReactionGroups = counts
+                ReactionGroups = new(counts
                     .Where(c => c.Kind == NostrKind.Reaction)
-                    .Select(c => new ReactionGroup() { Reaction = c.ReactionType, Count = c.Count })
-                    .ToList(),
+                    .Select(c => new ReactionGroup() { Reaction = c.ReactionType, Count = c.Count })),
                 Reposts = counts.Where(c => c.Kind == NostrKind.Repost).Sum(c => c.Count),
                 Zaps = counts.Where(c => c.Kind == NostrKind.Zap).Sum(c => c.Count),
             };

@@ -1,11 +1,23 @@
+using System.Collections.Concurrent;
+
 namespace Nostrid.Model;
 
 public class EventDetailsCount
 {
-    public List<ReactionGroup> ReactionGroups { get; set; }
+    public ConcurrentBag<ReactionGroup> ReactionGroups = new();
 
-    public int Reposts { get; set; }
+    public int Reposts;
 
-    public int Zaps { get; set; }
+    public int Zaps;
+
+    public void Add(EventDetailsCount delta)
+    {
+        Interlocked.Add(ref Reposts, delta.Reposts);
+        Interlocked.Add(ref Zaps, delta.Zaps);
+        foreach (var reactionGroup in delta.ReactionGroups)
+        {
+            ReactionGroups.Add(reactionGroup);
+        }
+    }
 }
 
