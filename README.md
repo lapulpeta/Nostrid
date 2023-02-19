@@ -138,9 +138,13 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 2. Clone this repository
 3. Make sure `git` is in your `PATH` system variable
 4. Run `git submodule update` to restore custom libraries
-5. Open solution in Visual Studio and run
-6. For Android: run `dotnet build -c Release -f net7.0-android` in `Nostrid` inner project
-7. For MacOS: run `dotnet publish -c Release -f net7.0-maccatalyst` in `Nostrid` inner project
+5. Ensure in Windows Settings -> Developer Settings -> Developer Mode is ON
+6. Open Solution
+7. From Package Manager Console run -> dotnet workload restore
+8. Build Solution
+9. Set "Nostrid" as startup project -> Run
+10. For Android: run `dotnet build -c Release -f net7.0-android` in `Nostrid` inner project
+11. For MacOS: run `dotnet publish -c Release -f net7.0-maccatalyst` in `Nostrid` inner project
 
 ## Authors
 
