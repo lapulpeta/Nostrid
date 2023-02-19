@@ -10,9 +10,12 @@ public class AllSubscriptionFilter : SubscriptionFilter, IRelayFilter, IDbFilter
     
     private readonly EventDatabase eventDatabase;
 
+    private Lazy<Context> db;
+
     public AllSubscriptionFilter(EventDatabase eventDatabase)
     {
         this.eventDatabase = eventDatabase;
+        db = new(() => eventDatabase.CreateContext());
     }
 
     public override NostrSubscriptionFilter[] GetFilters()
@@ -27,8 +30,7 @@ public class AllSubscriptionFilter : SubscriptionFilter, IRelayFilter, IDbFilter
 
     public NostrSubscriptionFilter[] GetFiltersForRelay(long relayId)
     {
-        using var db = eventDatabase.CreateContext();
-        if (db.Relays.Any(r => r.Id == relayId && r.IsPaid))
+        if (db.Value.Relays.Any(r => r.Id == relayId && r.IsPaid))
         {
             return new[] { new NostrSubscriptionFilter() { Kinds = validKinds, Limit = LimitFilterData?.Limit, Since = LimitFilterData?.Since, Until = LimitFilterData?.Until } };
         }
