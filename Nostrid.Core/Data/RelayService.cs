@@ -262,19 +262,23 @@ public class RelayService
                 }
             }
 
-            if (newEvents.Count > 0)
+            // Optimization: re-check filter as it may have been deleted since we checked it at the beginning
+            if (filterBySubscriptionId.ContainsKey(subscriptionId))
             {
-                filter.Handler?.Invoke(newEvents);
-                ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
-                if (filter.DestroyOnFirstEvent)
+                if (newEvents.Count > 0)
+                {
+                    filter.Handler?.Invoke(newEvents);
+                    ReceivedEvents?.Invoke(this, (filter.Id, newEvents));
+                    if (filter.DestroyOnFirstEvent)
+                    {
+                        DeleteFilters(filter);
+                        destroyed = true;
+                    }
+                }
+                if (!destroyed && filter.DestroyOn.HasValue && filter.DestroyOn < DateTimeOffset.UtcNow)
                 {
                     DeleteFilters(filter);
-                    destroyed = true;
                 }
-            }
-            if (!destroyed && filter.DestroyOn.HasValue && filter.DestroyOn < DateTimeOffset.UtcNow)
-            {
-                DeleteFilters(filter);
             }
         }
     }
@@ -622,6 +626,10 @@ public class RelayService
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
             catch
             {
                 // Retry
@@ -668,6 +676,10 @@ public class RelayService
                         }
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
             }
             catch
             {

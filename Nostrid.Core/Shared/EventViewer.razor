@@ -101,7 +101,6 @@
 
 @code {
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
-    private SubscriptionFilter? subscriptionFilter;
 
     protected override void OnParametersSet()
     {
@@ -110,13 +109,7 @@
 
         Cleanup();
 
-        var repostEventId = Event.RepostEventId;
-        if (repostEventId != null)
-        {
-            relayService.AddFilters(subscriptionFilter = new SingleEventSubscriptionFilter(repostEventId){ DestroyOnEose = true, DestroyOnFirstEvent = true });
-        }
-
-        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId);
+        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
 
         var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
         accountService.AddDetailsNeeded(accountIds);
@@ -142,11 +135,7 @@
 
     private void Cleanup()
     {
-        if (subscriptionFilter != null)
-        {
-            relayService.DeleteFilters(subscriptionFilter);
-        }
-        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId);
+        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
     }
     #endregion
 }

@@ -8,7 +8,7 @@
 @inject NoteProcessor noteProcessor
 @inject EventDatabase eventDatabase
 @inject ConfigService configService
-@inject RelayService relayService
+@inject FeedService feedService
 @inject AccountService accountService
 
 @code{
@@ -47,7 +47,6 @@
 </div>
 
 @code {
-    private SubscriptionFilter? subscriptionFilter;
     private RenderFragment? content;
 
     protected override async Task OnParametersSetAsync()
@@ -70,16 +69,12 @@
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-        
+
         Cleanup();
-        
+
         if (ShowReplyTo && !string.IsNullOrEmpty(Event.ReplyToId))
         {
-            relayService.AddFilters(subscriptionFilter = new SingleEventSubscriptionFilter(Event.ReplyToId) 
-            { 
-                DestroyOnEose = true, 
-                DestroyOnFirstEvent = true 
-            });
+            feedService.AddDetailsNeeded(Event.ReplyToId);
         }
 
         if (Event != null)
@@ -109,10 +104,7 @@
 
     private void Cleanup()
     {
-        if (subscriptionFilter != null)
-        {
-            relayService.DeleteFilters(subscriptionFilter);
-        }
+        feedService.RemoveDetailsNeeded(Event.ReplyToId);
     }
     #endregion
 }

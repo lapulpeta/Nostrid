@@ -160,7 +160,7 @@
         });
     }
 
-    private void ReceivedNotes(IEnumerable<Event> notes, bool fromNew)
+    private void ReceivedNotes(IEnumerable<Event> notes)
     {
         if (_disposed)
         {
@@ -198,9 +198,9 @@
         renderedIds = new string[0];
 
         newFilter = BaseFilter.Clone();
-        newFilter.Handler = (events) => ReceivedNotes(events, true);
+        newFilter.Handler = ReceivedNotes;
         oldFilter = BaseFilter.Clone();
-        oldFilter.Handler = (events) => ReceivedNotes(events, false);
+        oldFilter.Handler = ReceivedNotes;
         oldFilter.LimitFilterData.Limit = RelayQueryLimit;
         oldFilter.LimitFilterData.Until = DateTimeOffset.UtcNow;
         newFilter.LimitFilterData.Limit = 1;
@@ -218,9 +218,7 @@
         if (!renderedN.ContainsKey(data.EventId))
             return;
 
-        renderedN[data.Child.Id] = data.Child;
-        TrimOlder();
-        UpdateIfNeeded();
+        ReceivedNotes(new[] { data.Child });
     }
 
     private void TrimOlder()
