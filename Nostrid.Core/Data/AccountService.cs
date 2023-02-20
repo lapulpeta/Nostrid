@@ -237,6 +237,12 @@ public class AccountService
         followerRequestFilters.TryRemove(filterId, out _);
     }
 
+    public List<string> GetFollowsFromEvent(Event ev)
+    {
+        var followList = ev.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1).Distinct().ToList();
+        return followList;
+    }
+
     // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md
     public void HandleKind3(Event eventToProcess, string filterId)
     {

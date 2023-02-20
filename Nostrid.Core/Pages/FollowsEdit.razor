@@ -1,0 +1,89 @@
+﻿@page "/follows"
+@implements IDisposable
+
+@using Nostrid.Data;
+@using Nostrid.Data.Relays;
+@using Nostrid.Interfaces;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@using System.Collections.Concurrent;
+
+@inject AccountService accountService
+@inject RelayService relayService
+
+This page shows all your current and past follows.
+Your follows are NOT changed unless you press the UPDATE button.
+If there are missing follows then try connecting to other relays.
+
+@foreach (var (followId, lastUpdated) in follows ?? new())
+{
+    <FollowAccount AccountId="@followId"></FollowAccount>@lastUpdated
+}
+
+@code {
+    private ConcurrentDictionary<string, DateTimeOffset>? follows;
+    private SubscriptionFilter? filter;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+
+        follows = new();
+        filter = new PastFollowsSubscriptionFilter(accountService.MainAccount.Id)
+        {
+            DontSaveInLocalCache = true,
+            Handler = ReceivedEvents,
+        };
+        relayService.AddFilters(filter);
+    }
+
+    private void ReceivedEvents(IEnumerable<Event> events)
+    {
+        foreach (var ev in events)
+        {
+            var newFollows = accountService.GetFollowsFromEvent(ev);
+            MergeContacts(newFollows, ev.CreatedAt ?? DateTimeOffset.MinValue);
+        }
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void MergeContacts(IEnumerable<string> newFollows, DateTimeOffset eventTime)
+    {
+        foreach (var follow in newFollows)
+        {
+            follows.AddOrUpdate(follow, eventTime, (_, oldv) => oldv > eventTime ? oldv : eventTime);
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        if (filter != null)
+        {
+            relayService.DeleteFilters(filter);
+        }
+    }
+    #endregion
+}
