@@ -10,6 +10,7 @@
 
 @inject AccountService accountService
 @inject RelayService relayService
+@inject FeedService feedService
 
 This page shows all your current and past follows.
 Your follows are NOT changed unless you press the UPDATE button.
@@ -40,6 +41,7 @@ If there are missing follows then try connecting to other relays.
             Handler = ReceivedEvents,
         };
         relayService.AddFilters(filter);
+        ReceivedEvents(feedService.GetNotesFeed(filter, int.MaxValue));
     }
 
     private void ReceivedEvents(IEnumerable<Event> events)
@@ -57,6 +59,7 @@ If there are missing follows then try connecting to other relays.
         foreach (var follow in newFollows)
         {
             follows.AddOrUpdate(follow, eventTime, (_, oldv) => oldv > eventTime ? oldv : eventTime);
+            accountService.AddDetailsNeeded(follow);
         }
     }
 

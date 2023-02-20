@@ -592,7 +592,7 @@ namespace Nostrid.Data
             db.SaveChanges();
         }
 
-        public void SetFollows(string accountId, List<string> followIds)
+        public void SetFollows(string accountId, IEnumerable<string> followIds)
         {
             using var db = new Context(_dbfile);
             db.Follows.Where(f => f.AccountId == accountId).ExecuteDelete();
