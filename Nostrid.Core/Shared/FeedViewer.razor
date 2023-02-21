@@ -17,25 +17,12 @@
 
     [Parameter]
     public bool ShowAsMessages { get; set; }
-
-    [CascadingParameter]
-    public Scripts? Scripts { get; set; }
 }
 
 <div @ref="container"
      class="px-3 d-flex flex-column flex-grow-1 @(ShowAsMessages ? "position-relative flex-column-reverse overflow-y-auto" : "")"
      style="margin: 0 -1rem -1rem -1rem; flex-basis: 0;">
-    
-    <ElementObserver OnIntersecting="@ShowNewPostsIntersecting" Margin="-30px" />
-    <UpdatabableElement @ref="@labelShowNewPosts">
-        @if (newN.Count > 0)
-        {
-            <div class="sticky-top text-center px-3 @(!isShowNewPostsFloating ? "border-top" : "")" style="top: 30px; margin: 0 -1rem; z-index: 10;">
-                <button class="btn @(isShowNewPostsFloating ? "btn-primary shadow" : "btn-link") my-2" type="button" @onclick="ShowNewPosts">Show @newN.Count new posts</button>
-            </div>
-        }
-    </UpdatabableElement>
-    
+     
     @{
         var trees = ShowAsMessages ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
         // Root nodes are sorted newest on top
@@ -58,14 +45,26 @@
         </UpdatabableElement>
     </div>
 
-    <div class="position-absolute" style="height: 44px; width: 44px; @(!ShowAsMessages ? "bottom" : "top"): 1rem; right: 1rem;">
-        <div class="position-fixed">
-            <UpdatabableElement @ref="@labelLoadMoreFromNote">
-                <button disabled="@requestDisabled" @onclick="@(async () => await LoadMoreFromNoteAsync())" type="button" class="btn btn-secondary rounded-5 shadow fs-4">
+    <div class="position-absolute" style="height: 40px; width: 40px; @(!ShowAsMessages ? "bottom" : "top"): 1rem; right: 1rem;">
+        <UpdatabableElement @ref="@labelLoadMoreFromNote">
+            <div class="position-fixed">
+                <button type="button" @onclick="@(async () => await LoadMoreFromNoteAsync())" disabled="@requestDisabled"
+                        class="btn btn-secondary rounded-5 shadow fs-4" style="right: 1rem;">
                     <i class="bi bi-arrow-repeat"></i>
                 </button>
-            </UpdatabableElement>
-        </div>
+            </div>
+        </UpdatabableElement>
+        <UpdatabableElement @ref="@labelShowNewPosts">
+            @if (newN.Count > 0)
+            {
+                <div class="position-fixed" style="left: 50%;">
+                    <button type="button" @onclick="ShowNewPosts"
+                            class="btn btn-primary my-2" style="margin-left: -50%; margin-top: -3px;">
+                            Show @newN.Count new posts
+                    </button>
+                </div>
+            }
+        </UpdatabableElement>
     </div>
 
 </div>
@@ -78,7 +77,6 @@
     private NoteTreeViewer? noteTreeViewer;
     private bool requestDisabled;
     private UpdatabableElement? labelShowNewPosts, labelLoadMore, labelLoadMoreFromNote;
-    private bool isShowNewPostsFloating = false;
     private ElementReference? container;
     private static object lockobj = new();
     private bool loading = false;
@@ -92,20 +90,10 @@
     private const int RelayQueryLimit = 13;
     private const int SecondsForDetailsFilters = 30;
 
-    private async Task ShowNewPosts()
+    private void ShowNewPosts()
     {
         EventExtension.MergeAndClear(renderedN, newN);
         TrimOlder();
-        if (Scripts != null && container != null)
-        {
-            await Scripts.InvokeVoidAsync("scrollTop", container, 0);
-        }
-    }
-
-    private void ShowNewPostsIntersecting(object? sender, bool intersecting)
-    {
-        isShowNewPostsFloating = !intersecting;
-        labelShowNewPosts?.Update();
     }
 
     private void LoadMoreIntersecting(object? sender, bool intersecting)
