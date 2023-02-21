@@ -139,6 +139,7 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 ### Guides
 
 1. [How to use the Follows editor](Doc/HowToUseFollowsEditor.md)
+2. [How to configure a proxy](Doc/HowToSetupProxy.md)
 
 ### Building
 
