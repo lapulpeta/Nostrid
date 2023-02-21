@@ -1,0 +1,183 @@
+﻿@page "/follows"
+@implements IDisposable
+
+@using Nostrid.Data;
+@using Nostrid.Data.Relays;
+@using Nostrid.Interfaces;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@using System.Collections.Concurrent;
+@using Microsoft.AspNetCore.Components.Web.Virtualization;
+
+@inject AccountService accountService
+@inject RelayService relayService
+@inject FeedService feedService
+
+@code
+{
+    [CascadingParameter]
+    public Alert? Alert { get; set; }
+}
+
+<div class="alert alert-light m-0" role="alert">
+    These are your current and previous follows. Source data is what is stored in your local
+    database and what is reported by relays.
+    If there are missing follows then try connecting to other relays.
+    Your follows are NOT changed unless you press the UPDATE button.
+    
+</div>
+
+<div style="margin: 0 -1rem;">
+    <div class="sticky-top border-bottom d-flex flex-row p-3 bg-body align-items-center">
+        <button class="btn btn-primary" @onclick="Update" disabled="@loading">
+            @if (loading)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span>Updating...</span>
+            }
+            else
+            {
+                <span>Update</span>
+            }
+        </button>
+        <div class="fs-7 d-flex flex-column flex-grow-1 ps-2">
+            <span>@(follows?.Values.Count(f => f.Selected)) will be followed</span>
+            <span>@(follows?.Values.Count(f => !f.Selected)) will not be followed</span>
+        </div>
+        <div class="d-flex flex-column align-items-end">
+            <label role="button" for="selectAll" class="fs-7">@(SelectAll ? "Unselect" : "Select") All</label>
+            <div class="form-check m-0">
+                <InputCheckbox id="selectAll" @bind-Value="SelectAll" class="form-check-input" style="width: 20px; height: 20px;" />
+            </div>
+        </div>
+    </div>
+    <Virtualize Context="follow" Items="follows?.Values">
+        <FollowAccount AccountId="@follow.AccountId" Selectable="true" @bind-Selected="follow.Selected">
+            @follow.EventTime
+        </FollowAccount>
+    </Virtualize>
+</div>
+
+@code {
+    private ConcurrentDictionary<string, Follow>? follows;
+    private SubscriptionFilter? filter;
+    private bool selectAll;
+    private bool SelectAll
+    {
+        get => selectAll;
+        set
+        {
+            selectAll = value;
+            ToggleAll(value);
+        }
+    }
+    private UpdatabableElement? updateButton;
+    private bool loading;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+
+        follows = new();
+        filter = new PastFollowsSubscriptionFilter(accountService.MainAccount.Id)
+        {
+            DontSaveInLocalCache = true,
+            Handler = ReceivedEvents,
+        };
+        relayService.AddFilters(filter);
+        ReceivedEvents(feedService.GetNotesFeed(filter, int.MaxValue));
+    }
+
+    private async Task Update()
+    {
+        var selectedAccountIds = follows?.Values.Where(follow => follow.Selected).Select(follow => follow.AccountId).ToList();
+        if (selectedAccountIds == null) return;
+        loading = true;
+        try
+        {
+            await accountService.SetFollows(selectedAccountIds);
+            Alert?.Show("Follows has been saved", Alert.Type.Success);
+        }
+        catch
+        {
+            Alert?.Show("Error updating follows", Alert.Type.Danger);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ToggleAll(bool value)
+    {
+        follows?.Values.ToList().ForEach(follow => follow.Selected = value);
+    }
+
+    private void ReceivedEvents(IEnumerable<Event> events)
+    {
+        foreach (var ev in events)
+        {
+            var newFollows = accountService.GetFollowsFromEvent(ev);
+            MergeContacts(newFollows, ev.CreatedAt ?? DateTimeOffset.MinValue);
+        }
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void MergeContacts(IEnumerable<string> newFollows, DateTimeOffset eventTime)
+    {
+        foreach (var follow in newFollows)
+        {
+            follows?.AddOrUpdate(
+                follow,
+                new Follow(follow, eventTime, accountService.IsFollowing(follow)),
+                (_, oldv) => oldv.EventTime > eventTime ? oldv : new Follow(follow, eventTime, accountService.IsFollowing(follow)));
+            accountService.AddDetailsNeeded(follow);
+        }
+    }
+
+    private class Follow
+    {
+        public string AccountId { get; set; }
+        public DateTimeOffset EventTime { get; set; }
+        public bool Selected { get; set; }
+
+        public Follow(string accountId, DateTimeOffset eventTime, bool selected)
+        {
+            AccountId = accountId;
+            EventTime = eventTime;
+            Selected = selected;
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        if (filter != null)
+        {
+            relayService.DeleteFilters(filter);
+        }
+    }
+    #endregion
+}

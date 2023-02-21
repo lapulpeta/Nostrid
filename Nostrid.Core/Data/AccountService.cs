@@ -132,6 +132,18 @@ public class AccountService
         return eventDatabase.IsFollowing(MainAccount.Id, accountToCheckId);
     }
 
+    public async Task SetFollows(IEnumerable<string> follows)
+    {
+        if (MainAccount == null)
+            return;
+
+        lock (eventDatabase)
+        {
+            eventDatabase.SetFollows(MainAccount.Id, follows);
+        }
+        await SendContactList();
+    }
+
     public async Task FollowUnfollow(string otherAccountId, bool unfollow)
     {
         lock (eventDatabase)
@@ -235,6 +247,12 @@ public class AccountService
     public void UnregisterFollowerRequestFilter(string filterId)
     {
         followerRequestFilters.TryRemove(filterId, out _);
+    }
+
+    public List<string> GetFollowsFromEvent(Event ev)
+    {
+        var followList = ev.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1).Distinct().ToList();
+        return followList!;
     }
 
     // NIP-02: https://github.com/nostr-protocol/nips/blob/master/02.md

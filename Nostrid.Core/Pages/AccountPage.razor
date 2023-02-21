@@ -16,6 +16,7 @@
 @inject RelayService relayService
 @inject IClipboardService clipboardService
 @inject EventDatabase eventDatabase
+@inject NavigationManager navigationManager
 
 <div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
 
@@ -57,10 +58,16 @@
         }
         @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
         {
-            <div class="btn-group mb-3" role="group">
+            <div class="btn-group mb-3 me-3" role="group">
                 <button type="button" class="btn btn-outline-primary" @onclick="@(() => payModal?.Show(account.Id))">
                     <i class="bi bi-lightning-charge"></i> Pay
                 </button>
+            </div>
+        }
+        @if (IsMainAccountLoaded && IsMainAccount)
+        {
+            <div class="mb-3 me-3">
+                <button class="btn btn-link px-0" @onclick="@(() => navigationManager.NavigateTo("follows"))">Edit follows</button>
             </div>
         }
     </div>
