@@ -8,22 +8,75 @@
 @code {
     [Parameter, EditorRequired]
     public string AccountId { get; set; } = null!;
+
+    [Parameter]
+    public bool Selectable { get; set; }
+
+    [Parameter]
+    public bool Selected
+    {
+        get => selected;
+        set
+        {
+            if (selected != value)
+            {
+                selected = value;
+                SelectedChanged?.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<bool>? SelectedChanged { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
 }
 
-<div role="button" @onclick="@(() => navigationManager.NavigateTo($"account/{AccountId}"))" class="d-flex flex-row align-items-start p-3 bg-tertiary-hover text-decoration-none">
+<div role="button" @onclick="@(Click)" class="d-flex flex-row align-items-center p-3 bg-tertiary-hover text-decoration-none">
     <div class="d-flex flex-shrink-0">
         <AccountPicture Id="@AccountId" Size="48" />
     </div>
     <div class="d-flex flex-column flex-grow-1 ms-3">
+        <div class="fs-7 mb-1 lh-1 text-body-tertiary text-break">@ChildContent</div>
         <div class="d-flex flex-row align-items-center">
             <div class="fs-5 fw-bolder lh-1 flex-grow-1">
                 <AccountName Id="@AccountId" />
             </div>
             @if (accountService.MainAccount != null && accountService.MainAccount.Id != AccountId)
             {
-                <FollowButton AccountId="@AccountId" Css="btn-sm" />
+                if (!Selectable)
+                {
+                    <FollowButton AccountId="@AccountId" Css="btn-sm" />
+                }
+                else
+                {
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" style="width: 20px; height: 20px;"
+                            checked="@Selected"
+                            @onchange="@(args => Selected = (args.Value as bool?) ?? false)"
+                            @onclick:stopPropagation="true">
+                    </div>
+                }
             }
         </div>
         <div class="fs-7 mt-1 lh-1 text-body-tertiary text-break">@ByteTools.PubkeyToNpub(AccountId)</div>
     </div>
 </div>
+
+@code
+{
+    private bool selected;
+
+    private void Click()
+    {
+        if (Selectable)
+        {
+            Selected = !Selected;
+        }
+        else
+        {
+            navigationManager.NavigateTo($"account/{AccountId}");
+        }
+    }
+}
