@@ -35,6 +35,8 @@ For a quick start check out the [Installation](#Installation) section below.
 - [x] Display embedded images, videos and audios
 - [x] Reposts (aka Boosts)
 - [x] Embedded mentions of other accounts and notes - PARTIAL (only links, no previews)
+- [x] Proxy support (http(s), socks4/5)
+- [x] Follows editor that can recover old follows
 - [x] Direct messages
 - [x] Channels - PARTIAL (can join and participate but can't create channels yet)
 - [x] NIP-57 zaps - PARTIAL (can display zaps but can only send standard Lightning payments)
@@ -133,6 +135,10 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
 
 * MacOS
     * Download PKG and install. Since the package is unsigned you may have to control-click and choose `Open with...` > `Installer`.
+
+### Guides
+
+1. [How to use the Follows editor](Doc/HowToUseFollowsEditor.md)
 
 ### Building
 
