@@ -528,7 +528,7 @@ namespace Nostrid.Data
             {
                 ReactionGroups = new(counts
                     .Where(c => c.Kind == NostrKind.Reaction)
-                    .Select(c => new ReactionGroup() { Reaction = c.ReactionType, Count = c.Count })),
+                    .ToDictionary(c => c.ReactionType, c => c.Count)),
                 Reposts = counts.Where(c => c.Kind == NostrKind.Repost).Sum(c => c.Count),
                 Zaps = counts.Where(c => c.Kind == NostrKind.Zap).Sum(c => c.Count),
             };

@@ -105,8 +105,8 @@
             </div>
             @{
                 const int MAX_GROUPS = 1;
-                var groupedReactions = eventDetailsCount?.ReactionGroups;
-                if (groupedReactions?.Count > 0)
+                var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
+                if (groupedReactions?.Any() ?? false)
                 {
                     <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
                         @{

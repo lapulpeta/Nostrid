@@ -4,7 +4,7 @@ namespace Nostrid.Model;
 
 public class EventDetailsCount
 {
-    public ConcurrentBag<ReactionGroup> ReactionGroups = new();
+    public ConcurrentDictionary<string, int> ReactionGroups = new();
 
     public int Reposts;
 
@@ -14,9 +14,9 @@ public class EventDetailsCount
     {
         Interlocked.Add(ref Reposts, delta.Reposts);
         Interlocked.Add(ref Zaps, delta.Zaps);
-        foreach (var reactionGroup in delta.ReactionGroups)
+        foreach (var (reaction, count) in delta.ReactionGroups)
         {
-            ReactionGroups.Add(reactionGroup);
+            ReactionGroups.AddOrUpdate(reaction, count, (_, oldv) => oldv + count);
         }
     }
 }

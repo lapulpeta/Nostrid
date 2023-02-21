@@ -130,7 +130,7 @@ public class FeedService
             {
                 NostrKind.Repost => new() { Reposts = 1 },
                 NostrKind.Zap => new() { Zaps = 1 },
-                NostrKind.Reaction => new() { ReactionGroups = new() { new ReactionGroup() { Reaction = eventToProcess.Content, Count = 1 } } },
+                NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content] = 1 } },
                 _ => new()
             };
             NoteCountChanged?.Invoke(this, (etag.Data1, delta));
