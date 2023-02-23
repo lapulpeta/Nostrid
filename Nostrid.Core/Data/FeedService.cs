@@ -167,7 +167,8 @@ public class FeedService
     public List<Event> GetNotesThread(string eventId, out string? rootId)
     {
         using var db = eventDatabase.CreateContext();
-        var note = db.Events.Where(e => e.Kind == NostrKind.Text && (e.Id == eventId || e.ReplyToRootId == eventId || e.ReplyToId == eventId)).FirstOrDefault();
+        var note = db.Events.Where(e => e.Kind == NostrKind.Text && e.Id == eventId).FirstOrDefault();
+        note ??= db.Events.Where(e => e.Kind == NostrKind.Text && (e.ReplyToRootId == eventId || e.ReplyToId == eventId)).FirstOrDefault();
         if (note == null)
         {
             rootId = null;
