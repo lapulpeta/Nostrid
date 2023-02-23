@@ -3,6 +3,7 @@
 @using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
+@using System.Collections.Concurrent;
 @inject AccountService accountService
 @inject FeedService feedService
 
@@ -12,7 +13,7 @@
     <NoteComposer />
 </div>
 
-<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" OnLoaded="@OnLoaded" />
 
 @code {
     private SubscriptionFilter? filter;
@@ -22,11 +23,13 @@
         if (accountService.MainAccount == null) return;
 
         filter = new MentionSubscriptionFilter(accountService.MainAccount.Id);
+    }
 
-        var notesFeed = feedService.GetNotesFeed(filter, 1);
+    private void OnLoaded(ConcurrentDictionary<string, Event> notesFeed)
+    {
         if (notesFeed.Any())
         {
-            var newestNoteDate = DateTimeOffset.FromUnixTimeSeconds(notesFeed.Max(n => n.CreatedAtCurated)).UtcDateTime;
+            var newestNoteDate = DateTimeOffset.FromUnixTimeSeconds(notesFeed.Max(n => n.Value.CreatedAtCurated)).UtcDateTime;
             accountService.SetLastRead(newestNoteDate);
         }
     }

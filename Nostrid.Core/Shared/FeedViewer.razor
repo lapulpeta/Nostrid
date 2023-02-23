@@ -17,6 +17,9 @@
 
     [Parameter]
     public bool ShowAsMessages { get; set; }
+
+    [Parameter]
+    public Action<ConcurrentDictionary<string, Event>>? OnLoaded { get; set; }
 }
 
 <div @ref="container"
@@ -120,6 +123,7 @@
             EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
             loading = false;
             moreResults = renderedN.Count > prevRenderedN;
+            OnLoaded?.Invoke(renderedN);
             InvokeAsync(() => StateHasChanged());
         });
     }
