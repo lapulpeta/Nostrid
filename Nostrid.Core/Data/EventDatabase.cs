@@ -23,6 +23,11 @@ namespace Nostrid.Data
         {
             _dbfile = dbfile;
             using var db = new Context(dbfile);
+            var path = Path.GetDirectoryName(dbfile);
+            if (path.IsNotNullOrEmpty() && !Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
             if (db.Database.SqlQuery<bool>($"SELECT 1 AS [Value] FROM sqlite_master WHERE type='table' AND name='__EFMigrationsHistory'").FirstOrDefault())
             {
                 db.Database.ExecuteSql($"UPDATE __EFMigrationsHistory SET MigrationId='20230209075431_ProxyConfig' WHERE MigrationId='20230208180012_RelayFilters'");
