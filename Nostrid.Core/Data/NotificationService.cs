@@ -80,5 +80,10 @@ namespace Nostrid
         {
             blockedDmNotifications.Remove((account1, account2));
         }
-    }
+
+		public (int, int) GetNotificationNumber()
+		{
+			return (mentionsCount, unreadDmCount);
+		}
+	}
 }

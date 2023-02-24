@@ -59,7 +59,7 @@
     public Scripts? Scripts { get; set; }
 }
 
-<div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-top @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
+<div role="button" @ref="referenceElement" class="note d-flex flex-row px-2 px-lg-3 py-2 bg-tertiary-hover border-bottom @(Tree.Note.Id == MainEventId ? "bg-body-secondary" : "")"
      @onclick="@HandleClick" style="margin: 0 -1rem;">
 
     @for (var i = 1; i < TreeLayout.Length; i++)

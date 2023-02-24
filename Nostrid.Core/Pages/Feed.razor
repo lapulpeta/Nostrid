@@ -1,0 +1,124 @@
+﻿@page "/feed"
+@using Nostrid.Data;
+
+@inject NavigationManager navigationManager
+@inject NotificationService notificationService
+@inject AccountService accountService
+
+@implements IDisposable
+
+<h3>Feed</h3>
+
+@if (accountService.MainAccount != null)
+{
+    <ul class="sticky-top nav nav-pills-2 d-flex flex-row mx--3 bg-body border-bottom">
+        <li class="nav-item flex-grow-1">
+            <NavLink class="nav-link text-center bg-tertiary-hover rounded-0" href="/feed" Match="NavLinkMatch.All">
+                <span class="py-3">Global</span> 
+	        </NavLink>
+        </li>
+        <li class="nav-item flex-grow-1">
+            <NavLink class="nav-link text-center bg-tertiary-hover rounded-0" href="/feed/#following">
+                <span class="py-3">Following</span>
+	        </NavLink>
+        </li>
+        <li class="nav-item flex-grow-1">
+            <NavLink class="nav-link text-center bg-tertiary-hover rounded-0" href="/feed/#mentions">
+                <span class="py-3">
+                    Mentions
+                    <UpdatabableElement @ref="mentionsElement">
+                        @if (mentionsCount > 0)
+                        {
+                            <span class="badge rounded-pill bg-danger fs-8" style="vertical-align: 2px">
+                                @mentionsCount
+                            </span>
+                        }
+                    </UpdatabableElement>
+                </span>
+	        </NavLink>
+        </li>
+    </ul>
+
+    <div class="d-none d-md-flex mx--3 px-2 px-lg-3 py-2 border-bottom">
+        <NoteComposer />
+    </div>
+}
+@if (accountService.MainAccount != null && fragment == "#following")
+{
+    <FollowsFeed />
+}
+else if (accountService.MainAccount != null && fragment == "#mentions")
+{
+    <MentionsFeed />
+}
+else
+{
+    <GlobalFeed />
+}
+
+@code {
+    private Uri? currentBaseUri;
+    private string fragment = string.Empty;
+    private int mentionsCount;
+    private UpdatabableElement? mentionsElement;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        currentBaseUri = new Uri(navigationManager.BaseUri);
+        fragment = new Uri(navigationManager.Uri).Fragment;
+        navigationManager.LocationChanged += LocationChanged;
+        notificationService.NotificationNumberChanged += NotificationNumberChanged;
+		(mentionsCount, _) = notificationService.GetNotificationNumber();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            notificationService.Update();
+        }
+    }
+
+    private void LocationChanged(object? sender, LocationChangedEventArgs eventArgs)
+    {
+        var newLocation = new Uri(eventArgs.Location);
+        if (currentBaseUri?.IsBaseOf(newLocation) ?? false)
+        {
+            fragment = newLocation.Fragment;
+            StateHasChanged();
+        }
+    }
+
+    private void NotificationNumberChanged(object? sender, (int mentionsCount, int unreadDmCount) data)
+    {
+        mentionsCount = data.mentionsCount;
+        mentionsElement?.Update();
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        navigationManager.LocationChanged -= LocationChanged;
+        notificationService.NotificationNumberChanged -= NotificationNumberChanged;
+    }
+    #endregion
+}

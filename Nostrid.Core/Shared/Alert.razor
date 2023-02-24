@@ -1,12 +1,12 @@
 ﻿@implements IDisposable
 
-<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-0 mb-5">
+<div class="toast-container position-fixed bottom-0 start-50 w-100 translate-middle-x p-0 mb-5 d-flex flex-column align-items-center">
 	@foreach (var alert in alerts)
 	{
-		<div class="toast show align-items-center border-0 @alert.Item2 mb-3" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="toast show align-items-center border-0 @alert.Item2 mb-3" style="width: auto; max-width: 90%;" role="alert" aria-live="assertive" aria-atomic="true">
 			<div class="d-flex">
 				<div class="toast-body">
-					@alert.Item1
+					@((MarkupString)alert.Item1)
 				</div>
 				<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
 			</div>

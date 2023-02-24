@@ -1,14 +1,17 @@
-﻿@using Nostrid.Data;
+﻿@using Microsoft.Extensions.Logging;
+@using Nostrid.Data;
 @using Nostrid.Model;
 @using Nostrid.Pages;
+@using System.Diagnostics;
 
 @inject AccountService accountService
 @inject ConfigService configService
 @inject LocalSignerFactory localSignerFactory
+@inject ILogger<MainLayout> logger
 
 @inherits LayoutComponentBase
 
-<UpdatabableElement>
+<CustomErrorBoundary OnError="OnError">
 	<CascadingValue Value="@scripts">
 		<CascadingValue Value="@alert">
 			<NavMenu>
@@ -18,7 +21,7 @@
 			</NavMenu>
 		</CascadingValue>
 	</CascadingValue>
-</UpdatabableElement>
+</CustomErrorBoundary>
 
 <Alert @ref="alert"></Alert>
 <Scripts @ref="scripts" />
@@ -55,5 +58,13 @@
 				await scripts.InvokeVoidAsync("setTheme", configService.MainConfig.Theme ?? ConfigPage.DARK_THEME);
 			});
 		}
+	}
+
+	private void OnError(Exception e)
+	{
+		alert?.Show("An unhandled error has occurred. Click <a class='text-bg-danger' href='/'>here</a> to reload the application.", Alert.Type.Danger);
+		#if DEBUG
+		scripts?.JSRuntime?.InvokeVoidAsync("console.error", e.ToString());
+		#endif
 	}
 }
