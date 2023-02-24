@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+	<title>Nostrid</title>
+	<base href="/" />
+	<link href="css/app.css" rel="stylesheet" />
+	<link href="Nostrid.styles.css" rel="stylesheet" />
+</head>
+
+<body class="bg-body" data-bs-theme="dark">
+
+	<div class="status-bar-safe-area"></div>
+
+	<div id="app">
+		<div class="d-flex justify-content-center align-items-center flex-grow-1">
+			<div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	</div>
+
+	<div id="blazor-error-ui" style="z-index: 10000;">
+		An unhandled error has occurred.
+		<a href="" class="reload">Reload</a>
+		<a class="dismiss">🗙</a>
+	</div>
+
+	<script src="_framework/blazor.webview.js" autostart="true"></script>
+	<script src="lib/popper.js/umd/popper.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+
+</body>
+
+</html>
