@@ -64,34 +64,6 @@ namespace Nostrid.Photino
             };
 
             app.Run();
-
         }
-    }
-
-    public class NotificationCounter : INotificationCounter
-    {
-        public void SetNotificationCount(int count)
-        {
-            // TODO: Implement this
-        }
-    }
-
-    public class ClipboardService : IClipboardService
-    {
-        public async Task CopyAsync(string content)
-        {
-        }
-    }
-
-    public static class DbConstants
-    {
-        public const string DatabaseFilename = "Nostr.sqlite.db";
-        public const string AppName = "Nostrid";
-
-        public static string DatabasePath =>
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                AppName,
-                DatabaseFilename);
     }
 }
