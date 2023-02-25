@@ -5,9 +5,9 @@
 
 ---
 
-Nostrid is a multi-platform, open-source Nostr client. It is written in .NET and runs in Android, Windows and MacOS (it should run in iOS too but there are no binaries yet).
+Nostrid is a multi-platform, open-source Nostr client. It is written in .NET and runs in Windows, MacOS, Linux, Android and iOS.
 
-Also a [web version](https://web.nostrid.app/) is available. It runs completely on the browser, and it can even be installed locally as a [PWA](https://en.wikipedia.org/wiki/Progressive_web_app).
+Also a [web version](https://web.nostrid.app/) is available. It runs completely in the browser, and it can even be installed locally as a [PWA](https://en.wikipedia.org/wiki/Progressive_web_app).
 
 For a quick start check out the [Installation](#Installation) section below.
 
@@ -99,6 +99,7 @@ For a quick start check out the [Installation](#Installation) section below.
 * [Markdig](https://github.com/xoofx/markdig)
 * [QRCoder](https://github.com/codebude/QRCoder)
 * [Popper](https://popper.js.org/)
+* [Photino](https://www.tryphotino.io/)
 
 ### Contributing
 
