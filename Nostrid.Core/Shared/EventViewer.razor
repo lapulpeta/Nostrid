@@ -73,34 +73,42 @@
                 }
             </span>
         </p>
-        @switch (Event?.Kind)
-        {
-            case NostrKind.ChannelMessage:
-            case NostrKind.Text:
-                <div class="text-break note-content">
-                    @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
-                </div>
-                break;
-            case NostrKind.Repost:
-                if (Event.RepostEventId != null)
-                {
-                    var repostEvent = eventDatabase.GetEventOrNull(Event.RepostEventId);
-                    if (repostEvent != null)
+        <UpdatabableElement @ref="textContent">
+            @switch (Event?.Kind)
+            {
+                case NostrKind.ChannelMessage:
+                case NostrKind.Text:
+                    <div class="text-break note-content">
+                        @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
+                    </div>
+                    break;
+                case NostrKind.Repost:
+                    if (Event.RepostEventId != null)
                     {
-                        <div role="button" class="border border-secondary rounded-2 p-2"
-                             @onclick="@(() => navigationManager.NavigateTo($"/note/{repostEvent.Id}"))" @onclick:stopPropagation="true">
-                            <EventViewer Event="repostEvent" ShowReplyingTo="true" />
-                        </div>
+                        var repostEvent = eventDatabase.GetEventOrNull(Event.RepostEventId);
+                        if (repostEvent == null)
+                        {
+                            waitingForRepostedEvent = true;
+                        }
+                        else
+                        {
+                            <div role="button" class="border border-secondary rounded-2 p-2"
+                                 @onclick="@(() => navigationManager.NavigateTo($"/note/{repostEvent.Id}"))" @onclick:stopPropagation="true">
+                                <EventViewer Event="repostEvent" ShowReplyingTo="true" />
+                            </div>
+                        }
                     }
-                }
-                break;
-        }
+                    break;
+            }
+        </UpdatabableElement>
         @BottomPlaceholder
     </div>
 </div>
 
 @code {
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
+    private UpdatabableElement? textContent;
+    private bool waitingForRepostedEvent;
 
     protected override void OnParametersSet()
     {
@@ -111,8 +119,28 @@
 
         feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
 
+        if (Event.RepostEventId.IsNotNullOrEmpty())
+        {
+            feedService.NotesReceived += NotesReceived;
+        }
+
         var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
         accountService.AddDetailsNeeded(accountIds);
+    }
+
+    private void NotesReceived(object? sender, (string _, IEnumerable<Event> events) data)
+    {
+        if (_disposed || !waitingForRepostedEvent)
+        {
+            return;
+        }
+
+        var repostEventId = data.events.FirstOrDefault(e => e.Id == Event.RepostEventId);
+        if (repostEventId != null && textContent != null)
+        {
+            textContent.Update();
+            waitingForRepostedEvent = false;
+        }
     }
 
     #region Dispose
@@ -136,6 +164,7 @@
     private void Cleanup()
     {
         feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
+        feedService.NotesReceived -= NotesReceived;
     }
     #endregion
 }
