@@ -259,12 +259,9 @@ namespace Nostrid.Data
                 if (db.Events.Any(e => e.Id == ev.Id && e.CanEcho))
                 {
                     db.Events.Where(e => e.Id == ev.Id && e.CanEcho).ExecuteUpdate(e => e.SetProperty(e => e.CanEcho, false));
-                    ev.CreatedAtCurated = ((DateTimeOffset)ev.CreatedAt.Value).ToUnixTimeSeconds();
                     return true;
                 }
 
-                var now = DateTimeOffset.UtcNow;
-                ev.CreatedAtCurated = (!ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value).ToUnixTimeSeconds();
                 db.Add(ev);
                 db.SaveChanges();
                 return true;
@@ -440,7 +437,6 @@ namespace Nostrid.Data
             var ev = EventExtension.FromNostrEvent(nostrEvent);
             ev.Broadcast = broadcast;
             ev.CanEcho = true;
-            ev.CreatedAtCurated = nostrEvent.CreatedAt.Value.ToUnixTimeSeconds();
 
             db.Add(ev);
             db.SaveChanges();

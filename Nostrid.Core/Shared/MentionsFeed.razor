@@ -17,11 +17,11 @@
         filter = new MentionSubscriptionFilter(accountService.MainAccount.Id);
     }
 
-    private void OnLoaded(ConcurrentDictionary<string, Event> notesFeed)
+    private void OnLoaded(IEnumerable<NoteTree> notesFeed)
     {
         if (notesFeed.Any())
         {
-            var newestNoteDate = DateTimeOffset.FromUnixTimeSeconds(notesFeed.Max(n => n.Value.CreatedAtCurated)).UtcDateTime;
+            var newestNoteDate = DateTimeOffset.FromUnixTimeSeconds(notesFeed.Max(n => n.Note.CreatedAtCurated)).UtcDateTime;
             accountService.SetLastRead(newestNoteDate);
         }
     }

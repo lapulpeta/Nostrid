@@ -9,10 +9,12 @@ public static class EventExtension
 {
     public static Event FromNostrEvent(this NostrEvent ev)
     {
+        var now = DateTimeOffset.UtcNow;
         var ret = new Event()
         {
             Content = ev.Content,
             CreatedAt = ev.CreatedAt?.UtcDateTime,
+            CreatedAtCurated = (!ev.CreatedAt.HasValue || ev.CreatedAt > now ? now : ev.CreatedAt.Value).ToUnixTimeSeconds(),
             Deleted = ev.Deleted,
             Id = ev.Id,
             Kind = ev.Kind,
@@ -194,48 +196,29 @@ public static class EventExtension
         return 256; // Max
     }
 
-    public static void MergeAndClear(ConcurrentDictionary<string, Event> destination, ConcurrentDictionary<string, Event> source)
+    public static bool Merge(List<NoteTree> list, IEnumerable<Event> source)
     {
-        string id;
-        while ((id = source.Keys.FirstOrDefault()) != null)
-        {
-            if (source.TryRemove(id, out var ev))
-            {
-                Merge(destination, ev);
-            }
-        }
-    }
-
-    public static bool Merge(ConcurrentDictionary<string, Event> destination, IEnumerable<Event> source, Func<Event, bool> copyIf = null, Action<Event> onCopy = null)
-    {
-        var ret = false;
+        bool added = false;
         foreach (var ev in source)
         {
-            if (copyIf == null || copyIf(ev))
+            if (list.Exists(ev.Id))
             {
-                ret = true;
-                Merge(destination, ev, onCopy);
+                continue;
             }
-        }
-        return ret;
-    }
 
-    public static void Merge(ConcurrentDictionary<string, Event> destination, Event ev, Action<Event> onCopy = null)
-    {
-        destination.AddOrUpdate(
-            ev.Id,
-            addValueFactory: _ =>
+            int insertAt = list.Count;
+            for (int i = 0; i < list.Count; i++)
             {
-                onCopy?.Invoke(ev);
-                return ev;
-            },
-            updateValueFactory: (_, old) =>
-            {
-                var copy = false; // !old.Processed && ev.Processed;
-                if (copy)
-                    onCopy?.Invoke(ev);
-                return copy ? ev : old;
-            });
+                if (list[i].Note.CreatedAtCurated < ev.CreatedAtCurated)
+                {
+                    insertAt = i;
+                    break;
+                }
+            }
+            list.Insert(insertAt, new NoteTree(ev));
+            added = true;
+        }
+        return added;
     }
 }
 

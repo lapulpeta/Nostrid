@@ -247,7 +247,7 @@ public class RelayService
                         continue;
                 }
 
-                if (filter.DontSaveInLocalCache || eventDatabase.SaveNewEvent(ev, relay))
+                if (filter.DontSaveInLocalCache || eventDatabase.SaveNewEvent(ev, relay) || filter.Handler != null)
                 {
                     newEvents.Add(ev);
                 }

@@ -19,19 +19,14 @@
     public bool ShowAsMessages { get; set; }
 
     [Parameter]
-    public Action<ConcurrentDictionary<string, Event>>? OnLoaded { get; set; }
+    public Action<IEnumerable<NoteTree>>? OnLoaded { get; set; }
 }
 
 <div @ref="container"
      class="px-3 d-flex flex-column flex-grow-1 @(ShowAsMessages ? "position-relative flex-column-reverse overflow-y-auto" : "")"
      style="margin: 0 -1rem -1rem -1rem; flex-basis: 0;">
      
-    @{
-        var trees = ShowAsMessages ? feedService.GetTreesFromNotesNoGrouping(renderedN.Values) : feedService.GetTreesFromNotes(renderedN.Values);
-        // Root nodes are sorted newest on top
-        trees.Sort((a, b) => b.Note.CreatedAtCurated.CompareTo(a.Note.CreatedAtCurated));
-    }
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@trees" ShowAsMessage="@ShowAsMessages" />
+    <NoteTreeViewer @ref="noteTreeViewer" Trees="@renderedN" ShowAsMessage="@ShowAsMessages" />
     
     <div class="text-center px-3 py-2" style="margin: 0 -1rem;">
         <UpdatabableElement @ref="@labelLoadMore">
@@ -70,10 +65,10 @@
 </div>
 
 @code {
-    private ConcurrentDictionary<string, Event> renderedN = new(), newN = new(), oldN = new();
+    private ConcurrentDictionary<string, bool> receivedIds = new();
+    private List<NoteTree> renderedN = new(), newN = new();
     private int dbLimit;
     private SubscriptionFilter? newFilter, oldFilter;
-    private string[]? renderedIds;
     private NoteTreeViewer? noteTreeViewer;
     private bool requestDisabled;
     private UpdatabableElement? labelLoadMore, buttonLoadMoreFromNote;
@@ -86,14 +81,19 @@
     private Task? updateTask;
     private CancellationTokenSource cancellationTokenSource = new();
 
+    private const int InitialRenderInSeconds = 2;
     private const int MinSecondsBetweenUpdates = 3;
     private const int RelayQueryLimit = 13;
     private const int SecondsForDetailsFilters = 30;
 
     private void ShowNewPosts()
     {
-        EventExtension.MergeAndClear(renderedN, newN);
-        TrimOlder();
+        lock (lockobj)
+        {
+            EventExtension.Merge(renderedN, newN.AllNotes());
+            newN.Clear();
+            TrimOlder();
+        }
     }
 
     private void LoadMoreIntersecting(object? sender, bool intersecting)
@@ -162,22 +162,38 @@
             return;
         }
 
-        notes = notes.Where(n => MessageKinds.Contains(n.Kind));
+        notes = notes.Where(n => MessageKinds.Contains(n.Kind) && receivedIds.TryAdd(n.Id, true)).ToList();
         if (!notes.Any())
         {
             return;
         }
 
+        bool added = false;
         if (ShowAsMessages)
         {
-            EventExtension.Merge(renderedN, notes);
-            TrimOlder();
-            UpdateIfNeeded();
+            lock (lockobj)
+            {
+                if (EventExtension.Merge(renderedN, notes))
+                {
+                    added = true;
+                    TrimOlder();
+                }
+            }
+            if (added)
+            {
+                UpdateIfNeeded();
+            }
         }
         else
         {
-            EventExtension.Merge(newN, notes);
-            buttonLoadMoreFromNote?.Update();
+            lock (lockobj)
+            {
+                added = EventExtension.Merge(newN, notes);
+            }
+            if (added)
+            {
+                buttonLoadMoreFromNote?.Update();
+            }
         }
     }
 
@@ -189,8 +205,7 @@
 
         renderedN = new();
         newN = new();
-        oldN = new();
-        renderedIds = new string[0];
+        receivedIds = new();
 
         newFilter = BaseFilter.Clone();
         newFilter.Handler = ReceivedNotes;
@@ -205,9 +220,7 @@
 
         LoadMore();
 
-        feedService.NoteReceivedChild += NoteReceivedChild;
-
-        Task.Delay(3000).ContinueWith((_) =>
+        Task.Delay(TimeSpan.FromSeconds(InitialRenderInSeconds)).ContinueWith((_) =>
         {
             if (renderedN.Count == 0)
             {
@@ -216,42 +229,25 @@
         });
     }
 
-    private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
-    {
-        if (!renderedN.ContainsKey(data.EventId))
-            return;
-
-        ReceivedNotes(new[] { data.Child });
-    }
-
     private void TrimOlder()
     {
         if (renderedN == null || renderedN.Count <= dbLimit)
         {
             return;
         }
-
-        if (renderedN.Count > dbLimit * 2)
-        {
-            // Better to create a new list
-            renderedN = new(renderedN.OrderByDescending(n => n.Value.CreatedAtCurated).Take(dbLimit));
-        }
-        else
-        {
-            // Better to remove older items
-            var toRemove = renderedN.Values.OrderByDescending(n => n.CreatedAtCurated).Select(n => n.Id).Skip(dbLimit).ToList();
-            foreach (var item in toRemove)
-            {
-                renderedN.TryRemove(item, out _);
-            }
-        }
+        renderedN.RemoveRange(dbLimit, renderedN.Count - dbLimit);
     }
 
     private void UpdateIfNeeded()
     {
-        var waitFor = lastUpdate.AddSeconds(MinSecondsBetweenUpdates) < DateTime.UtcNow ? 0 : MinSecondsBetweenUpdates;
+        if (updateTask != null)
+        {
+            return;
+        }
+        var waitFor = Math.Min(Math.Max((lastUpdate.AddSeconds(MinSecondsBetweenUpdates) - DateTime.UtcNow).TotalSeconds, 0), MinSecondsBetweenUpdates);
         updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor), cancellationTokenSource.Token).ContinueWith((_) =>
         {
+            lastUpdate = DateTime.UtcNow;
             InvokeAsync(() => StateHasChanged());
             updateTask = null;
         }, cancellationTokenSource.Token);
@@ -277,7 +273,6 @@
 
     private void Cleanup()
     {
-        feedService.NoteReceivedChild -= NoteReceivedChild;
         relayService.DeleteFilters(newFilter, oldFilter);
         cancellationTokenSource.Cancel();
     }
