@@ -206,6 +206,14 @@
         LoadMore();
 
         feedService.NoteReceivedChild += NoteReceivedChild;
+
+        Task.Delay(3000).ContinueWith((_) =>
+        {
+            if (renderedN.Count == 0)
+            {
+                LoadMore();
+            }
+        });
     }
 
     private void NoteReceivedChild(object? sender, (string EventId, Event Child) data)
