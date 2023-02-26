@@ -33,6 +33,7 @@ public class FeedService
         this.channelService = channelService;
         this.dmService = dmService;
         this.relayService.ReceivedEvents += ReceivedEvents;
+        StartDetailsUpdater();
     }
 
     private void HandleEvent(Event eventToProcess, string filterId)

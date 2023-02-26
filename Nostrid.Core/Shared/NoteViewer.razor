@@ -243,16 +243,12 @@
     public const int MaxNestingLevel = 4;
     public const int MaxChildren = 5;
 
-    protected override void OnInitialized()
-    {
-        feedService.NoteCountChanged += NoteCountChanged;
-        feedService.NoteDeleted += NoteDeleted;
-    }
-
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
         eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
+        feedService.NoteCountChanged += NoteCountChanged;
+        feedService.NoteDeleted += NoteDeleted;
     }
 
     protected override void OnAfterRender(bool firstRender)
