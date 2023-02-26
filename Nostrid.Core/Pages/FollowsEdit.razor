@@ -28,24 +28,30 @@
 </div>
 
 <div style="margin: 0 -1rem;">
-    <div class="sticky-top border-bottom d-flex flex-row p-3 bg-body align-items-center">
-        <button class="btn btn-primary" @onclick="Update" disabled="@loading">
-            @if (loading)
-            {
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span>Updating...</span>
-            }
-            else
-            {
-                <span>Update</span>
-            }
-        </button>
-        <div class="fs-7 d-flex flex-column flex-grow-1 ps-2">
-            <span>@(follows?.Values.Count(f => f.Selected)) will be followed</span>
-            <span>@(follows?.Values.Count(f => !f.Selected)) will not be followed</span>
+    <div class="sticky-top border-bottom d-flex flex-row p-3 bg-body">
+        <div class="d-flex flex-row flex-grow-1 align-items-center flex-wrap">
+            <div class="btn-group me-3 mb-1">
+                <button class="btn btn-outline-secondary" @onclick="OpenImportModal">Import</button>
+                @*<button class="btn btn-outline-secondary">Export</button>*@
+            </div>
+            <button class="btn btn-primary me-3 mb-1" @onclick="Update" disabled="@loading">
+                @if (loading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>Updating...</span>
+                }
+                else
+                {
+                    <span>Update</span>
+                }
+            </button>
+            <div class="fs-7">
+                <span>@(follows?.Values.Count(f => f.Selected)) will be followed.</span>
+                <span>@(follows?.Values.Count(f => !f.Selected)) will not be followed.</span>
+            </div>
         </div>
         <div class="d-flex flex-column align-items-end">
-            <label role="button" for="selectAll" class="fs-7">@(SelectAll ? "Unselect" : "Select") All</label>
+            <label role="button" for="selectAll" class="fs-7 text-nowrap">@(SelectAll ? "Unselect" : "Select") All</label>
             <div class="form-check m-0">
                 <InputCheckbox id="selectAll" @bind-Value="SelectAll" class="form-check-input" style="width: 20px; height: 20px;" />
             </div>
@@ -53,14 +59,37 @@
     </div>
     <Virtualize Context="follow" Items="follows?.Values">
         <FollowAccount AccountId="@follow.AccountId" Selectable="true" @bind-Selected="follow.Selected">
-            @follow.EventTime
+            <span class="fw-bold">@(follow.EventTime.HasValue ? follow.EventTime : "Imported")</span>
         </FollowAccount>
     </Virtualize>
 </div>
 
+<ModalContainer @ref="importModal">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Import</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 d-flex">
+                    <InputTextArea class="form-control rounded-0 border-0 glow-0" style="resize: none;" rows="10"
+                                   placeholder="Paste one npub or hex per line" @bind-Value="importText">
+                    </InputTextArea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @onclick="Import">Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</ModalContainer>
+
 @code {
     private ConcurrentDictionary<string, Follow>? follows;
     private SubscriptionFilter? filter;
+    private ModalContainer? importModal;
+    private string importText;
     private bool selectAll;
     private bool SelectAll
     {
@@ -91,6 +120,31 @@
         };
         relayService.AddFilters(filter);
         ReceivedEvents(feedService.GetNotesFeed(filter, int.MaxValue));
+    }
+
+    private void OpenImportModal()
+    {
+        importModal?.Show();
+    }
+
+    private void Import()
+    {
+        var followsToImport = importText.Split(
+            new string[] { Environment.NewLine, "\n" },
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var follow in followsToImport)
+        {
+            var hex = ByteTools.Bech32ToHex(follow, "npub") ?? follow;
+            if (Utils.IsValidNostrId(hex) 
+                && follows.TryAdd(hex, new Follow(hex, null, accountService.IsFollowing(hex))))
+            {
+                accountService.AddDetailsNeeded(hex);
+            }
+        }
+
+        importModal?.Hide();
+        importText = string.Empty;
     }
 
     private async Task Update()
@@ -143,10 +197,10 @@
     private class Follow
     {
         public string AccountId { get; set; }
-        public DateTimeOffset EventTime { get; set; }
+        public DateTimeOffset? EventTime { get; set; }
         public bool Selected { get; set; }
 
-        public Follow(string accountId, DateTimeOffset eventTime, bool selected)
+        public Follow(string accountId, DateTimeOffset? eventTime, bool selected)
         {
             AccountId = accountId;
             EventTime = eventTime;
