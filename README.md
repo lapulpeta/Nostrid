@@ -132,25 +132,19 @@ You can find the binaries in the [Releases](https://github.com/lapulpeta/Nostrid
     * Download APK and install.
 
 * Windows
-    * Download ZIP package, unzip and run `Install.ps1` in PowerShell. Follow instructions.
+    * Download MSIX and install.
 
 * MacOS
     * Download PKG and install. Since the package is unsigned you may have to control-click and choose `Open with...` > `Installer`.
 
+* Other platforms
+    * Download ZIP and run `Nostrid` executable.
+    
 ### Guides
 
-1. [How to use the Follows editor](Doc/HowToUseFollowsEditor.md)
-2. [How to configure a proxy](Doc/HowToSetupProxy.md)
-
-### Building
-
-1. Install Visual Studio 2022 with support for `.NET Multi-platform App UI development` (and optionally `.NET Webassembly Build Tools` for Web project)
-2. Clone this repository
-3. Make sure `git` is in your `PATH` system variable
-4. Run `git submodule update` to restore custom libraries
-5. Open solution in Visual Studio and run
-6. For Android: run `dotnet build -c Release -f net7.0-android` in `Nostrid` inner project
-7. For MacOS: run `dotnet publish -c Release -f net7.0-maccatalyst` in `Nostrid` inner project
+1. [How to build from source](Doc/HowToBuild.md)
+2. [How to use the Follows editor](Doc/HowToUseFollowsEditor.md)
+3. [How to configure a proxy](Doc/HowToSetupProxy.md)
 
 ## Authors
 
