@@ -12,11 +12,15 @@
 @inject AccountService accountService
 @inject RelayService relayService
 @inject FeedService feedService
+@inject IClipboardService clipboardService
 
 @code
 {
     [CascadingParameter]
     public Alert? Alert { get; set; }
+
+    [CascadingParameter]
+    public Scripts? Scripts { get; set; }
 }
 
 <div class="alert alert-light m-0" role="alert">
@@ -31,17 +35,17 @@
         <div class="d-flex flex-row flex-grow-1 align-items-center flex-wrap">
             <div class="btn-group me-3 mb-1">
                 <button class="btn btn-outline-secondary" @onclick="OpenImportModal">Import</button>
-                @*<button class="btn btn-outline-secondary">Export</button>*@
+                <button class="btn btn-outline-secondary" @onclick="OpenExportModal">Export</button>
             </div>
             <button class="btn btn-primary me-3 mb-1" @onclick="Update" disabled="@loading">
                 @if (loading)
                 {
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    <span>Updating...</span>
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Updating...</span>
                 }
                 else
                 {
-                    <span>Update</span>
+                        <span>Update</span>
                 }
             </button>
             <div class="fs-7">
@@ -63,21 +67,65 @@
     </Virtualize>
 </div>
 
-<ModalContainer @ref="importModal">
+<ModalContainer @ref="viewerModal">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-fullscreen-sm-down modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="exampleModalLabel">Import</h1>
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">@viewerModalTitle</h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0 d-flex">
                     <InputTextArea class="form-control rounded-0 border-0 glow-0" style="resize: none;" rows="10"
-                                   placeholder="Paste one npub or hex per line" @bind-Value="importText">
+                                   placeholder="Paste one npub or hex per line" @bind-Value="viewerModalContent" readonly="@viewerModalContentReadonly">
                     </InputTextArea>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" @onclick="Import">Import</button>
+                    <button class="btn btn-primary" @onclick="@(() => viewerModalAction?.Invoke())">@viewerModalActionText</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</ModalContainer>
+
+<ModalContainer @ref="exportModal">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen-sm-down modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Export</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-4">
+                        <label class="col-12 col-sm-4 fw-bold" for="switchExportSelected">
+                            Contacts
+                        </label>
+                        <label class="col-4 col-sm-3 text-sm-end" for="switchExportSelected">All</label>
+                        <div class="col-4 col-sm-2 d-flex justify-content-center">
+                            <div class="form-check form-switch m-0 p-0 fs-4">
+                                <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchExportSelected"
+                                       @bind-value="exportSelected" />
+                            </div>
+                        </div>
+                        <label class="col-4 col-sm-3 text-end text-sm-start" for="switchExportSelected">Selected only</label>
+                    </div>
+                    <div class="row g-2 mb-4">
+                        <label class="col-12 col-sm-4 fw-bold" for="switchExportHex">
+                            Keys
+                        </label>
+                        <label class="col-4 col-sm-3 text-sm-end" for="switchExportHex">npub</label>
+                        <div class="col-4 col-sm-2 d-flex justify-content-center">
+                            <div class="form-check form-switch m-0 p-0 fs-4">
+                                <input type="checkbox" class="form-check-input m-0 float-end" role="switch" id="switchExportHex"
+                                       @bind-value="exportHex" />
+                            </div>
+                        </div>
+                        <label class="col-4 col-sm-3 text-end text-sm-start" for="switchExportHex">hex</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @onclick="Export">Export</button>
                 </div>
             </div>
         </div>
@@ -87,8 +135,18 @@
 @code {
     private ConcurrentDictionary<string, Follow>? follows;
     private SubscriptionFilter? filter;
-    private ModalContainer? importModal;
-    private string importText;
+
+    private ModalContainer? viewerModal;
+    private string? viewerModalTitle;
+    private string? viewerModalContent;
+    private bool viewerModalContentReadonly;
+    private string? viewerModalActionText;
+    private Action? viewerModalAction;
+
+    private ModalContainer? exportModal;
+    private bool exportSelected;
+    private bool exportHex;
+
     private bool selectAll;
     private bool SelectAll
     {
@@ -113,37 +171,75 @@
 
         follows = new();
         filter = new PastFollowsSubscriptionFilter(accountService.MainAccount.Id)
-        {
-            DontSaveInLocalCache = true,
-            Handler = ReceivedEvents,
-        };
+            {
+                DontSaveInLocalCache = true,
+                Handler = ReceivedEvents,
+            };
         relayService.AddFilters(filter);
         ReceivedEvents(feedService.GetNotesFeed(filter, int.MaxValue));
     }
 
+    private void OpenViewerModal(string title, string content, string actionText, Action action)
+    {
+        viewerModalTitle = title;
+        viewerModalContent = content;
+        viewerModalContentReadonly = !string.IsNullOrEmpty(content);
+        viewerModalActionText = actionText;
+        viewerModalAction = action;
+        viewerModal?.Show();
+    }
+
     private void OpenImportModal()
     {
-        importModal?.Show();
+        OpenViewerModal("Import", string.Empty, "Import", () => Import());
+    }
+
+    private void OpenExportModal()
+    {
+        exportModal?.Show();
     }
 
     private void Import()
     {
-        var followsToImport = importText.Split(
+        var followsToImport = viewerModalContent?.Split(
             new string[] { Environment.NewLine, "\n" },
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        foreach (var follow in followsToImport)
+        foreach (var follow in followsToImport ?? Enumerable.Empty<string>())
         {
             var hex = ByteTools.Bech32ToHex(follow, "npub") ?? follow;
-            if (Utils.IsValidNostrId(hex) 
-                && follows.TryAdd(hex, new Follow(hex, null, accountService.IsFollowing(hex))))
+            if (Utils.IsValidNostrId(hex)
+                && (follows?.TryAdd(hex, new Follow(hex, null, accountService.IsFollowing(hex))) ?? false))
             {
                 accountService.AddDetailsNeeded(hex);
             }
         }
 
-        importModal?.Hide();
-        importText = string.Empty;
+        viewerModal?.Hide();
+    }
+
+    private void Export()
+    {
+        var content = string.Join(
+            Environment.NewLine,
+            follows?
+                .Where(f => !exportSelected || f.Value.Selected)
+                .Select(f => exportHex ? f.Key : ByteTools.StringToBech32(f.Key, "npub")) ?? Enumerable.Empty<string>());
+
+        exportModal?.Hide();
+        if (string.IsNullOrEmpty(content))
+        {
+            Alert?.Show("No follows to export", Alert.Type.Primary);
+        }
+        else
+        {
+            OpenViewerModal("Export", content, "Copy to clipboard", async () => await clipboardService.CopyAsync(content));
+        }
+    }
+
+    private void ToggleAll(bool value)
+    {
+        follows?.Values.ToList().ForEach(follow => follow.Selected = value);
     }
 
     private async Task Update()
@@ -164,11 +260,6 @@
         {
             loading = false;
         }
-    }
-
-    private void ToggleAll(bool value)
-    {
-        follows?.Values.ToList().ForEach(follow => follow.Selected = value);
     }
 
     private void ReceivedEvents(IEnumerable<Event> events)
