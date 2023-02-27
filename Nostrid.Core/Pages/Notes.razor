@@ -43,7 +43,9 @@
 else
 {
     <div style="margin-bottom: -1rem;">
-        <NoteTreeViewer Trees="@noteTrees" MainEventId="@EventId" ChildIndex="@ChildIndex" NotClickable="true" />
+        <UpdatabableElement @ref="content">
+            <NoteTreeViewer Trees="@noteTrees" MainEventId="@EventId" ChildIndex="@ChildIndex" NotClickable="true" />
+        </UpdatabableElement>
     </div>
 }
 
@@ -51,12 +53,10 @@ else
     private List<NoteTree> noteTrees = new();
     private bool noteNotFound;
     private string? rootId;
+    private UpdatabableElement? content;
 
-    private DateTime lastUpdate;
-    private Task? updateTask;
     private CancellationTokenSource cancellationTokenSource = new();
 
-    private const int MinSecondsBetweenUpdates = 3;
 
     private static readonly object lockTree = new();
 
@@ -67,8 +67,6 @@ else
         cancellationTokenSource = new();
 
         feedService.NotesReceived += ReceivedNotes;
-
-        lastUpdate = DateTime.UtcNow;
 
         noteTrees = new();
         noteNotFound = false;
@@ -111,17 +109,6 @@ else
         }
     }
 
-
-    private void UpdateIfNeeded()
-    {
-        var waitFor = lastUpdate.AddSeconds(MinSecondsBetweenUpdates) < DateTime.UtcNow ? 0 : MinSecondsBetweenUpdates;
-        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor), cancellationTokenSource.Token).ContinueWith((_) =>
-        {
-            InvokeAsync(() => StateHasChanged());
-            updateTask = null;
-        }, cancellationTokenSource.Token);
-    }
-
     private void ReceivedNotes(object? sender, (string _, IEnumerable<Event> events) data)
     {
         Task.Run(() =>
@@ -143,12 +130,7 @@ else
 
             TruncateTreeIfNeeded(notesToAdd);
 
-            if (updateTask != null)
-            {
-                return;
-            }
-
-            UpdateIfNeeded();
+            content?.Update();
         },
         cancellationTokenSource.Token);
     }

@@ -1,14 +1,37 @@
-﻿@code{
-    [Parameter]
+﻿@using Nostrid.Misc;
+
+@code{
+    [Parameter, EditorRequired]
     public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public int MinSecBetweenUpdates { get; set; } = 3;
 }
 
 @ChildContent
 
 @code
 {
+    private DateTime lastUpdate;
+    private Task? updateTask;
+
+    private readonly object lockObj = new();
+
     public void Update()
     {
-        InvokeAsync(() => StateHasChanged());
+        lock (lockObj)
+        {
+            if (updateTask != null)
+            {
+                return;
+            }
+            double waitFor = Utils.Between((lastUpdate.AddSeconds(MinSecBetweenUpdates) - DateTime.UtcNow).TotalSeconds, min: 0, max: MinSecBetweenUpdates);
+            updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
+            {
+                lastUpdate = DateTime.UtcNow;
+                InvokeAsync(() => StateHasChanged());
+                updateTask = null;
+            });
+        }
     }
 }
