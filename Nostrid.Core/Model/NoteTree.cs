@@ -27,14 +27,14 @@ public class NoteTree : NoteTreeNode
         return Find(id, out _);
     }
 
-    public NoteTree? Find(string id, out bool exceededMax, int? maxChildAllowed = null)
+    public NoteTree? Find(string id, out bool exceededMax, int startChildIndex = 0, int? maxChildAllowed = null)
     {
         if (Note.Id == id)
         {
             exceededMax = false;
             return this;
         }
-        return Children.Find(id, out exceededMax, maxChildAllowed);
+        return Children.Find(id, out exceededMax, startChildIndex, maxChildAllowed);
     }
 
     public bool Exists(string id)
@@ -60,14 +60,14 @@ public static class NoteTreeExtensions
         return Find(chain, id, out _);
     }
 
-    public static NoteTree? Find(this List<NoteTree> chain, string id, out bool exceededMax, int? maxChildAllowed = null)
+    public static NoteTree? Find(this List<NoteTree> chain, string id, out bool exceededMax, int startChildIndex = 0, int? maxChildAllowed = null)
     {
         exceededMax = false;
-        for (int i = 0; i < chain.Count; i++)
+        for (int i = startChildIndex; i < chain.Count; i++)
         {
-            var ret = chain[i].Find(id, out exceededMax, maxChildAllowed);
+            var ret = chain[i].Find(id, out exceededMax);
             if (maxChildAllowed.HasValue)
-                exceededMax |=  i >= maxChildAllowed;
+                exceededMax |=  i - startChildIndex >= maxChildAllowed;
             if (ret != null) return ret;
         }
         return null;

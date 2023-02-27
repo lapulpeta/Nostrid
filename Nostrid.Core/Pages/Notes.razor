@@ -99,10 +99,10 @@ else
             var requestedNode = noteTrees.Find(EventId);
             if (requestedNode != null)
             {
-                // Let's back up MaxNestingLevel or until the node is no longer visible
-                for (int i = 0; i < NoteViewer.MaxNestingLevel && requestedNode.Parent != null; i++)
+                // Let's back up MaxNestingLevel/2 or until the node is no longer visible
+                for (int i = 0; i < NoteViewer.MaxNestingLevel / 2 && requestedNode.Parent != null; i++)
                 {
-                    if (requestedNode.Parent.Find(EventId, out var maxExceeded, NoteViewer.MaxChildren) == null || maxExceeded)
+                    if (requestedNode.Parent.Find(EventId, out var maxExceeded, ChildIndex, NoteViewer.MaxChildren) == null || maxExceeded)
                         break;
                     requestedNode = requestedNode.Parent;
                 }
