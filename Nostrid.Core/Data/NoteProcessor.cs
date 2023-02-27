@@ -143,7 +143,7 @@ namespace Nostrid.Data
                     if (match.Success)
                     {
                         var value = match.Groups[1].Value;
-                        sequence = InsertLink(sequence, builder, $"/tag/{value}", $"#{value}");
+                        sequence = InsertLink(sequence, builder, $"feed/tag/{value}", $"#{value}");
                     }
                     else
                     {

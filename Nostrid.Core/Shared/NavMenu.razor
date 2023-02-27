@@ -53,24 +53,28 @@
 							<span>Blogs</span>
 						</NavLink>
 					</li>
-					@*<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="/favorites" @onclick="HideOffCanvasMenu">
-							<i class="bi bi-heart display-inactive" aria-hidden="true"></i>
-							<i class="bi bi-heart-fill display-active" aria-hidden="true"></i>
-							<span>Favorites</span>
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="channels" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-tv display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-tv-fill display-active" aria-hidden="true"></i>
+							<span>Channels</span>
 						</NavLink>
-					</li>*@
+					</li>
+					<li class="nav-item pb-2">
+						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="explore" @onclick="HideOffCanvasMenu">
+							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-inactive" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+							</svg>
+							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+								<path d="M 10.249 9.251 C 12.366 6.363 10.562 2.268 7.004 1.879 C 3.445 1.49 0.801 5.099 2.243 8.375 C 3.442 11.098 6.853 12.011 9.25 10.251 C 9.271 10.28 10.28 9.271 10.249 9.25 L 10.249 9.251 Z" />
+							</svg>
+							<span>Explore</span>
+						</NavLink>
+					</li>
 					<UpdatabableElement @ref="@loggedInElements">
 						@if (accountService.MainAccount != null)
 						{
-							@foreach (var feedSource in feedService.GetFeedSources(accountService.MainAccount.Id))
-							{
-								<li class="nav-item pb-2">
-									<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="@($"/favorite/feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
-										<span class="bi bi-house-heart-fill" aria-hidden="true"></span> @string.Join(", ", feedSource.Hashtags.ToArray())
-									</NavLink>
-								</li>
-							}
 							<li class="nav-item pb-2">
 								<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="dms" @onclick="HideOffCanvasMenu">
 									<i class="bi bi-envelope display-inactive" aria-hidden="true"></i>
@@ -88,24 +92,6 @@
 							</li>
 						}
 					</UpdatabableElement>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="explore" @onclick="HideOffCanvasMenu">
-							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-inactive" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
-							</svg>
-							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-								<path d="M 6.5 13 C 7.883 13.002 9.231 12.561 10.345 11.742 L 10.344 11.742 C 10.374 11.782 10.406 11.82 10.442 11.857 L 14.292 15.707 C 14.836 16.252 15.766 16.003 15.966 15.259 C 16.058 14.914 15.96 14.546 15.707 14.293 L 11.857 10.443 C 11.821 10.407 11.783 10.373 11.742 10.343 C 12.561 9.229 13.002 7.882 13 6.5 C 12.999 2.911 10.089 0.001 6.5 0 C 1.496 0 -1.631 5.417 0.871 9.75 C 2.032 11.761 4.178 13 6.5 13 Z" />
-							</svg>
-							<span>Explore</span>
-						</NavLink>
-					</li>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="channels" @onclick="HideOffCanvasMenu">
-							<i class="bi bi-tv display-inactive" aria-hidden="true"></i>
-							<i class="bi bi-tv-fill display-active" aria-hidden="true"></i>
-							<span>Channels</span>
-						</NavLink>
-					</li>
 					<li class="nav-item pb-2">
 						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="config" @onclick="HideOffCanvasMenu">
 							<i class="bi bi-gear display-inactive" aria-hidden="true"></i>
@@ -225,7 +211,8 @@
 							<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
 						</svg>
 						<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-							<path d="M 6.5 13 C 7.883 13.002 9.231 12.561 10.345 11.742 L 10.344 11.742 C 10.374 11.782 10.406 11.82 10.442 11.857 L 14.292 15.707 C 14.836 16.252 15.766 16.003 15.966 15.259 C 16.058 14.914 15.96 14.546 15.707 14.293 L 11.857 10.443 C 11.821 10.407 11.783 10.373 11.742 10.343 C 12.561 9.229 13.002 7.882 13 6.5 C 12.999 2.911 10.089 0.001 6.5 0 C 1.496 0 -1.631 5.417 0.871 9.75 C 2.032 11.761 4.178 13 6.5 13 Z" />
+							<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+							<path d="M 10.249 9.251 C 12.366 6.363 10.562 2.268 7.004 1.879 C 3.445 1.49 0.801 5.099 2.243 8.375 C 3.442 11.098 6.853 12.011 9.25 10.251 C 9.271 10.28 10.28 9.271 10.249 9.25 L 10.249 9.251 Z" />
 						</svg>
 					</NavLink>
 				</li>
@@ -310,20 +297,20 @@
 	}
 
 	#region Dispose
-	private bool _disposed;
+	private bool disposed;
 
 	public void Dispose() => Dispose(true);
 
 	protected virtual void Dispose(bool disposing)
 	{
-		if (!_disposed)
+		if (!disposed)
 		{
 			if (disposing)
 			{
 				Cleanup();
 			}
 
-			_disposed = true;
+			disposed = true;
 		}
 	}
 
