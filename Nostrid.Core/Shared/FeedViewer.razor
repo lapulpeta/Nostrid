@@ -26,8 +26,10 @@
      class="px-3 d-flex flex-column flex-grow-1 @(ShowAsMessages ? "position-relative flex-column-reverse overflow-y-auto" : "")"
      style="margin: 0 -1rem -1rem -1rem; flex-basis: 0;">
      
-    <NoteTreeViewer @ref="noteTreeViewer" Trees="@renderedN" ShowAsMessage="@ShowAsMessages" />
-    
+    <UpdatabableElement @ref="content">
+        <NoteTreeViewer @ref="noteTreeViewer" Trees="@renderedN" ShowAsMessage="@ShowAsMessages" />
+    </UpdatabableElement>
+
     <div class="text-center px-3 py-2" style="margin: 0 -1rem;">
         <UpdatabableElement @ref="@labelLoadMore">
             @if (loading)
@@ -71,7 +73,7 @@
     private SubscriptionFilter? newFilter, oldFilter;
     private NoteTreeViewer? noteTreeViewer;
     private bool requestDisabled;
-    private UpdatabableElement? labelLoadMore, buttonLoadMoreFromNote;
+    private UpdatabableElement? labelLoadMore, buttonLoadMoreFromNote, content;
     private ElementReference? container;
     private static object lockobj = new();
     private bool loading = false;
@@ -181,7 +183,7 @@
             }
             if (added)
             {
-                UpdateIfNeeded();
+                content?.Update();
             }
         }
         else
@@ -238,21 +240,6 @@
         renderedN.RemoveRange(dbLimit, renderedN.Count - dbLimit);
     }
 
-    private void UpdateIfNeeded()
-    {
-        if (updateTask != null)
-        {
-            return;
-        }
-        double waitFor = Utils.Between((lastUpdate.AddSeconds(MinSecondsBetweenUpdates) - DateTime.UtcNow).TotalSeconds, min: 0, max: MinSecondsBetweenUpdates);
-        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor), cancellationTokenSource.Token).ContinueWith((_) =>
-        {
-            lastUpdate = DateTime.UtcNow;
-            InvokeAsync(() => StateHasChanged());
-            updateTask = null;
-        }, cancellationTokenSource.Token);
-    }
-
     #region Dispose
     private bool _disposed;
 
@@ -273,6 +260,14 @@
 
     private void Cleanup()
     {
+        if (newFilter != null)
+        {
+            newFilter.Handler = null;
+        }
+        if (oldFilter != null)
+        {
+            oldFilter.Handler = null;
+        }
         relayService.DeleteFilters(newFilter, oldFilter);
         cancellationTokenSource.Cancel();
     }

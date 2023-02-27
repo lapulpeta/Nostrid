@@ -1,4 +1,5 @@
 ﻿@using Nostrid.Misc;
+
 @code{
     [Parameter, EditorRequired]
     public RenderFragment ChildContent { get; set; }
@@ -14,18 +15,23 @@
     private DateTime lastUpdate;
     private Task? updateTask;
 
+    private readonly object lockObj = new();
+
     public void Update()
     {
-        if (updateTask != null)
+        lock (lockObj)
         {
-            return;
+            if (updateTask != null)
+            {
+                return;
+            }
+            double waitFor = Utils.Between((lastUpdate.AddSeconds(MinSecBetweenUpdates) - DateTime.UtcNow).TotalSeconds, min: 0, max: MinSecBetweenUpdates);
+            updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
+            {
+                lastUpdate = DateTime.UtcNow;
+                InvokeAsync(() => StateHasChanged());
+                updateTask = null;
+            });
         }
-        double waitFor = Utils.Between((lastUpdate.AddSeconds(MinSecBetweenUpdates) - DateTime.UtcNow).TotalSeconds, min: 0, max: MinSecBetweenUpdates);
-        updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
-        {
-            lastUpdate = DateTime.UtcNow;
-            InvokeAsync(() => StateHasChanged());
-            updateTask = null;
-        });
     }
 }
