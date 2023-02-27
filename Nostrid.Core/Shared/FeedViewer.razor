@@ -118,6 +118,7 @@
             dbLimit += RelayQueryLimit;
             var prevRenderedN = renderedN.Count;
             EventExtension.Merge(renderedN, feedService.GetNotesFeed(BaseFilter, dbLimit, MessageKinds));
+            renderedN.ForEach(n => receivedIds[n.Note.Id] = true);
             loading = false;
             moreResults = renderedN.Count > prevRenderedN;
             OnLoaded?.Invoke(renderedN);
