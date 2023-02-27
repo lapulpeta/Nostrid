@@ -17,6 +17,11 @@ namespace Nostrid.Misc
         private static readonly Regex noteMentionBech32Regex = NoteMentionBech32Regex();
         private static readonly Regex onlyHashtagRegex = OnlyHashtagRegex();
 
+        public static double Between(double value, double min, double max)
+        {
+            return value < min ? min : (value > max ? max : value);
+        }
+
         public static string ToSvgIdenticon(string hex, int size = 48)
         {
             try

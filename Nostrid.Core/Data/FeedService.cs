@@ -22,6 +22,7 @@ public class FeedService
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
     public event EventHandler<(string eventId, EventDetailsCount delta)> NoteCountChanged;
+    public event EventHandler<(string eventId, string reactorId)> NoteReacted;
     public event EventHandler<string> NoteDeleted;
     public event EventHandler<(string EventId, Event Child)> NoteReceivedChild;
 
@@ -131,10 +132,14 @@ public class FeedService
             {
                 NostrKind.Repost => new() { Reposts = 1 },
                 NostrKind.Zap => new() { Zaps = 1 },
-                NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content] = 1 } },
+                NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content ?? string.Empty] = 1 } },
                 _ => new()
             };
             NoteCountChanged?.Invoke(this, (etag.Data1, delta));
+            if (eventToProcess.Kind == NostrKind.Reaction)
+            {
+                NoteReacted?.Invoke(this, (etag.Data1, eventToProcess.PublicKey));
+            }
         }
     }
 

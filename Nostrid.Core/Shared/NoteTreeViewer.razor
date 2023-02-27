@@ -44,12 +44,13 @@
 
 @{
     var i = 0;
-    foreach (var tree in Trees)
+    var toRender = Trees.ToList();
+    foreach (var tree in toRender)
     {
         var treeLayout = (TreeLayout ?? new int[0]);
         if (!OnlyChild)
         {
-            treeLayout = treeLayout.Append(Trees.Count() - (i++)).ToArray();
+            treeLayout = treeLayout.Append(toRender.Count - (i++)).ToArray();
         }
 
         if (tree is NoteTreeShowMore noteTreeShowMore)

@@ -244,7 +244,7 @@
         {
             return;
         }
-        var waitFor = Math.Min(Math.Max((lastUpdate.AddSeconds(MinSecondsBetweenUpdates) - DateTime.UtcNow).TotalSeconds, 0), MinSecondsBetweenUpdates);
+        double waitFor = Utils.Between((lastUpdate.AddSeconds(MinSecondsBetweenUpdates) - DateTime.UtcNow).TotalSeconds, min: 0, max: MinSecondsBetweenUpdates);
         updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor), cancellationTokenSource.Token).ContinueWith((_) =>
         {
             lastUpdate = DateTime.UtcNow;
