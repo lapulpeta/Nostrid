@@ -62,9 +62,11 @@
         }
         else if (tree is NoteTree noteTree)
         {
+            var key = noteTree.Note.Id;
+
             if (ShowAsMessage)
             {
-                <MessageWrapperViewer Tree="@noteTree"
+                <MessageWrapperViewer @key=key Tree="@noteTree"
                     OnComponentLoad="AddTreeItemComponent" OnComponentUnload="RemoveTreeItemComponent"
                     OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
                     OnPay="@(Root ? (arg => Pay(arg)) : OnPay)"
@@ -72,7 +74,7 @@
             }
             else
             {
-                <NoteViewer Tree="@noteTree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
+                <NoteViewer @key=key Tree="@noteTree" MainEventId="@MainEventId" TreeLayout="@treeLayout" OnlyChild="@OnlyChild"
                     OnComponentLoad="AddTreeItemComponent" OnComponentUnload="RemoveTreeItemComponent"
                     OnReply="@(Root ? (arg => Reply(arg)) : OnReply)"
                     OnRepost="@(Root ? (arg => Repost(arg)) : OnRepost)"

@@ -241,13 +241,25 @@
     private NoteTreeViewer? NoteTreeViewerRef;
     private EventDetailsCount? eventDetailsCount;
     private UpdatabableElement? bottomPlaceholder;
+    private int previousChildren;
+    private int[]? previousLayout;
+    private bool shouldRender;
 
     public const int MaxNestingLevel = 4;
     public const int MaxChildren = 5;
 
     protected override void OnParametersSet()
     {
-        base.OnParametersSet();
+        // TODO: Investigate best approach for multi-level threads
+        // (if it's better to check more levels or simply render always if it has children)
+        shouldRender = previousChildren != Tree.Children.Count || previousLayout == null || !Enumerable.SequenceEqual(previousLayout.Skip(1), TreeLayout.Skip(1));
+        if (!shouldRender)
+        {
+            return;
+        }
+        previousChildren = Tree.Children.Count;
+        previousLayout = TreeLayout;
+
         eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
         feedService.NoteCountChanged += NoteCountChanged;
         feedService.NoteDeleted += NoteDeleted;
@@ -353,6 +365,11 @@
         {
             navigationManager.NavigateTo($"/note/{Tree.Note.Id}");
         }
+    }
+
+    protected override bool ShouldRender()
+    {
+        return shouldRender;
     }
 
     #region Dispose

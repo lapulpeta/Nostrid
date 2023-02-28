@@ -139,7 +139,6 @@
 
     protected override void OnParametersSet()
     {
-        base.OnParametersSet();
         eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note?.Id ?? string.Empty);
     }
 
@@ -224,6 +223,11 @@
             content = await accountService.MainAccountSigner.DecryptNip04(pubkey, content);
         }
         await clipboardService.CopyAsync(content);
+    }
+
+    protected override bool ShouldRender()
+    {
+        return false; // Never auto render
     }
 
     #region Dispose
