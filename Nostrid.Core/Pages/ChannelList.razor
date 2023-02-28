@@ -13,9 +13,16 @@
 
 <h4>Channels</h4>
 <div style="margin-bottom: -1rem;">
-    @foreach (var (channelId, messageCount) in channelsById.OrderByDescending(m => m.Value).Take(50))
+    @{
+        List<string> visibleChannelsId;
+        lock (channelsById)
+        {
+            visibleChannelsId = channelsById.OrderByDescending(c => c.Value).Take(50).Select(c => c.Key).ToList();
+        }
+    }
+    @foreach (var channelId in visibleChannelsId)
     {
-        <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+        <div @key=channelId role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
             @onclick="@(() => navigationManager.NavigateTo($"/channel/{channelId}"))" style="margin: 0 -1rem;">
             <div class="flex-shrink-0">
                 <ChannelPicture Id="@channelId" />
