@@ -96,7 +96,7 @@
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Message Hex</a></li>
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note?.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
+                                <li><a role="button" class="dropdown-item" @onclick="@(() => CopyContentAsync())" @onclick:stopPropagation="true">Copy Content</a></li>
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => feedService.ResendExistingEvent(Tree.Note))" @onclick:stopPropagation="true">Broadcast</a></li>
                             </ul>
                         </div>
@@ -211,6 +211,19 @@
 
         Tree.Note.Deleted = true;
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task CopyContentAsync()
+    {
+        string content = Tree.Note.Content;
+        if (Tree.Note.Kind == NostrKind.DM)
+        {
+            var pubkey = Tree.Note.PublicKey == accountService.MainAccount.Id 
+                ? Tree.Note.GetMentionsIds('p').FirstOrDefault() 
+                : Tree.Note.PublicKey;
+            content = await accountService.MainAccountSigner.DecryptNip04(pubkey, content);
+        }
+        await clipboardService.CopyAsync(content);
     }
 
     #region Dispose
