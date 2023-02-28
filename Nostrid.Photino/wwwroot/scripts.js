@@ -71,6 +71,15 @@ export function scrollTop(element, value) {
     }
 }
 
+export function saveFile(filename, content) {
+    var link = document.createElement('a');
+    link.download = filename;
+    link.href = "data:text/plain;charset=utf-8," + encodeURIComponent(content)
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 var findClosestScrollContainer = function (element) {
     while (element) {
         if (getComputedStyle(element).overflowY !== 'visible') {
