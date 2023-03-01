@@ -23,8 +23,11 @@
         {
             Scripts.InvokeAfterRender(async () =>
             {
-                observer = await Scripts.InvokeAsync<IJSObjectReference>(
-                    "createIntersectionObserver", element, DotNetObjectReference.Create(this), "Intersect", Margin);    
+                if (!_disposed)
+                {
+                    observer = await Scripts.InvokeAsync<IJSObjectReference>(
+                        "createIntersectionObserver", element, DotNetObjectReference.Create(this), "Intersect", Margin);
+                }
             });
         }
     }
