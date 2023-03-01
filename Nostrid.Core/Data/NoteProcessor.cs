@@ -114,7 +114,13 @@ namespace Nostrid.Data
                         {
                             sequence = InsertLink(
                                 sequence, builder, $"/account/{value.MentionId}",
-                                HttpUtility.HtmlEncode(accountService.GetAccountName(value.MentionId)));
+                                new RenderFragment(b =>
+                                {
+                                    b.OpenComponent<AccountName>(sequence++);
+                                    b.AddAttribute(sequence++, "Id", value.MentionId);
+                                    b.AddAttribute(sequence++, "OnlyText", true);
+                                    b.CloseComponent();
+                                }));
                         }
                         else
                         {
@@ -145,6 +151,16 @@ namespace Nostrid.Data
             builder.AddAttribute(sequence++, "href", url);
             builder.AddEventStopPropagationAttribute(sequence++, "onclick", true);
             builder.AddAttribute(sequence++, "ChildContent", new RenderFragment(b => b.AddContent(sequence++, content)));
+            builder.CloseComponent();
+            return sequence++;
+        }
+
+        public int InsertLink(int sequence, RenderTreeBuilder builder, string url, RenderFragment content)
+        {
+            builder.OpenComponent<NavLink>(sequence++);
+            builder.AddAttribute(sequence++, "href", url);
+            builder.AddEventStopPropagationAttribute(sequence++, "onclick", true);
+            builder.AddAttribute(sequence++, "ChildContent", content);
             builder.CloseComponent();
             return sequence++;
         }
