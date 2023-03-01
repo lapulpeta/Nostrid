@@ -36,7 +36,7 @@
         if (data.accountId == Id)
         {
             _details = data.details;
-            InvokeAsync(() => StateHasChanged());
+            InvokeAsync(() => StateHasChanged()); // TODO: this change will be ignored because of ShouldRender=false
         }
     }
 
