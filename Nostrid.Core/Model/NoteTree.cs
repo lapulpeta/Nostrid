@@ -77,9 +77,4 @@ public static class NoteTreeExtensions
     {
         return chain.SelectMany(child => child.AllNotes()).ToList();
     }
-
-    public static int ChildCount(this List<NoteTree> chain)
-    {
-        return chain.Sum(child => 1 + child.Children.ChildCount());
-    }
 }

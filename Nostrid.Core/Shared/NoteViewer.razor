@@ -247,39 +247,44 @@
     private NoteTreeViewer? NoteTreeViewerRef;
     private EventDetailsCount? eventDetailsCount;
     private UpdatabableElement? bottomPlaceholder, leftPlaceholder, treeLayoutSection, treeChildrenSection;
-    private int previousChildren;
     private int[]? previousLayout;
+    private bool previousHasChildren;
     private bool previousOnlyChild;
+    private bool rendered;
 
     public const int MaxNestingLevel = 4;
     public const int MaxChildren = 5;
 
     protected override void OnParametersSet()
     {
-        bool exit = false;
-        if ((previousLayout != null && !Enumerable.SequenceEqual(previousLayout.Skip(1), TreeLayout.Skip(1))) ||
-            previousOnlyChild != OnlyChild)
+        if (rendered)
         {
-            treeLayoutSection?.Update();
-            exit = true;
-        }
-        int currentChildCount = Tree.Children.ChildCount();
-        if (previousChildren != currentChildCount)
-        {
-            leftPlaceholder?.Update();
+            // Always rerender children, just in case their tree layout has changed
             treeChildrenSection?.Update();
-            exit = true;
+
+            // Check if current tree layout must be rerendered
+            if ((previousLayout != null && !Enumerable.SequenceEqual(previousLayout.Skip(1), TreeLayout.Skip(1))) ||
+                previousOnlyChild != OnlyChild)
+            {
+                treeLayoutSection?.Update();
+            }
+
+            // Check if lines attached to profile pic must be rerendered
+            if (previousHasChildren != Tree.Children.Any())
+            {
+                leftPlaceholder?.Update();
+            }
         }
+
         previousLayout = TreeLayout;
         previousOnlyChild = OnlyChild;
-        previousChildren = currentChildCount;
-        if (exit)
+        previousHasChildren = Tree.Children.Any();
+
+        if (rendered)
         {
             return;
         }
-
-        previousChildren = Tree.Children.Count;
-        previousLayout = TreeLayout;
+        rendered = true;
 
         eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
         feedService.NoteCountChanged += NoteCountChanged;
