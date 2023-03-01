@@ -91,7 +91,28 @@
     </UpdatabableElement>
     @if (Tree.Note.Deleted)
     {
-        <div class="d-flex flex-grow-1 align-items-center justify-content-center text-secondary">Note deleted</div>
+        <div class="d-flex flex-row align-items-center flex-grow-1">
+            <div>
+                <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;">
+                    <i class="bi bi-x-lg"></i>
+                </div>
+                @if (Tree.Children.Count > 0)
+                {
+                    <div class="flex-grow-1 d-flex flex-row">
+                        <div class="tree-placeholder-width-half"></div>
+                        <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+                    </div>
+                }
+            </div>
+            <div class="ms-2 position-relative">
+                <div class="opacity-25 position-relative" style="filter: blur(1px);">
+                    <span class="placeholder placeholder-xs d-block" style="width: 100px;"></span>
+                    <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
+                    <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
+                </div>
+                <span class="position-absolute top-50 start-50 translate-middle badge text-bg-secondary rounded-pill">Deleted</span>
+            </div>
+        </div>
     }
     else
     {
