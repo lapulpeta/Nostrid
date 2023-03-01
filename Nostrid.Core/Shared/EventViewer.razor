@@ -78,8 +78,9 @@
             {
                 case NostrKind.ChannelMessage:
                 case NostrKind.Text:
+                case NostrKind.DM:
                     <div class="text-break note-content">
-                        @noteProcessor.GetContent(Event?.Content ?? string.Empty, Event?.GetMentions())
+                        @content
                     </div>
                     break;
                 case NostrKind.Repost:
@@ -109,11 +110,24 @@
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private UpdatabableElement? textContent;
     private bool waitingForRepostedEvent;
+    private RenderFragment content;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        base.OnParametersSet();
+        base.OnParametersSetAsync();
         if (Event == null) return;
+
+        string? rawContent;
+        if (Event?.Kind == NostrKind.DM)
+        {
+            var pubkey = Event.PublicKey == accountService.MainAccount.Id ? Event.GetMentionsIds('p').FirstOrDefault() : Event.PublicKey;
+            rawContent = await accountService.MainAccountSigner.DecryptNip04(pubkey, Event.Content);
+        }
+        else
+        {
+            rawContent = Event?.Content;
+        }
+        content = noteProcessor.GetContent(rawContent ?? string.Empty, Event?.GetMentions());
 
         Cleanup();
 
