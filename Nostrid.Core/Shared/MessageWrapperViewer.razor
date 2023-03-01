@@ -103,32 +103,34 @@
                     </TopContent>
                 </MessageViewer>
             </div>
-            @{
-                const int MAX_GROUPS = 1;
-                var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
-                if (groupedReactions?.Any() ?? false)
-                {
-                    <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
-                        @{
-                            foreach (var group in groupedReactions.Take(MAX_GROUPS))
-                            {
-                                <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
-                                    @NormalizedReaction(group.Reaction)
-                                    <span class="fs-7">@group.Count</span>
-                                </div>
+            <UpdatabableElement @ref="reactionsSection">
+                @{
+                    const int MAX_GROUPS = 1;
+                    var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
+                    if (groupedReactions?.Any() ?? false)
+                    {
+                        <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
+                            @{
+                                foreach (var group in groupedReactions.Take(MAX_GROUPS))
+                                {
+                                    <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
+                                        @NormalizedReaction(group.Reaction)
+                                        <span class="fs-7">@group.Count</span>
+                                    </div>
+                                }
+                                var remainingReactionCount = groupedReactions.Skip(MAX_GROUPS).Sum(group => group.Count);
+                                if (remainingReactionCount > 0)
+                                {
+                                    <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
+                                        <i class="bi bi-three-dots"></i>
+                                        <span class="fs-7">@remainingReactionCount</span>
+                                    </div>
+                                }
                             }
-                            var remainingReactionCount = groupedReactions.Skip(MAX_GROUPS).Sum(group => group.Count);
-                            if (remainingReactionCount > 0)
-                            {
-                                <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
-                                    <i class="bi bi-three-dots"></i>
-                                    <span class="fs-7">@remainingReactionCount</span>
-                                </div>
-                            }
-                        }
-                    </div>
+                        </div>
+                    }
                 }
-            }
+            </UpdatabableElement>
         </div>
     }
 </div>
@@ -136,14 +138,14 @@
 @code {
     private ElementReference? referenceElement;
     private EventDetailsCount? eventDetailsCount;
+    private UpdatabableElement? reactionsSection;
 
-    protected override void OnParametersSet()
-    {
-        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note?.Id ?? string.Empty);
-    }
-
+    // We never rerender this component with different parameters
+    // so all the logic can be done here
     protected override void OnInitialized()
     {
+        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note?.Id ?? string.Empty);
+
         feedService.NoteCountChanged += NoteCountChanged;
         feedService.NoteDeleted += NoteDeleted;
     }
@@ -200,7 +202,7 @@
             return;
 
         eventDetailsCount.Add(data.delta);
-        InvokeAsync(() => StateHasChanged());
+        reactionsSection?.Update();
     }
 
     private void NoteDeleted(object? sender, string eventId)
@@ -227,7 +229,10 @@
 
     protected override bool ShouldRender()
     {
-        return false; // Never auto render
+        // Never auto refresh, except when deleted
+        // This is a quick hack to avoid wrapping everything in an UpdatabableElement or
+        // adding more complex logic to determine whether to render or not
+        return Tree.Note.Deleted;
     }
 
     #region Dispose
