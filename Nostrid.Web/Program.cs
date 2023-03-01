@@ -31,6 +31,7 @@ builder.Services.AddSingleton<DatabaseService>();
 builder.Services.AddSingleton<IClipboardService, ClipboardService>();
 builder.Services.AddSingleton<MediaServiceProvider>();
 builder.Services.AddSingleton<IMediaService, NostrImgMediaService>();
+builder.Services.AddSingleton<IMediaService, NostrcheckMediaService>();
 builder.Services.AddSingleton<ChannelService>();
 builder.Services.AddSingleton<AllSubscriptionFilterFactory>();
 builder.Services.AddSingleton<DmService>();
