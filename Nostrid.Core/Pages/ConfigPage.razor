@@ -8,6 +8,7 @@
 @inject RelayService relayService
 @inject EventDatabase eventDatabase
 @inject AccountService accountService
+@inject FeedService feedService
 
 @implements IDisposable
 
@@ -455,6 +456,7 @@
             ConfirmationModal.Options.Button.CreateYesButton(() =>
             {
                 eventDatabase.Clean();
+                feedService.ClearDetailsNeeded();
             })));
     }
 

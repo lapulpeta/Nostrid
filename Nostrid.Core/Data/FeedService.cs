@@ -19,6 +19,7 @@ public class FeedService
     private bool running;
     private CancellationTokenSource clientThreadsCancellationTokenSource;
     private bool detailsNeededIdsChanged;
+    private bool detailsNeededForceClear;
 
     public event EventHandler<(string filterId, IEnumerable<Event> notes)> NotesReceived;
     public event EventHandler<(string eventId, EventDetailsCount delta)> NoteCountChanged;
@@ -656,6 +657,15 @@ public class FeedService
         }
     }
 
+    public void ClearDetailsNeeded()
+    {
+        lock (detailsNeededIds)
+        {
+            detailsNeededIds.Clear();
+            detailsNeededForceClear = true;
+        }
+    }
+
     private const int SecondsForDetailsFilters = 10;
     public async Task QueryDetails(CancellationToken cancellationToken)
     {
@@ -667,6 +677,13 @@ public class FeedService
             var now = DateTime.UtcNow;
             lock (detailsNeededIds)
             {
+                if (detailsNeededForceClear)
+                {
+                    detailsNeededForceClear = false;
+                    detailsNeededIdsChanged = true;
+                    willQuery = new();
+                }
+                
                 if (detailsNeededIdsChanged)
                 {
                     detailsNeededIdsChanged = false;
