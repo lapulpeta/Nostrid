@@ -25,6 +25,7 @@ h6:focus {
 
 a, .btn-link {
     color: #0071c1;
+    text-decoration: none;
 }
 
 .valid.modified:not([type=checkbox]) {

@@ -113,10 +113,10 @@
                         <div class="w-100 mt-1 d-flex flex-row" style="margin-right:-1.5rem;">
                             @if (accountService.MainAccount != null)
                             {
-                                <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                     <i class="bi bi-chat"></i>
                                 </a>
-                                <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                     <i class="bi bi-repeat"></i>
                                     @if (eventDetailsCount?.Reposts > 0)
                                     {
@@ -124,7 +124,7 @@
                                     }
                                 </a>
                                 <a role="button" @onclick:stopPropagation="true"
-                                    class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover"
+                                    class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover"
                                     data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi @(!likeClicked ? "bi-heart" : "bi-heart-fill")"></i>
                                     @{
@@ -143,7 +143,7 @@
                                             @foreach (var reactionGroup in groupedReactions!.Take(5))
                                             {
                                                 <a @onclick="@(() => Like(reactionGroup.Reaction))" @onclick:stopPropagation="true"
-                                                   class="p-1 me-1 d-flex flex-row align-items-center fs-4 text-decoration-none bg-primary-opacity-10-hover">
+                                                   class="p-1 me-1 d-flex flex-row align-items-center fs-4 bg-primary-opacity-10-hover">
                                                     <span class="text-center" style="min-width: 20px;">@NormalizedReaction(reactionGroup.Reaction)</span>
                                                     <span class="mt-1 me-1 fs-7 fw-normal text-secondary">@reactionGroup.Count</span>
                                                 </a>
@@ -162,7 +162,7 @@
                                                 foreach (var reaction in reactions)
                                                 {
                                                     <a @onclick="@(() => Like(reaction))" @onclick:stopPropagation="true"
-                                                   class="text-decoration-none me-2 mb-2 bg-primary-opacity-10-hover">
+                                                   class="me-2 mb-2 bg-primary-opacity-10-hover">
                                                         @NormalizedReaction(reaction)
                                                     </a>
                                                 }
@@ -173,14 +173,14 @@
                                 @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
                                 {
                                     <a role="button" @onclick="@Delete" @onclick:stopPropagation="true"
-                                       class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                       class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                         <i class="bi bi-trash3"></i>
                                     </a>
                                 }
                             }
                             <PayButton Id="@Tree.Note.PublicKey">
                                 <a role="button" @onclick="@Pay" @onclick:stopPropagation="true"
-                                   class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                   class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
                                     <i class="bi bi-lightning-charge"></i>
                                     @if (eventDetailsCount?.Zaps > 0)
                                     {
@@ -189,7 +189,7 @@
                                 </a>
                             </PayButton>
                             <a role="button" @onclick:stopPropagation="true"
-                               class="d-flex text-decoration-none lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+                               class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </a>
                             <ul class="dropdown-menu shadow">
