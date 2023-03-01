@@ -32,22 +32,22 @@
     }
 }
 
-@if (!noteTrees.Any())
-{
-    <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
-        <div class="spinner-border mx-3 my-2" role="status">
-            <span class="visually-hidden">Waiting for feed...</span>
+<UpdatabableElement @ref="content">
+    @if (!noteTrees.Any())
+    {
+        <div class="text-center px-3 py-2 border-top" style="margin: 0 -1rem;">
+            <div class="spinner-border mx-3 my-2" role="status">
+                <span class="visually-hidden">Waiting for feed...</span>
+            </div>
         </div>
-    </div>
-}
-else
-{
-    <div style="margin-bottom: -1rem;">
-        <UpdatabableElement @ref="content">
+    }
+    else
+    {
+        <div style="margin-bottom: -1rem;">
             <NoteTreeViewer Trees="@noteTrees" MainEventId="@EventId" ChildIndex="@ChildIndex" NotClickable="true" />
-        </UpdatabableElement>
-    </div>
-}
+        </div>
+    }
+</UpdatabableElement>
 
 @code {
     private List<NoteTree> noteTrees = new();
