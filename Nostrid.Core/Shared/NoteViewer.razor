@@ -395,7 +395,10 @@
 
     protected override bool ShouldRender()
     {
-        return false; // Never auto refresh
+        // Never auto refresh, except when deleted
+        // This is a quick hack to avoid wrapping everything in an UpdatabableElement or
+        // adding more complex logic to determine whether to render or not
+        return Tree.Note.Deleted; 
     }
 
     #region Dispose
