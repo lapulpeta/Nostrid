@@ -642,6 +642,12 @@ namespace Nostrid.Data
             return db.Follows.Count(f => f.AccountId == accountId);
         }
 
+        public bool HasFollows(string accountId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Follows.Any(f => f.AccountId == accountId);
+        }
+
         public int GetFollowerCount(string accountId)
         {
             using var db = new Context(_dbfile);

@@ -1,7 +1,7 @@
 ﻿<ModalContainer @ref="modalContainer">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-            <div class="modal-content">
+            <div class="modal-content shadow">
                 @if (!string.IsNullOrEmpty(options.Title))
                 {
                     <div class="modal-header">
@@ -11,7 +11,7 @@
                 }
                 @if (!string.IsNullOrEmpty(options.Content))
                 {
-                    <div class="modal-body">@options.Content</div>
+                    <div class="modal-body">@((MarkupString)options.Content)</div>
                 }
                 @if (options.Buttons?.Length > 0)
                 {
