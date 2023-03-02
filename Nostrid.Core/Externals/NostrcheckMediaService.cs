@@ -5,7 +5,7 @@ namespace Nostrid.Externals
 {
     public partial class NostrcheckMediaService : IMediaService
     {
-        public string Name => "nostrcheck";
+        public string Name => "nostrcheck.me";
 
         public int MaxSize => 5 * 1024 * 1024;
 
