@@ -18,7 +18,7 @@ For a quick start check out the [Installation](#Installation) section below.
 - [x] NIP-05 profiles
 - [x] Lightning Network (pay button and profile setup)
 - [x] Text notes with support for markdown (receive and send)
-- [x] Upload media files (uses third-party services [nostr.build](https://nostr.build/), [void.cat](https://void.cat/) and [nostrimg.com](https://nostrimg.com/))
+- [x] Upload media files (uses third-party services [nostr.build](https://nostr.build/), [void.cat](https://void.cat/), [nostrimg.com](https://nostrimg.com/) and [nostrcheck.me](https://nostrcheck.me/))
 - [x] Delete notes
 - [x] NIP-13 PoW (receive/filter and send)
 - [x] Reactions (receive and send)
