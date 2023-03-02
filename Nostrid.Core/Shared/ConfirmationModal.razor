@@ -11,7 +11,7 @@
                 }
                 @if (!string.IsNullOrEmpty(options.Content))
                 {
-                    <div class="modal-body">@options.Content</div>
+                    <div class="modal-body">@((MarkupString)options.Content)</div>
                 }
                 @if (options.Buttons?.Length > 0)
                 {

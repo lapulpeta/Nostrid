@@ -22,14 +22,13 @@
         @onclick="@(async () => await FollowUnfollow(true))" @onclick:stopPropagation="true">
     @(!isFollowing ? "Follow" : "Unfollow")
 </button>
-<div @onclick:preventDefault="true">
-    @confirmationModalRenderFragment
-</div>
+
+@confirmationModalRenderFragment
 
 @code
 {
-    private RenderFragment confirmationModalRenderFragment;
-    private ConfirmationModal confirmationModal;
+    private RenderFragment? confirmationModalRenderFragment;
+    private ConfirmationModal? confirmationModal;
 
     protected override void OnParametersSet()
     {
@@ -47,18 +46,21 @@
     private async Task FollowUnfollow(bool showConfirmation = true)
     {
         var follow = !accountService.IsFollowing(AccountId);
-        var noFollows = eventDatabase.GetFollowCount(AccountId) == 0;
-        if (showConfirmation && follow && noFollows)
+        var hasFollows = accountService.MainAccount != null && eventDatabase.HasFollows(accountService.MainAccount.Id);
+        if (showConfirmation && follow && !hasFollows)
         {
             if (confirmationModalRenderFragment == null)
             {
                 confirmationModalRenderFragment = new RenderFragment(builder =>
                 {
-                    builder.OpenComponent<ConfirmationModal>(0);
-                    builder.AddComponentReferenceCapture(1, instance => { confirmationModal = instance as ConfirmationModal; });
+                    builder.OpenElement(0, "div");
+                    builder.AddEventStopPropagationAttribute(1, "onclick", true);
+                    builder.OpenComponent<ConfirmationModal>(2);
+                    builder.AddComponentReferenceCapture(3, instance => { confirmationModal = instance as ConfirmationModal; });
                     builder.CloseComponent();
-                    InvokeAsync(() => ShowConfirmation());
+                    builder.CloseElement();
                 });
+                await InvokeAsync(() => ShowConfirmation());
             }
             else
             {
@@ -75,7 +77,7 @@
     {
         confirmationModal?.Show(
             ConfirmationModal.Options.Create(
-                "Is this your first follow ever? We haven't seen any other follows yet. If you continue, you will have one follow in total.\nAre you sure you want to continue?",
+                "Is this your first follow ever? We haven't seen any other follows yet. If you continue, you will have one follow in total.<br /><b>Are you sure you want to continue?</b>",
                 "Follow account",
                 ConfirmationModal.Options.Button.CreateButton("Yes, this is my first follow", async () => await FollowUnfollow(false), "btn-outline-secondary"),
                 ConfirmationModal.Options.Button.CreateButton("No, I'll wait until I receive all my follows", null, "btn-outline-secondary")));
