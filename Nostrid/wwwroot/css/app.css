@@ -132,6 +132,10 @@ a, .btn-link {
 }
 
 /* BOOTSTRAP EXTENSIONS */
+.modal-backdrop:nth-child(2n-1) {
+    opacity: 0;
+}
+
 [data-bs-theme=dark] {
     --bs-body-bg: #1e1e1e;
     --bs-body-bg-rgb: 30,30,30
