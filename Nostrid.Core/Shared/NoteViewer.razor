@@ -342,6 +342,7 @@
         if (await feedService.SendReaction(reaction, Tree.Note))
         {
             likeClicked = true;
+            bottomPlaceholder?.Update();
         }
     }
 
