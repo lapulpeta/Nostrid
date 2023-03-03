@@ -543,7 +543,8 @@ namespace Nostrid.Data
                 .Where(e => e.Tags.Any(d => d.Data0 == "e" && d.Data1 == eventId) && e.Kind == NostrKind.Reaction)
                 .Skip(index)
                 .Take(count)
-                .Select(e => new Reaction() { Content = e.Content, ReactorId = e.PublicKey });
+                .Select(e => new Reaction() { Content = e.Content, ReactorId = e.PublicKey })
+                .ToList();
         }
 
         public bool AccountReacted(string eventId, string accountId)
