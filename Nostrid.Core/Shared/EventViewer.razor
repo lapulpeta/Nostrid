@@ -132,7 +132,7 @@
 
         Cleanup();
 
-        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
+        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId, Event.ReplaceableId);
 
         if (Event.RepostEventId.IsNotNullOrEmpty())
         {

@@ -181,7 +181,7 @@ public class FeedService
             rootId = null;
             return new();
         }
-        rootId = note.ReplyToRootId ?? note.Id;
+        rootId = note.ReplyToRootId ?? note.ReplaceableId ?? note.Id;
         var localRootId = rootId;
         return db.Events
             .Include(e => e.Tags)
@@ -460,17 +460,27 @@ public class FeedService
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { p }.ToList() });
         }
 
-        // Then e's (mentions) (indexed)
+        // Then e's (mentions) (indexed) (use "a" tag if it's a replaceable event)
         var relay = relayService.GetRecommendedRelayUri();
         foreach (var e in es)
         {
-            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { e, relay, "mention" }.ToList() });
+            var ev = eventDatabase.GetEventOrNull(e);
+            (string tag, string tagdata) =
+                ev != null && ev.ReplaceableId.IsNotNullOrEmpty() ?
+                ("a", ev.ReplaceableId) :
+                ("e", e);
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = tag, Data = new[] { tagdata, relay, "mention" }.ToList() });
         }
 
-        // Then e's (reply/root) (non-indexed)
+        // Then e's (reply/root) (non-indexed) (use "a" tag if it's a replaceable event)
         foreach (var er in ers)
         {
-            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { er.Item1, relay, er.Item2 }.ToList() });
+            var ev = eventDatabase.GetEventOrNull(er.Item1);
+            (string tag, string tagdata) =
+                ev != null && ev.ReplaceableId.IsNotNullOrEmpty() ?
+                ("a", ev.ReplaceableId) :
+                ("e", er.Item1);
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = tag, Data = new[] { tagdata, relay, er.Item2 }.ToList() });
         }
 
         // Then t's (non-indexed)
@@ -499,7 +509,11 @@ public class FeedService
             PublicKey = accountService.MainAccount.Id,
             Tags = new(),
         };
-        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { reactTo.Id }.ToList() });
+        (string tag, string tagdata) =
+            reactTo.ReplaceableId.IsNotNullOrEmpty() ?
+            ("a", reactTo.ReplaceableId) :
+            ("e", reactTo.Id);
+        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = tag, Data = new[] { tagdata }.ToList() });
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { reactTo.PublicKey }.ToList() });
         if (!await accountService.MainAccountSigner.Sign(nostrEvent))
             return false;

@@ -29,6 +29,13 @@ public class ReplaceableEventSubscriptionFilter : SubscriptionFilter
 					Authors = new[] { naddr!.Value.pubkey },
 					ExtensionData = new Dictionary<string, JToken>() { ["#d"] = ConvertStringArrayToJsonElement(naddr!.Value.dstr) }
 				})
+			.Union(rids
+            .Select(naddr =>
+                new NostrSubscriptionFilter(NostrNip.NostrNipGenericTag)
+                {
+                    ExtensionData = new Dictionary<string, JToken>() { ["#a"] = ConvertStringArrayToJsonElement(naddr) }
+                })
+            )
 			.ToArray();
 	}
 

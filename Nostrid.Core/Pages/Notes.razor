@@ -120,7 +120,7 @@
                 {
                     return;
                 }
-                rootId = note.ReplyToRootId ?? note.Id;
+                rootId = note.ReplyToRootId ?? note.ReplaceableId ?? note.Id;
             }
             var notesToAdd = data.events.Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == rootId || e.ReplaceableId == rootId || e.ReplyToRootId == rootId));
             if (!notesToAdd.Any())
