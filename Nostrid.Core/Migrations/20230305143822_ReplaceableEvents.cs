@@ -26,10 +26,15 @@ namespace Nostrid.Migrations
                 name: "IX_Events_ReplaceableId_CreatedAt",
                 table: "Events",
                 columns: new[] { "ReplaceableId", "CreatedAt" });
-        }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
+            // Remove all events that have an 'a' tag because we might have to recalculate their replyTo
+			migrationBuilder.Sql("DELETE FROM Events WHERE Id IN (SELECT EventId FROM TagDatas WHERE Data0='a')");
+			migrationBuilder.Sql("DELETE FROM TagDatas WHERE Data0='a'");
+
+		}
+
+		/// <inheritdoc />
+		protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
                 name: "IX_Events_ReplaceableId",

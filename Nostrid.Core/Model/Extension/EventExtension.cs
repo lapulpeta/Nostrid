@@ -91,29 +91,34 @@ public static class EventExtension
 
 	public static string? GetReplyToId(Event ev)
 	{
+		return GetReplyToId(ev, "a") ?? GetReplyToId(ev, "e");
+	}
+
+	private static string? GetReplyToId(Event ev, string tag)
+	{
 		if (ev.Kind == NostrKind.Text || ev.Kind == NostrKind.ChannelMessage)
 		{
 			var preferred = ev.Tags
-				.Where(t => t.Data0 == "e" && t.Data3 == "reply")
+				.Where(t => t.Data0 == tag && t.Data3 == "reply")
 				.Select(t => t.Data1)
 				.FirstOrDefault();
 			if (preferred != null)
 			{
 				return preferred;
 			}
-			if (ev.Kind == NostrKind.ChannelMessage && ev.Tags.Count(t => t.Data0 == "e") <= 1)
+			if (ev.Kind == NostrKind.ChannelMessage && ev.Tags.Count(t => t.Data0 == tag) <= 1)
 			{
 				return null;
 			}
 			return ev.Tags
-				.Where(t => t.Data0 == "e" && t.Data1 != null)
+				.Where(t => t.Data0 == tag && t.Data1 != null)
 				.Select(t => t.Data1)
 				.LastOrDefault();
 		}
 		else if (ev.Kind == NostrKind.DM)
 		{
 			return ev.Tags
-				.Where(t => t.Data0 == "e" && t.Data1 != null)
+				.Where(t => t.Data0 == tag && t.Data1 != null)
 				.Select(t => t.Data1)
 				.FirstOrDefault();
 		}
@@ -122,10 +127,15 @@ public static class EventExtension
 
 	public static string? GetReplyToRootId(Event ev)
 	{
+		return GetReplyToRootId(ev, "a") ?? GetReplyToRootId(ev, "e");
+	}
+
+	private static string? GetReplyToRootId(Event ev, string tag)
+	{
 		if (ev.Kind == NostrKind.Text)
 		{
 			var preferred = ev.Tags
-				.Where(t => t.Data0 == "e" && t.Data3 == "root")
+				.Where(t => t.Data0 == tag && t.Data3 == "root")
 				.Select(t => t.Data1)
 				.FirstOrDefault();
 			if (preferred != null)
@@ -133,7 +143,7 @@ public static class EventExtension
 				return preferred;
 			}
 			return ev.Tags
-				.Where(t => t.Data0 == "e" && t.Data1 != null)
+				.Where(t => t.Data0 == tag && t.Data1 != null)
 				.Select(t => t.Data1)
 				.FirstOrDefault();
 		}
@@ -172,17 +182,46 @@ public static class EventExtension
 		return null;
 	}
 
-	// NIP-16: https://github.com/nostr-protocol/nips/blob/master/16.md
-	// NIP-33: https://github.com/nostr-protocol/nips/blob/master/33.md
+	public static bool IsReplaceableId(this string id)
+	{
+		return id?.Contains(':') ?? false;
+	}
+
+	public static (string pubkey, int kind, string dstr)? ExplodeReplaceableId(string? naddr)
+	{
+		if (naddr == null)
+		{
+			return null;
+		}
+		var parts = naddr.Split(":");
+		if (parts.Length != 3 || !int.TryParse(parts[0], out int kind))
+		{
+			return null;
+		}
+		return (parts[1], kind, parts[2]);
+	}
+
+	public static string? GetReplaceableId(string pubkey, int kindd, string? dstr)
+	{
+		if (dstr == null)
+		{
+			return $"{kindd}:{pubkey}";
+		}
+		else
+		{
+			return $"{kindd}:{pubkey}:{dstr}";
+		}
+	}
+
 	public static string? GetReplaceableId(Event ev)
 	{
 		switch (ev.KindClass)
 		{
 			case NostrKindClass.Replaceable:
-				return $"{ev.Kind}:{ev.PublicKey}";
+				return GetReplaceableId(ev.PublicKey, ev.Kind, null);
 			case NostrKindClass.ReplaceableParams:
 				string dstr = ev.Tags.Where(t => t.Data0 == "d").Select(t => t.Data1).FirstOrDefault() ?? string.Empty;
-				return $"{ev.Kind}:{ev.PublicKey}:{dstr}";
+				return GetReplaceableId(ev.PublicKey, ev.Kind, dstr);
 		}
 		return null;
 	}

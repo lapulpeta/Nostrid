@@ -1,6 +1,8 @@
 using Nostrid.Misc;
 using NNostr.Client;
 using Nostrid.Model;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace Nostrid.Data.Relays;
 
@@ -43,5 +45,11 @@ public abstract class SubscriptionFilter
     public abstract NostrSubscriptionFilter[] GetFilters();
 
     public abstract SubscriptionFilter Clone();
+
+	protected static JToken ConvertStringArrayToJsonElement(params string[] array)
+	{
+		string jsonString = JsonConvert.SerializeObject(array);
+		return JToken.Parse(jsonString).Root;
+	}
 }
 

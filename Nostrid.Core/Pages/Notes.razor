@@ -115,14 +115,14 @@
         {
             if (rootId == null)
             {
-                var note = data.events.Where(e => e.Kind == NostrKind.Text && (e.Id == EventId || e.ReplyToRootId == EventId || e.ReplyToId == EventId)).FirstOrDefault();
+                var note = data.events.Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == EventId || e.ReplaceableId == EventId || e.ReplyToRootId == EventId || e.ReplyToId == EventId)).FirstOrDefault();
                 if (note == null)
                 {
                     return;
                 }
                 rootId = note.ReplyToRootId ?? note.Id;
             }
-            var notesToAdd = data.events.Where(e => e.Kind == NostrKind.Text && (e.Id == rootId || e.ReplyToRootId == rootId));
+            var notesToAdd = data.events.Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == rootId || e.ReplaceableId == rootId || e.ReplyToRootId == rootId));
             if (!notesToAdd.Any())
             {
                 return;

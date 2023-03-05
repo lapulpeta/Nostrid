@@ -174,8 +174,8 @@ public class FeedService
     public List<Event> GetNotesThread(string eventId, out string? rootId)
     {
         using var db = eventDatabase.CreateContext();
-        var note = db.Events.Where(e => e.Kind == NostrKind.Text && e.Id == eventId).FirstOrDefault();
-        note ??= db.Events.Where(e => e.Kind == NostrKind.Text && (e.ReplyToRootId == eventId || e.ReplyToId == eventId)).FirstOrDefault();
+        var note = db.Events.FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == eventId || e.ReplaceableId == eventId));
+            note ??= db.Events.FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplyToRootId == eventId || e.ReplyToId == eventId));
         if (note == null)
         {
             rootId = null;
@@ -185,7 +185,7 @@ public class FeedService
         var localRootId = rootId;
         return db.Events
             .Include(e => e.Tags)
-            .Where(e => e.Kind == NostrKind.Text && (e.Id == localRootId || e.ReplyToRootId == localRootId))
+            .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == localRootId || e.ReplaceableId == localRootId || e.ReplyToRootId == localRootId))
             .ToList();
     }
 
@@ -670,7 +670,7 @@ public class FeedService
     public async Task QueryDetails(CancellationToken cancellationToken)
     {
         List<string> willQuery = new();
-        EventSubscriptionFilter? filter = null;
+        List<SubscriptionFilter> filters = new();
         bool mustUpdate;
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -702,9 +702,20 @@ public class FeedService
 
             if (mustUpdate && willQuery.Count > 0)
             {
-                relayService.DeleteFilters(filter);
-                filter = new EventSubscriptionFilter(willQuery.ToArray());
-                relayService.AddFilters(filter);
+                relayService.DeleteFilters(filters);
+                filters = new();
+                var rids = willQuery.Where(id => id.Contains(':')).ToArray();
+                var eids = willQuery.Except(rids).ToArray();
+                // TODO: optimize this so they are checked separately (eg. we don't need to recreate eids if only rids changed)
+                if (eids.Any())
+                {
+                    filters.Add(new EventSubscriptionFilter(eids));
+                }
+				if (rids.Any())
+				{
+					filters.Add(new ReplaceableEventSubscriptionFilter(rids));
+				}
+				relayService.AddFilters(filters);
                 await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
             }
             else
@@ -713,7 +724,7 @@ public class FeedService
             }
         }
 
-        relayService.DeleteFilters(filter);
+        relayService.DeleteFilters(filters);
     }
 
 }

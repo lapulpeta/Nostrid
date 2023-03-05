@@ -371,9 +371,11 @@ namespace Nostrid.Data
 			}
 			if (filter.ExtensionData != null)
 			{
-				var filterTags = filter.GetAdditionalTagFilters()["t"].Select(t => t.ToLower()).ToList();
-				notes = notes.Where(e => e.Tags.Any(t => t.Data0 == "t" && filterTags.Contains(t.Data1)));
-
+				foreach (var tagfilter in filter.GetAdditionalTagFilters())
+				{
+					var filterTags = tagfilter.Value.Select(t => t.ToLower()).ToList();
+					notes = notes.Where(e => e.Tags.Any(t => t.Data0 == tagfilter.Key && filterTags.Contains(t.Data1)));
+				}
 			}
 			if (filter.Since.HasValue)
 			{

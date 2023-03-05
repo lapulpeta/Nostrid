@@ -1,0 +1,22 @@
+﻿@page "/long"
+
+@using Nostrid.Data
+@using Nostrid.Data.Relays;
+@using Nostrid.Model;
+@using Nostrid.Misc;
+@inject AccountService accountService
+@inject FeedService feedService
+@inject NavigationManager navigationManager
+
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.LongContent})" />
+
+@code {
+    private SubscriptionFilter? filter;
+    private string[]? hashtags;
+    private long id;
+
+    protected override void OnInitialized()
+    {
+        filter = new LongContentSubscriptionFilter();
+    }
+}
