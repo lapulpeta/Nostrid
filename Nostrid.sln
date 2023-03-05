@@ -12,6 +12,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NNostr.Client", "NNostr.Cli
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nostrid.Photino", "Nostrid.Photino\Nostrid.Photino.csproj", "{9A321F3B-2DE5-4A64-B1B6-25CB5B0A1404}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nostrid.Core.Test", "Nostrid.Core.Test\Nostrid.Core.Test.csproj", "{FF56A5D5-CD86-48FA-900B-B79FF2A66D10}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +42,10 @@ Global
 		{9A321F3B-2DE5-4A64-B1B6-25CB5B0A1404}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A321F3B-2DE5-4A64-B1B6-25CB5B0A1404}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9A321F3B-2DE5-4A64-B1B6-25CB5B0A1404}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF56A5D5-CD86-48FA-900B-B79FF2A66D10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF56A5D5-CD86-48FA-900B-B79FF2A66D10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF56A5D5-CD86-48FA-900B-B79FF2A66D10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF56A5D5-CD86-48FA-900B-B79FF2A66D10}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
