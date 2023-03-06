@@ -1,0 +1,220 @@
+﻿@implements IDisposable
+
+@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+@using Microsoft.AspNetCore.Components.Web.Virtualization;
+@using System.Diagnostics;
+
+@inject FeedService feedService
+@inject EventDatabase eventDatabase
+@inject AccountService accountService
+
+@code{
+    [Parameter, EditorRequired]
+    public string EventId { get; set; } = null!;
+}
+
+<div style="width: 325px">
+    <UpdatabableElement @ref="reactionCountsElement">
+        @{
+            var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
+            var groupedReactionsSum = groupedReactions?.Sum(reaction => reaction.Count);
+        }
+        @if (groupedReactionsSum > 0)
+        {
+            <div class="d-flex flex-row overflow-x-auto" style="margin-right: -.25rem;">
+                @foreach (var reactionGroup in groupedReactions!.Take(5))
+                {
+                    <a @onclick="@(() => Like(reactionGroup.Reaction))" @onclick:stopPropagation="true"
+                        class="p-1 me-1 d-flex flex-row align-items-center fs-4 bg-primary-opacity-10-hover">
+                        <span class="text-center" style="min-width: 20px;">@NormalizedReaction(reactionGroup.Reaction)</span>
+                        <span class="mt-1 me-1 fs-7 fw-normal text-secondary">@reactionGroup.Count</span>
+                    </a>
+                }
+            </div>
+
+            <hr class="my-1" />
+
+            <div class="overflow-y-auto position-realtive" style="max-height: 160px;" tabindex="-1">
+                @if (loading)
+                {
+                    <div class="d-flex flex-row align-items-center justify-content-center p-3">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                <Virtualize @ref="reactionList" Context="reaction" ItemsProvider="@GetReactionList" ItemSize="32" OverscanCount="10">
+                    <ItemContent>
+                        <div style="height: 32px">
+                            <div class="d-flex flex-column justify-content-center h-100">
+                                <div class="d-flex flex-row align-items-center">
+                                    <div class="flex-grow-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <AccountName @key="@reaction.ReactorId" Id="@reaction.ReactorId"></AccountName>
+                                    </div>
+                                    <div class="fs-4">@NormalizedReaction(reaction.Content)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </ItemContent>
+                    <Placeholder>
+                        <div style="height: 32px;">
+                            <div class="d-flex flex-column justify-content-center h-100 px-2">
+                                <div class="d-flex flex-row align-items-center placeholder-glow">
+                                    <span class="placeholder col-6"></span>
+                                    <span class="col-5"></span>
+                                    <span class="placeholder col-1"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </Placeholder>
+                </Virtualize>
+            </div>
+        }
+        @if (groupedReactionsSum > 0 && !likeClicked)
+        {
+            <hr class="my-1" />
+        }
+    </UpdatabableElement>
+    @if (!likeClicked)
+    {
+        <div class="fs-3 d-flex flex-row" style="margin: 0 -.5rem -.5rem 0;">
+            @{
+                var reactions = new string[] { "+", "-", "🤙", "❤️", "😂", "😭", "😡", "😮" };
+                foreach (var reaction in reactions)
+                {
+                    <a @onclick="@(() => Like(reaction))" @onclick:stopPropagation="true" class="me-2 mb-2 bg-primary-opacity-10-hover">
+                        @NormalizedReaction(reaction)
+                    </a>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+
+    private bool likeClicked = false;
+    private EventDetailsCount? eventDetailsCount;
+    private bool loading = true;
+    private UpdatabableElement? reactionCountsElement;
+    private Virtualize<Reaction>? reactionList;
+
+    private DateTime lastUpdate;
+    private Task? updateTask;
+    private readonly object lockObj = new();
+    private int minSecBetweenUpdates = 3;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        eventDetailsCount = feedService.GetEventDetailsCount(EventId);
+        feedService.NoteCountChanged += NoteCountChanged;
+
+        if (accountService.MainAccount != null)
+        {
+            likeClicked = feedService.AccountReacted(EventId, accountService.MainAccount.Id);
+            feedService.NoteReacted += NoteReacted;
+        }
+    }
+
+    private void NoteCountChanged(object? sender, (string eventId, EventDetailsCount delta) data)
+    {
+        if (_disposed || EventId != data.eventId)
+            return;
+
+        eventDetailsCount?.Add(data.delta);
+        reactionCountsElement?.Update();
+        UpdateReactionList();
+    }
+
+    private void NoteReacted(object? sender, (string eventId, string reactorId) data)
+    {
+        if (_disposed || EventId != data.eventId || accountService.MainAccount!.Id != data.reactorId)
+            return;
+
+        likeClicked = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateReactionList()
+    {
+        lock (lockObj)
+        {
+            if (updateTask != null)
+            {
+                return;
+            }
+            double waitFor = Utils.Between((lastUpdate.AddSeconds(minSecBetweenUpdates) - DateTime.UtcNow).TotalSeconds, min: 0, max: minSecBetweenUpdates);
+            updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
+            {
+                lastUpdate = DateTime.UtcNow;
+                reactionList?.RefreshDataAsync();
+                updateTask = null;
+            });
+        }
+    }
+
+    private string NormalizedReaction(string reaction)
+    {
+        if (string.IsNullOrEmpty(reaction) || reaction == "+")
+        {
+            return "👍";
+        }
+        if (reaction == "-")
+        {
+            return "👎";
+        }
+        return reaction;
+    }
+
+    private async ValueTask<ItemsProviderResult<Reaction>> GetReactionList(ItemsProviderRequest request)
+    {
+        var reactions = await Task.Run(() => eventDatabase.GetReactionList(EventId, request.StartIndex, request.Count));
+        var totalReactions = eventDetailsCount?.ReactionGroups.Sum(r => r.Value) ?? 0;
+        if (loading)
+        {
+            loading = false;
+            await InvokeAsync(() => StateHasChanged());
+        }
+        return new ItemsProviderResult<Reaction>(reactions, totalReactions);
+    }
+
+    private async Task Like(string reaction)
+    {
+        if (likeClicked) return;
+        var _event = eventDatabase.GetEvent(EventId);
+        if (_event != null && (await feedService.SendReaction(reaction, _event)))
+        {
+            likeClicked = true;
+            await InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        feedService.NoteCountChanged -= NoteCountChanged;
+        feedService.NoteReacted -= NoteReacted;
+    }
+    #endregion
+}

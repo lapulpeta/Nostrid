@@ -535,6 +535,18 @@ namespace Nostrid.Data
             };
         }
 
+        public IEnumerable<Reaction> GetReactionList(string eventId, int index, int count)
+        {
+            using var db = new Context(_dbfile);
+
+            return db.Events
+                .Where(e => e.Tags.Any(d => d.Data0 == "e" && d.Data1 == eventId) && e.Kind == NostrKind.Reaction)
+                .Skip(index)
+                .Take(count)
+                .Select(e => new Reaction() { Content = e.Content, ReactorId = e.PublicKey })
+                .ToList();
+        }
+
         public bool AccountReacted(string eventId, string accountId)
         {
             using var db = new Context(_dbfile);
