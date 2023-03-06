@@ -90,6 +90,20 @@
             }
         }
 
+        // Check TVL bech32
+        if (ByteTools.TryDecodeTvlBech32(input, out var tvlEntity))
+        {
+            switch (tvlEntity)
+            {
+                case Nevent nevent:
+                    NavigationManager.NavigateTo($"/note/{nevent.EventId}");
+                    return;
+                default:
+                    invalidInput = true;
+                    return;
+            }
+        }
+
         // Check tag
         var words = input.Split(" ");
         var hashtags = new List<string>();

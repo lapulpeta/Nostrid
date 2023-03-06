@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using Nostrid.Model;
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace Nostrid.Misc
 {
@@ -32,7 +34,7 @@ namespace Nostrid.Misc
             return Bech32.Encode(hrp, bytes);
         }
 
-        public static string Bech32ToHex(string bech32, string prefix)
+        public static byte[]? Bech32ToByteArray(string bech32, string prefix)
         {
             if (!bech32.StartsWith(prefix))
             {
@@ -40,6 +42,16 @@ namespace Nostrid.Misc
             }
             var hrp = Encoding.ASCII.GetBytes(prefix);
             var bytes = Bech32.Decode(hrp, bech32);
+            return bytes;
+        }
+
+        public static string? Bech32ToHex(string bech32, string prefix)
+        {
+            var bytes = Bech32ToByteArray(bech32, prefix);
+            if (bytes == null)
+            {
+                return null;
+            }
             return Convert.ToHexString(bytes).ToLower();
         }
 
@@ -78,6 +90,56 @@ namespace Nostrid.Misc
             prefix = null;
             hex = null;
             return false;
+        }
+
+        private static string GetHrp(string bech32)
+        {
+            return bech32.Split("1")[0];
+        }
+
+        public static bool TryDecodeTvlBech32(string bech32, [NotNullWhen(true)] out TvlEntity? tvlEntity)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(bech32))
+                {
+                    var pr = GetHrp(bech32);
+                    var bytes = Bech32ToByteArray(bech32, pr);
+                    if (bytes != null)
+                    {
+                        var tvl = BytesToTvl(bytes);
+                        tvlEntity = pr switch
+                        {
+                            "nevent" => new Nevent(tvl),
+                            _ => null
+                        };
+                        if (tvlEntity != null)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            tvlEntity = null;
+            return false;
+        }
+
+        private static List<(NostrTvlType, byte[])> BytesToTvl(byte[] bytes)
+        {
+            List<(NostrTvlType, byte[])> ret = new();
+            for (int i = 0; i < bytes.Length;)
+            {
+                var type = bytes[i];
+                var length = bytes[i + 1];
+                var data = bytes[(i + 2)..(i + 2 + length)];
+                ret.Add(((NostrTvlType)type, data));
+                i += 2 + length;
+            }
+            return ret;
         }
 
         public static string PubkeyToNpub(string pubkey, bool shorten = false)
