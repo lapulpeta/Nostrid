@@ -31,10 +31,12 @@ namespace Nostrid.Migrations
 			migrationBuilder.Sql("DELETE FROM Events WHERE Id IN (SELECT EventId FROM TagDatas WHERE Data0='a')");
 			migrationBuilder.Sql("DELETE FROM TagDatas WHERE Data0='a'");
 
-		}
+            // Remove all replaceable events because we need to recalculate their replaceableId
+            migrationBuilder.Sql("DELETE FROM Events WHERE Kind>=10000 AND Kind<40000");
+        }
 
-		/// <inheritdoc />
-		protected override void Down(MigrationBuilder migrationBuilder)
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
                 name: "IX_Events_ReplaceableId",

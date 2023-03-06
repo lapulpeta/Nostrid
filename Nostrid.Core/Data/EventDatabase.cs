@@ -400,31 +400,6 @@ namespace Nostrid.Data
 			return notes.Where(e => !e.Deleted);
 		}
 
-		private List<Event> ListChildrenNotes(string rootEventId, int levels, out bool maxReached, Context db) // That reply to this tweet
-		{
-			var ret = new List<Event>();
-
-			maxReached = true;
-			if (levels <= 0) return ret;
-			var children = db.Events
-				.Include(e => e.Tags)
-				.Where(e => e.Kind == NostrKind.Text && e.Tags.Any(t => t.Data0 == "e" && t.Data1 == rootEventId))
-				.ToList()
-				.Where(e => e.ReplyToId == rootEventId) // TODO: move this to DB query
-				.ToList();
-			ret.AddRange(children);
-			if (levels > 1)
-			{
-				maxReached = false;
-				var childrenLevels = children.Count > 1 ? levels - 1 : levels; // Single replies are at level of parent
-				foreach (var tww in children)
-				{
-					ret.AddRange(ListChildrenNotes(tww.Id, childrenLevels, out maxReached, db));
-				}
-			}
-			return ret;
-		}
-
 		public string? GetAccountName(string accountId)
 		{
 			using var db = new Context(_dbfile);
@@ -540,8 +515,10 @@ namespace Nostrid.Data
 
 			var validKinds = new int[] { NostrKind.Reaction, NostrKind.Repost, NostrKind.Zap };
 
-			var counts = db.TagDatas
-				.Where(d => d.Data0 == "e" && d.Data1 == eventId && validKinds.Contains(d.Event.Kind))
+            var tag = eventId.IsReplaceableId() ? "a" : "e";
+
+            var counts = db.TagDatas
+				.Where(d => d.Data0 == tag && d.Data1 == eventId && validKinds.Contains(d.Event.Kind))
 				.GroupBy(d => new { d.Event.Kind, ReactionType = d.Event.Kind == NostrKind.Reaction ? d.Event.Content ?? string.Empty : string.Empty })
 				.Select(d => new { d.Key.Kind, d.Key.ReactionType, Count = d.Count() });
 			return new()
@@ -570,7 +547,8 @@ namespace Nostrid.Data
         {
             using var db = new Context(_dbfile);
 
-			return db.TagDatas.Any(d => d.Data0 == "e" && d.Data1 == eventId && d.Event.Kind == NostrKind.Reaction &&
+			var tag = eventId.IsReplaceableId() ? "a" : "e";
+			return db.TagDatas.Any(d => d.Data0 == tag && d.Data1 == eventId && d.Event.Kind == NostrKind.Reaction &&
 				d.Event.PublicKey == accountId);
 		}
 

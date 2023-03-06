@@ -52,7 +52,7 @@
 @code {
     private List<NoteTree> noteTrees = new();
     private bool noteNotFound;
-    private string? rootId;
+    private string? standardRootId, replaceableRootId;
     private UpdatabableElement? content;
 
     private CancellationTokenSource cancellationTokenSource = new();
@@ -74,7 +74,7 @@
         Task.Run(() =>
         {
             feedService.AddDetailsNeeded(EventId);
-            var notes = feedService.GetNotesThread(EventId, out rootId);
+            var notes = feedService.GetNotesThread(EventId, out standardRootId, out replaceableRootId);
             TruncateTreeIfNeeded(notes);
             InvokeAsync(() => StateHasChanged());
         },
@@ -113,16 +113,45 @@
     {
         Task.Run(() =>
         {
-            if (rootId == null)
+            if (standardRootId == null && replaceableRootId == null)
             {
                 var note = data.events.Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == EventId || e.ReplaceableId == EventId || e.ReplyToRootId == EventId || e.ReplyToId == EventId)).FirstOrDefault();
                 if (note == null)
                 {
                     return;
                 }
-                rootId = note.ReplyToRootId ?? note.ReplaceableId ?? note.Id;
+                if (note.ReplyToRootId.IsNullOrEmpty())
+                {
+                    standardRootId = note.Id;
+                    replaceableRootId = note.ReplaceableId;
+                }
+                else if (note.ReplyToRootId.IsReplaceableId())
+                {
+                    standardRootId = null;
+                    replaceableRootId = note.ReplyToRootId;
+                }
+                else
+                {
+                    standardRootId = note.ReplyToRootId;
+                    replaceableRootId = null;
+                }
             }
-            var notesToAdd = data.events.Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == rootId || e.ReplaceableId == rootId || e.ReplyToRootId == rootId));
+
+            List<Event> notesToAdd = new();
+            if (standardRootId.IsNotNullOrEmpty())
+            {
+                notesToAdd = data.events
+                .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == standardRootId || e.ReplyToRootId == standardRootId))
+                .ToList();
+            }
+
+            if (replaceableRootId.IsNotNullOrEmpty())
+            {
+                var alreadyLoadedEvents = notesToAdd.Select(e => e.Id).ToList();
+                notesToAdd.AddRange(data.events
+                .Where(e => !alreadyLoadedEvents.Contains(e.Id) && (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplaceableId == replaceableRootId || e.ReplyToRootId == replaceableRootId))
+                );
+            }
             if (!notesToAdd.Any())
             {
                 return;

@@ -275,13 +275,13 @@
         }
         rendered = true;
 
-        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.Id);
+        eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.ReplaceableId ?? Tree.Note.Id);
         feedService.NoteCountChanged += NoteCountChanged;
         feedService.NoteDeleted += NoteDeleted;
         if (accountService.MainAccount != null)
         {
             // If this note receives a reaction from main account then show it
-            likeClicked = feedService.AccountReacted(Tree.Note.Id, accountService.MainAccount.Id);
+            likeClicked = feedService.AccountReacted(Tree.Note.ReplaceableId ?? Tree.Note.Id, accountService.MainAccount.Id);
             feedService.NoteReacted += NoteReacted;
         }
     }

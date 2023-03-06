@@ -171,22 +171,56 @@ public class FeedService
         return eventDatabase.ListNotes(filter.GetFilters(), kinds, count);
     }
 
-    public List<Event> GetNotesThread(string eventId, out string? rootId)
+    public List<Event> GetNotesThread(string eventId, out string? standardRootId, out string? replaceableRootId)
     {
         using var db = eventDatabase.CreateContext();
-        var note = db.Events.FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == eventId || e.ReplaceableId == eventId));
-            note ??= db.Events.FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplyToRootId == eventId || e.ReplyToId == eventId));
+        var note = db.Events.AsNoTracking().FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == eventId || e.ReplaceableId == eventId));
+        note ??= db.Events.AsNoTracking().FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplyToRootId == eventId || e.ReplyToId == eventId));
         if (note == null)
         {
-            rootId = null;
+            standardRootId = null;
+            replaceableRootId = null;
             return new();
         }
-        rootId = note.ReplyToRootId ?? note.ReplaceableId ?? note.Id;
-        var localRootId = rootId;
-        return db.Events
-            .Include(e => e.Tags)
-            .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == localRootId || e.ReplaceableId == localRootId || e.ReplyToRootId == localRootId))
-            .ToList();
+        if (note.ReplyToRootId.IsNullOrEmpty())
+        {
+            standardRootId = note.Id;
+            replaceableRootId = note.ReplaceableId;
+        }
+        else if (note.ReplyToRootId.IsReplaceableId())
+        {
+            standardRootId = null;
+            replaceableRootId = note.ReplyToRootId;
+        }
+        else
+        {
+            standardRootId = note.ReplyToRootId;
+            replaceableRootId = null;
+        }
+
+        List<Event> events = new();
+        if (standardRootId.IsNotNullOrEmpty())
+        {
+            var queryRootId = standardRootId;
+            events = db.Events
+                .AsNoTracking()
+                .Include(e => e.Tags)
+                .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == queryRootId || e.ReplyToRootId == queryRootId))
+                .ToList();
+        }
+        
+        if (replaceableRootId.IsNotNullOrEmpty())
+        {
+            var queryRootId = replaceableRootId;
+            var alreadyLoadedEvents = events.Select(e => e.Id).ToList();
+            events.AddRange(db.Events
+                .AsNoTracking()
+                .Include(e => e.Tags)
+                .Where(e => !alreadyLoadedEvents.Contains(e.Id) && (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplaceableId == queryRootId || e.ReplyToRootId == queryRootId))
+                );
+        }
+
+        return events;
     }
 
     public List<NoteTree> GetTreesFromNotesNoGrouping(IEnumerable<Event> evs)

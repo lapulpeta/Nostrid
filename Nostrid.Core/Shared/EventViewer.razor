@@ -178,7 +178,7 @@
 
     private void Cleanup()
     {
-        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
+        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId, Event.ReplaceableId);
         feedService.NotesReceived -= NotesReceived;
     }
     #endregion
