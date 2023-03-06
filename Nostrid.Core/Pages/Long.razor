@@ -7,6 +7,7 @@
 @inject FeedService feedService
 @inject NavigationManager navigationManager
 
+<h3>Blogs</h3>
 <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.LongContent})" />
 
 @code {
