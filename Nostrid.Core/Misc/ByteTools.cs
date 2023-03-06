@@ -27,11 +27,16 @@ namespace Nostrid.Misc
             return Encoding.UTF8.GetString(bytes).ToLower();
         }
 
-        public static string HexToBech32(string hex, string prefix)
+        public static string ByteArrayToBech32(byte[] bytes, string prefix)
         {
             var hrp = Encoding.ASCII.GetBytes(prefix);
-            var bytes = Convert.FromHexString(hex);
             return Bech32.Encode(hrp, bytes);
+        }
+
+        public static string HexToBech32(string hex, string prefix)
+        {
+            var bytes = Convert.FromHexString(hex);
+            return ByteArrayToBech32(bytes, prefix);
         }
 
         public static byte[]? Bech32ToByteArray(string bech32, string prefix)
@@ -97,6 +102,18 @@ namespace Nostrid.Misc
             return bech32.Split("1")[0];
         }
 
+        public static string? EncodeTvlBech32(TvlEntity tvlEntity)
+        {
+            var tvl = tvlEntity.GetTvl();
+            var bytes = TvlToBytes(tvl);
+            return tvlEntity switch
+            {
+                Nevent => ByteArrayToBech32(bytes, "nevent"),
+                Naddr => ByteArrayToBech32(bytes, "naddr"),
+                _ => null,
+            };
+        }
+
         public static bool TryDecodeTvlBech32(string bech32, [NotNullWhen(true)] out TvlEntity? tvlEntity)
         {
             try
@@ -143,6 +160,11 @@ namespace Nostrid.Misc
             return ret;
         }
 
+        private static byte[] TvlToBytes(List<(NostrTvlType, byte[])> tvl)
+        {
+            return tvl.SelectMany(t => new[] { (byte)t.Item1, (byte)t.Item2.Length }.Concat(t.Item2)).ToArray();
+        }
+
         public static string PubkeyToNpub(string pubkey, bool shorten = false)
         {
             return PubkeyToBech32(pubkey, "npub", shorten);
@@ -156,6 +178,18 @@ namespace Nostrid.Misc
         public static string PubkeyToNote(string pubkey, bool shorten = false)
         {
             return PubkeyToBech32(pubkey, "note", shorten);
+        }
+
+        public static string EventIdToString(string id, bool shorten = false)
+        {
+            if (id.IsReplaceableId())
+            {
+                return ShortenBech32(EncodeTvlBech32(new Naddr(id)), true);
+            }
+            else
+            {
+                return PubkeyToBech32(id, "note", shorten);
+            }
         }
 
         public static string PubkeyToBech32(string pubkey, string prefix, bool shorten = false)

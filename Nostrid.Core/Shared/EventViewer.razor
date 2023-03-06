@@ -60,7 +60,7 @@
                     <span class="d-inline-block">
                         Replying to
                         <a href="/note/@Event?.ReplyToId" @onclick:stopPropagation="true">
-                            @ByteTools.PubkeyToNote(Event?.ReplyToId ?? string.Empty, true)
+                            @ByteTools.EventIdToString(Event?.ReplyToId ?? string.Empty, true)
                         </a>
                     </span>
                 }

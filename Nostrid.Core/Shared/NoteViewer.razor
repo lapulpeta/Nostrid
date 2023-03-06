@@ -182,6 +182,10 @@
                                 <i class="bi bi-three-dots-vertical"></i>
                             </a>
                             <ul class="dropdown-menu shadow">
+                                @if (Tree.Note.ReplaceableId.IsNotNullOrEmpty())
+                                {
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.EncodeTvlBech32(new Naddr(Tree.Note.ReplaceableId)) ?? string.Empty))" @onclick:stopPropagation="true">Copy Naddr</a></li>
+                                }
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Note ID</a></li>
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Note Hex</a></li>
                                 <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>

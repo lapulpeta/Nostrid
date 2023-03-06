@@ -11,9 +11,9 @@ public enum NostrTvlType
     Kind = 3
 }
 
-public class TvlEntity
+public abstract class TvlEntity
 {
-
+    public abstract List<(NostrTvlType, byte[])> GetTvl();
 }
 
 // NIP-19: https://github.com/nostr-protocol/nips/blob/master/19.md
@@ -26,6 +26,11 @@ public class Nevent : TvlEntity
     {
         EventId = Convert.ToHexString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Special).Item2).ToLower();
     }
+
+    public override List<(NostrTvlType, byte[])> GetTvl()
+    {
+        return new() { (NostrTvlType.Special, Convert.FromHexString(EventId)) };
+    }
 }
 
 public class Naddr : TvlEntity
@@ -33,6 +38,18 @@ public class Naddr : TvlEntity
     public readonly string D;
     public readonly string Pubkey;
     public readonly int Kind;
+
+    public Naddr(string replaceableId)
+    {
+        var exploded = EventExtension.ExplodeReplaceableId(replaceableId);
+        if (exploded == null)
+        {
+            return;
+        }
+        Pubkey = exploded.Value.pubkey;
+        Kind = exploded.Value.kind;
+        D = exploded.Value.dstr;
+    }
 
     public Naddr(List<(NostrTvlType, byte[])> tvl)
     {
@@ -42,4 +59,15 @@ public class Naddr : TvlEntity
     }
 
     public string ReplaceableId => EventExtension.GetReplaceableId(Pubkey, Kind, D)!;
+
+    public override List<(NostrTvlType, byte[])> GetTvl()
+    {
+        byte[] kind = new byte[sizeof(uint)];
+        BinaryPrimitives.WriteUInt32BigEndian(kind, (uint)Kind);
+        return new() {
+            (NostrTvlType.Special, Encoding.ASCII.GetBytes(D)),
+            (NostrTvlType.Author, Convert.FromHexString(Pubkey)),
+            (NostrTvlType.Kind, kind),
+        };
+    }
 }
