@@ -1,5 +1,6 @@
 using Newtonsoft.Json.Linq;
 using NNostr.Client;
+using Nostrid.Misc;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -187,7 +188,21 @@ public static class EventExtension
 		return id?.Contains(':') ?? false;
 	}
 
-	public static (string pubkey, int kind, string dstr)? ExplodeReplaceableId(string? naddr)
+    public static bool IsReplaceableIdStrict(this string id)
+    {
+		var exploded = ExplodeReplaceableId(id);
+		if (exploded == null)
+		{
+			return false;
+		}
+		if (!Utils.IsValidNostrId(exploded.Value.pubkey))
+		{
+			return false;
+		}
+		return true;
+    }
+
+    public static (string pubkey, int kind, string dstr)? ExplodeReplaceableId(string? naddr)
 	{
 		if (naddr == null)
 		{

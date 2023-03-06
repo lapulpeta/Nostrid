@@ -1,4 +1,5 @@
-using System.Collections.Immutable;
+using System.Buffers.Binary;
+using System.Text;
 
 namespace Nostrid.Model;
 
@@ -15,6 +16,8 @@ public class TvlEntity
 
 }
 
+// NIP-19: https://github.com/nostr-protocol/nips/blob/master/19.md
+
 public class Nevent : TvlEntity
 {
     public readonly string EventId;
@@ -25,3 +28,18 @@ public class Nevent : TvlEntity
     }
 }
 
+public class Naddr : TvlEntity
+{
+    public readonly string D;
+    public readonly string Pubkey;
+    public readonly int Kind;
+
+    public Naddr(List<(NostrTvlType, byte[])> tvl)
+    {
+        D = Encoding.ASCII.GetString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Special).Item2);
+        Pubkey = Convert.ToHexString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Author).Item2).ToLower();
+        Kind = (int)BinaryPrimitives.ReadUInt32BigEndian(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Kind).Item2);
+    }
+
+    public string ReplaceableId => EventExtension.GetReplaceableId(Pubkey, Kind, D)!;
+}

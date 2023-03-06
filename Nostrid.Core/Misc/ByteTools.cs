@@ -111,6 +111,7 @@ namespace Nostrid.Misc
                         tvlEntity = pr switch
                         {
                             "nevent" => new Nevent(tvl),
+                            "naddr" => new Naddr(tvl),
                             _ => null
                         };
                         if (tvlEntity != null)

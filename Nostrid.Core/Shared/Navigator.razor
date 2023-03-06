@@ -98,6 +98,9 @@
                 case Nevent nevent:
                     NavigationManager.NavigateTo($"/note/{nevent.EventId}");
                     return;
+                case Naddr naddr:
+                    NavigationManager.NavigateTo($"/note/{naddr.ReplaceableId}");
+                    return;
                 default:
                     invalidInput = true;
                     return;
@@ -117,6 +120,13 @@
         if (hashtags.Any())
         {
             NavigationManager.NavigateTo($"/tag/{string.Join(",", hashtags.ToArray())}");
+            return;
+        }
+
+        // Check replaceable ID
+        if (input.IsReplaceableIdStrict())
+        {
+            NavigationManager.NavigateTo($"/note/{input}");
             return;
         }
 
