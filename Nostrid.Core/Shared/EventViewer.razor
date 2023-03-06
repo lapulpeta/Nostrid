@@ -21,6 +21,9 @@
     public bool ShowReplyingTo { get; set; }
 
     [Parameter]
+    public bool Expanded { get; set; }
+
+    [Parameter]
     public RenderFragment? LeftPlaceholder { get; set; }
 
     [Parameter]
@@ -80,9 +83,19 @@
                 case NostrKind.Text:
                 case NostrKind.DM:
                 case NostrKind.LongContent:
-                    <div class="text-break note-content">
-                        @content
+                    <div class="note-content-wrapper @(!allVisible ? "to-expand" : "") @(Expanded ? "expanded" : "")">
+                        <div class="text-break note-content">
+                            @content
+                        </div>
+                        <ElementObserver OnIntersecting="Intersecting"></ElementObserver>
                     </div>
+                    @if (!allVisible)
+                    {
+                        <a href="#" role="button"
+                            @onclick="@ToggleExpand" 
+                            @onclick:stopPropagation="true"
+                            @onclick:preventDefault="true">See more...</a>
+                    }
                     break;
                 case NostrKind.Repost:
                     if (Event.RepostEventId != null)
@@ -112,6 +125,7 @@
     private UpdatabableElement? textContent;
     private bool waitingForRepostedEvent;
     private RenderFragment content;
+    private bool allVisible = true;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -156,6 +170,19 @@
             textContent.Update();
             waitingForRepostedEvent = false;
         }
+    }
+
+    private void Intersecting(object? sender, bool interescting)
+    {
+        allVisible = interescting;
+        textContent?.Update();
+    }
+
+    private void ToggleExpand()
+    {
+        Expanded = !Expanded;
+        if (Expanded) allVisible = true;
+        textContent?.Update();
     }
 
     #region Dispose

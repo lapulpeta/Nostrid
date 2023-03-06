@@ -117,7 +117,7 @@
     else
     {
         <div class="d-flex flex-grow-1 flex-column">
-            <EventViewer Event="@Tree.Note" ShowReplyingTo="@(TreeLayout.Length == 1 && !OnlyChild)">
+            <EventViewer Event="@Tree.Note" ShowReplyingTo="@(TreeLayout.Length == 1 && !OnlyChild)" Expanded="@(Tree.Note.Id == MainEventId)">
                 <LeftPlaceholder>
                     <UpdatabableElement @ref="leftPlaceholder">
                         @if (Tree.Children.Count > 0)
