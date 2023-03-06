@@ -4,6 +4,11 @@ public class Event
 {
     public string Id { get; set; }
 
+    /// <summary>
+    /// This is an internal ID for replaceable events. It is always the same for a given replaceable event.
+    /// </summary>
+    public string? ReplaceableId { get; set; }
+
     public string PublicKey { get; set; }
 
     public DateTime? CreatedAt { get; set; }
@@ -37,6 +42,14 @@ public class Event
     public string? ChannelId { get; set; }
 
     public string? DmToId { get; set; }
+
+    public NostrKindClass KindClass => Kind switch
+    {
+        >= 10000 and < 20000 => NostrKindClass.Replaceable,
+        >= 20000 and < 30000 => NostrKindClass.Ephemeral,
+        >= 30000 and < 40000 => NostrKindClass.ReplaceableParams,
+        _ => NostrKindClass.Other
+    };
 
     #region Properties (move to extension when supported by C#)
 

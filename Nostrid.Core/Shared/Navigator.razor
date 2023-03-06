@@ -90,6 +90,23 @@
             }
         }
 
+        // Check TVL bech32
+        if (ByteTools.TryDecodeTvlBech32(input, out var tvlEntity))
+        {
+            switch (tvlEntity)
+            {
+                case Nevent nevent:
+                    NavigationManager.NavigateTo($"/note/{nevent.EventId}");
+                    return;
+                case Naddr naddr:
+                    NavigationManager.NavigateTo($"/note/{naddr.ReplaceableId}");
+                    return;
+                default:
+                    invalidInput = true;
+                    return;
+            }
+        }
+
         // Check tag
         var words = input.Split(" ");
         var hashtags = new List<string>();
@@ -103,6 +120,13 @@
         if (hashtags.Any())
         {
             NavigationManager.NavigateTo($"/tag/{string.Join(",", hashtags.ToArray())}");
+            return;
+        }
+
+        // Check replaceable ID
+        if (input.IsReplaceableIdStrict())
+        {
+            NavigationManager.NavigateTo($"/note/{input}");
             return;
         }
 

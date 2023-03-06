@@ -29,7 +29,8 @@ public class NoteTree : NoteTreeNode
 
     public NoteTree? Find(string id, out bool exceededMax, int startChildIndex = 0, int? maxChildAllowed = null)
     {
-        if (Note.Id == id)
+        var isReplaceableId = EventExtension.IsReplaceableId(id);
+        if ((!isReplaceableId && Note.Id == id) || (isReplaceableId && Note.ReplaceableId == id))
         {
             exceededMax = false;
             return this;
@@ -39,7 +40,8 @@ public class NoteTree : NoteTreeNode
 
     public bool Exists(string id)
     {
-        return Note.Id == id || Children.Exists(id);
+		var isReplaceableId = EventExtension.IsReplaceableId(id);
+		return (!isReplaceableId && Note.Id == id) || (isReplaceableId && Note.ReplaceableId == id) || Children.Exists(id);
     }
 
     public List<Event> AllNotes()

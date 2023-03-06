@@ -1,1 +1,13 @@
-﻿
+﻿.note-content-wrapper {
+    max-height: 50vh;
+    overflow: hidden;
+    transition: background ease-in-out 3s;
+}
+
+    .note-content-wrapper.expanded {
+        max-height: initial;
+    }
+
+    .note-content-wrapper.to-expand {
+        -webkit-mask: linear-gradient(#000 calc(100% - 3rem), #0000);
+    }

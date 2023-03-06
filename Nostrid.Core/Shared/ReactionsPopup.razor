@@ -126,7 +126,6 @@
             return;
 
         eventDetailsCount?.Add(data.delta);
-        reactionCountsElement?.Update();
         UpdateReactionList();
     }
 
@@ -151,7 +150,7 @@
             updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
             {
                 lastUpdate = DateTime.UtcNow;
-                reactionList?.RefreshDataAsync();
+                reactionList?.RefreshDataAsync().ContinueWith(_ => reactionCountsElement?.Update());
                 updateTask = null;
             });
         }

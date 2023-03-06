@@ -21,6 +21,9 @@
     public bool ShowReplyingTo { get; set; }
 
     [Parameter]
+    public bool Expanded { get; set; }
+
+    [Parameter]
     public RenderFragment? LeftPlaceholder { get; set; }
 
     [Parameter]
@@ -57,7 +60,7 @@
                     <span class="d-inline-block">
                         Replying to
                         <a href="/note/@Event?.ReplyToId" @onclick:stopPropagation="true">
-                            @ByteTools.PubkeyToNote(Event?.ReplyToId ?? string.Empty, true)
+                            @ByteTools.EventIdToString(Event?.ReplyToId ?? string.Empty, true)
                         </a>
                     </span>
                 }
@@ -79,9 +82,20 @@
                 case NostrKind.ChannelMessage:
                 case NostrKind.Text:
                 case NostrKind.DM:
-                    <div class="text-break note-content">
-                        @content
+                case NostrKind.LongContent:
+                    <div class="note-content-wrapper @(!allVisible ? "to-expand" : "") @(Expanded ? "expanded" : "")">
+                        <div class="text-break note-content">
+                            @content
+                        </div>
+                        <ElementObserver OnIntersecting="Intersecting"></ElementObserver>
                     </div>
+                    @if (!allVisible)
+                    {
+                        <a href="#" role="button"
+                            @onclick="@ToggleExpand" 
+                            @onclick:stopPropagation="true"
+                            @onclick:preventDefault="true">See more...</a>
+                    }
                     break;
                 case NostrKind.Repost:
                     if (Event.RepostEventId != null)
@@ -111,6 +125,7 @@
     private UpdatabableElement? textContent;
     private bool waitingForRepostedEvent;
     private RenderFragment content;
+    private bool allVisible = true;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -131,7 +146,7 @@
 
         Cleanup();
 
-        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
+        feedService.AddDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId, Event.ReplaceableId);
 
         if (Event.RepostEventId.IsNotNullOrEmpty())
         {
@@ -157,6 +172,19 @@
         }
     }
 
+    private void Intersecting(object? sender, bool interescting)
+    {
+        allVisible = interescting;
+        textContent?.Update();
+    }
+
+    private void ToggleExpand()
+    {
+        Expanded = !Expanded;
+        if (Expanded) allVisible = true;
+        textContent?.Update();
+    }
+
     #region Dispose
     private bool _disposed;
 
@@ -177,7 +205,7 @@
 
     private void Cleanup()
     {
-        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId);
+        feedService.RemoveDetailsNeeded(Event.Id, Event.ReplyToId, Event.ReplyToRootId, Event.RepostEventId, Event.ReplaceableId);
         feedService.NotesReceived -= NotesReceived;
     }
     #endregion

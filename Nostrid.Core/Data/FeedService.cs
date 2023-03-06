@@ -126,21 +126,29 @@ public class FeedService
     {
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
         // NIP-57: https://github.com/nostr-protocol/nips/blob/master/57.md
-        var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
-        if (etag != null && Utils.IsValidNostrId(etag.Data1))
+        var tag = eventToProcess.Tags.Where(t => (t.Data0 == "e" || t.Data0 == "a") && t.Data1 != null).LastOrDefault();
+        if (tag == null)
         {
-            EventDetailsCount delta = eventToProcess.Kind switch
-            {
-                NostrKind.Repost => new() { Reposts = 1 },
-                NostrKind.Zap => new() { Zaps = 1 },
-                NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content ?? string.Empty] = 1 } },
-                _ => new()
-            };
-            NoteCountChanged?.Invoke(this, (etag.Data1, delta));
-            if (eventToProcess.Kind == NostrKind.Reaction)
-            {
-                NoteReacted?.Invoke(this, (etag.Data1, eventToProcess.PublicKey));
-            }
+            return;
+        }
+
+        if ((tag.Data0 != "e" || !Utils.IsValidNostrId(tag.Data1)) &&
+            (tag.Data0 != "a" || !tag.Data1!.IsReplaceableIdStrict()))
+        {
+            return;
+        }
+
+        EventDetailsCount delta = eventToProcess.Kind switch
+        {
+            NostrKind.Repost => new() { Reposts = 1 },
+            NostrKind.Zap => new() { Zaps = 1 },
+            NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content ?? string.Empty] = 1 } },
+            _ => new()
+        };
+        NoteCountChanged?.Invoke(this, (tag.Data1!, delta));
+        if (eventToProcess.Kind == NostrKind.Reaction)
+        {
+            NoteReacted?.Invoke(this, (tag.Data1!, eventToProcess.PublicKey));
         }
     }
 
@@ -171,22 +179,56 @@ public class FeedService
         return eventDatabase.ListNotes(filter.GetFilters(), kinds, count);
     }
 
-    public List<Event> GetNotesThread(string eventId, out string? rootId)
+    public List<Event> GetNotesThread(string eventId, out string? standardRootId, out string? replaceableRootId)
     {
         using var db = eventDatabase.CreateContext();
-        var note = db.Events.Where(e => e.Kind == NostrKind.Text && e.Id == eventId).FirstOrDefault();
-        note ??= db.Events.Where(e => e.Kind == NostrKind.Text && (e.ReplyToRootId == eventId || e.ReplyToId == eventId)).FirstOrDefault();
+        var note = db.Events.AsNoTracking().FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == eventId || e.ReplaceableId == eventId));
+        note ??= db.Events.AsNoTracking().FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplyToRootId == eventId || e.ReplyToId == eventId));
         if (note == null)
         {
-            rootId = null;
+            standardRootId = null;
+            replaceableRootId = null;
             return new();
         }
-        rootId = note.ReplyToRootId ?? note.Id;
-        var localRootId = rootId;
-        return db.Events
-            .Include(e => e.Tags)
-            .Where(e => e.Kind == NostrKind.Text && (e.Id == localRootId || e.ReplyToRootId == localRootId))
-            .ToList();
+        if (note.ReplyToRootId.IsNullOrEmpty())
+        {
+            standardRootId = note.Id;
+            replaceableRootId = note.ReplaceableId;
+        }
+        else if (note.ReplyToRootId.IsReplaceableId())
+        {
+            standardRootId = null;
+            replaceableRootId = note.ReplyToRootId;
+        }
+        else
+        {
+            standardRootId = note.ReplyToRootId;
+            replaceableRootId = null;
+        }
+
+        List<Event> events = new();
+        if (standardRootId.IsNotNullOrEmpty())
+        {
+            var queryRootId = standardRootId;
+            events = db.Events
+                .AsNoTracking()
+                .Include(e => e.Tags)
+                .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == queryRootId || e.ReplyToRootId == queryRootId))
+                .ToList();
+        }
+        
+        if (replaceableRootId.IsNotNullOrEmpty())
+        {
+            var queryRootId = replaceableRootId;
+            var alreadyLoadedEvents = events.Select(e => e.Id).ToList();
+            events.AddRange(db.Events
+                .AsNoTracking()
+                .Include(e => e.Tags)
+                .Where(e => !alreadyLoadedEvents.Contains(e.Id) && (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplaceableId == queryRootId || e.ReplyToRootId == queryRootId))
+                );
+        }
+
+        return events;
     }
 
     public List<NoteTree> GetTreesFromNotesNoGrouping(IEnumerable<Event> evs)
@@ -460,17 +502,27 @@ public class FeedService
             nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { p }.ToList() });
         }
 
-        // Then e's (mentions) (indexed)
+        // Then e's (mentions) (indexed) (use "a" tag if it's a replaceable event)
         var relay = relayService.GetRecommendedRelayUri();
         foreach (var e in es)
         {
-            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { e, relay, "mention" }.ToList() });
+            var ev = eventDatabase.GetEventOrNull(e);
+            (string tag, string tagdata) =
+                ev != null && ev.ReplaceableId.IsNotNullOrEmpty() ?
+                ("a", ev.ReplaceableId) :
+                ("e", e);
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = tag, Data = new[] { tagdata, relay, "mention" }.ToList() });
         }
 
-        // Then e's (reply/root) (non-indexed)
+        // Then e's (reply/root) (non-indexed) (use "a" tag if it's a replaceable event)
         foreach (var er in ers)
         {
-            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { er.Item1, relay, er.Item2 }.ToList() });
+            var ev = eventDatabase.GetEventOrNull(er.Item1);
+            (string tag, string tagdata) =
+                ev != null && ev.ReplaceableId.IsNotNullOrEmpty() ?
+                ("a", ev.ReplaceableId) :
+                ("e", er.Item1);
+            nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = tag, Data = new[] { tagdata, relay, er.Item2 }.ToList() });
         }
 
         // Then t's (non-indexed)
@@ -499,7 +551,11 @@ public class FeedService
             PublicKey = accountService.MainAccount.Id,
             Tags = new(),
         };
-        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "e", Data = new[] { reactTo.Id }.ToList() });
+        (string tag, string tagdata) =
+            reactTo.ReplaceableId.IsNotNullOrEmpty() ?
+            ("a", reactTo.ReplaceableId) :
+            ("e", reactTo.Id);
+        nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = tag, Data = new[] { tagdata }.ToList() });
         nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = new[] { reactTo.PublicKey }.ToList() });
         if (!await accountService.MainAccountSigner.Sign(nostrEvent))
             return false;
@@ -670,7 +726,7 @@ public class FeedService
     public async Task QueryDetails(CancellationToken cancellationToken)
     {
         List<string> willQuery = new();
-        EventSubscriptionFilter? filter = null;
+        List<SubscriptionFilter> filters = new();
         bool mustUpdate;
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -702,9 +758,20 @@ public class FeedService
 
             if (mustUpdate && willQuery.Count > 0)
             {
-                relayService.DeleteFilters(filter);
-                filter = new EventSubscriptionFilter(willQuery.ToArray());
-                relayService.AddFilters(filter);
+                relayService.DeleteFilters(filters);
+                filters = new();
+                var rids = willQuery.Where(id => id.Contains(':')).ToArray();
+                var eids = willQuery.Except(rids).ToArray();
+                // TODO: optimize this so they are checked separately (eg. we don't need to recreate eids if only rids changed)
+                if (eids.Any())
+                {
+                    filters.Add(new EventSubscriptionFilter(eids));
+                }
+				if (rids.Any())
+				{
+					filters.Add(new ReplaceableEventSubscriptionFilter(rids));
+				}
+				relayService.AddFilters(filters);
                 await Task.Delay(TimeSpan.FromSeconds(SecondsForDetailsFilters), cancellationToken);
             }
             else
@@ -713,7 +780,7 @@ public class FeedService
             }
         }
 
-        relayService.DeleteFilters(filter);
+        relayService.DeleteFilters(filters);
     }
 
 }

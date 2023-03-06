@@ -41,11 +41,13 @@ public class Context : DbContext
         builder.Entity<Event>().HasIndex(e => e.Kind);
         builder.Entity<Event>().HasIndex(e => e.PublicKey);
         builder.Entity<Event>().HasIndex(e => e.Id);
+        builder.Entity<Event>().HasIndex(e => e.ReplaceableId).IsUnique();
         builder.Entity<Event>().HasIndex(e => e.CreatedAtCurated);
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToId });
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ReplyToRootId });
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.ChannelId });
         builder.Entity<Event>().HasIndex(e => new { e.Kind, e.DmToId });
+        builder.Entity<Event>().HasIndex(e => new { e.ReplaceableId, e.CreatedAt });
         builder.Entity<Account>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => e.Id);
         builder.Entity<AccountDetails>().HasIndex(e => new { e.Id, e.DetailsLastReceived });
