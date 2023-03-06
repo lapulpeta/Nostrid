@@ -228,6 +228,12 @@ namespace Nostrid.Data
 		public Event? GetEventOrNull(string id)
 		{
 			using var db = new Context(_dbfile);
+			if (id.IsReplaceableId())
+			{
+                return db.Events
+                    .Include(e => e.Tags)
+                    .FirstOrDefault(e => e.ReplaceableId == id);
+            }
 			return db.Events
 				.Include(e => e.Tags)
 				.FirstOrDefault(e => e.Id == id);

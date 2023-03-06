@@ -331,7 +331,7 @@
 
     private void NoteCountChanged(object? sender, (string eventId, EventDetailsCount delta) data)
     {
-        if (_disposed || Tree.Note.Id != data.eventId)
+        if (_disposed || (Tree.Note.Id != data.eventId && Tree.Note.ReplaceableId != data.eventId))
             return;
 
         eventDetailsCount?.Add(data.delta);
@@ -349,7 +349,7 @@
 
     private void NoteReacted(object? sender, (string eventId, string reactorId) data)
     {
-        if (_disposed || Tree.Note.Id != data.eventId || accountService.MainAccount!.Id != data.reactorId)
+        if (_disposed || (Tree.Note.Id != data.eventId && Tree.Note.ReplaceableId != data.eventId) || accountService.MainAccount!.Id != data.reactorId)
             return;
 
         likeClicked = true;

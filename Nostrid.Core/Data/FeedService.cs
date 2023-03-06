@@ -126,21 +126,29 @@ public class FeedService
     {
         // NIP-25: https://github.com/nostr-protocol/nips/blob/master/25.md
         // NIP-57: https://github.com/nostr-protocol/nips/blob/master/57.md
-        var etag = eventToProcess.Tags.Where(t => t.Data0 == "e" && t.Data1 != null).LastOrDefault();
-        if (etag != null && Utils.IsValidNostrId(etag.Data1))
+        var tag = eventToProcess.Tags.Where(t => (t.Data0 == "e" || t.Data0 == "a") && t.Data1 != null).LastOrDefault();
+        if (tag == null)
         {
-            EventDetailsCount delta = eventToProcess.Kind switch
-            {
-                NostrKind.Repost => new() { Reposts = 1 },
-                NostrKind.Zap => new() { Zaps = 1 },
-                NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content ?? string.Empty] = 1 } },
-                _ => new()
-            };
-            NoteCountChanged?.Invoke(this, (etag.Data1, delta));
-            if (eventToProcess.Kind == NostrKind.Reaction)
-            {
-                NoteReacted?.Invoke(this, (etag.Data1, eventToProcess.PublicKey));
-            }
+            return;
+        }
+
+        if ((tag.Data0 != "e" || !Utils.IsValidNostrId(tag.Data1)) &&
+            (tag.Data0 != "a" || !tag.Data1!.IsReplaceableIdStrict()))
+        {
+            return;
+        }
+
+        EventDetailsCount delta = eventToProcess.Kind switch
+        {
+            NostrKind.Repost => new() { Reposts = 1 },
+            NostrKind.Zap => new() { Zaps = 1 },
+            NostrKind.Reaction => new() { ReactionGroups = new() { [eventToProcess.Content ?? string.Empty] = 1 } },
+            _ => new()
+        };
+        NoteCountChanged?.Invoke(this, (tag.Data1!, delta));
+        if (eventToProcess.Kind == NostrKind.Reaction)
+        {
+            NoteReacted?.Invoke(this, (tag.Data1!, eventToProcess.PublicKey));
         }
     }
 
