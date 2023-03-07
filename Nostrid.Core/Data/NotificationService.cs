@@ -14,10 +14,14 @@ namespace Nostrid
 		private readonly FeedService feedService;
 		private readonly DmService dmService;
 		private readonly HashSet<(string, string)> blockedDmNotifications = new();
+		private readonly Timer periodTimer;
 
 		public event EventHandler<(int, int)>? NotificationNumberChanged;
+		public event EventHandler? TimerPeriod;
 
 		private int mentionsCount, unreadDmCount;
+
+		public const int PeriodSeconds = 10;
 
 		public NotificationService(INotificationCounter notificationCounter, AccountService accountService, FeedService feedService, DmService dmService)
 		{
@@ -29,6 +33,12 @@ namespace Nostrid
 			accountService.MainAccountChanged += (_, _) => SendUpdate(true, true);
 			dmService.NewDm += NewDm;
 			dmService.LastReadUpdated += NewDm;
+			periodTimer = new Timer(TimerCallback, null, TimeSpan.FromSeconds(PeriodSeconds), TimeSpan.FromSeconds(PeriodSeconds));
+		}
+
+		private void TimerCallback(object? _)
+		{
+			_ = Task.Run(() => TimerPeriod?.Invoke(this, EventArgs.Empty));
 		}
 
 		public void Update()
@@ -74,12 +84,12 @@ namespace Nostrid
 		public void AddDmBlock(string account1, string account2)
 		{
 			blockedDmNotifications.Add((account1, account2));
-        }
+		}
 
-        public void RemoveDmBlock(string account1, string account2)
-        {
-            blockedDmNotifications.Remove((account1, account2));
-        }
+		public void RemoveDmBlock(string account1, string account2)
+		{
+			blockedDmNotifications.Remove((account1, account2));
+		}
 
 		public (int, int) GetNotificationNumber()
 		{

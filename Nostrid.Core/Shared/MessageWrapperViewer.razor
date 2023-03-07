@@ -1,16 +1,10 @@
 ﻿@implements IDisposable
 @implements ITreeItem
 
-@using Markdig;
-@using Microsoft.JSInterop;
-@using Nostrid.Data.Relays;
 @using Nostrid.Data;
 @using Nostrid.Interfaces;
 @using Nostrid.Misc;
 @using Nostrid.Model;
-@using Ganss.Xss;
-@using System.Web;
-@using System.Net;
 
 @inject NavigationManager navigationManager
 @inject AccountService accountService
@@ -59,7 +53,7 @@
             <div class="p-2 pt-1 mx-2 rounded shadow-sm position-relative triangle @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "triangle-end bg-success-subtle" : "bg-body-secondary triangle-start")">
                 <MessageViewer Event="@Tree.Note">
                     <TopContent>
-                        <span class="ms-2 d-inline-block text-secondary">@Utils.FormatDate(Tree.Note?.CreatedAtCurated ?? 0)</span>
+                        <span class="ms-2 d-inline-block text-secondary"><TimeStamp DateSeconds="@(Tree.Note?.CreatedAtCurated ?? 0)" /></span>
                         <div class="btn-group">
                             <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-1 ms-1 rounded-5 fs-6 text-secondary bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-three-dots-vertical"></i>

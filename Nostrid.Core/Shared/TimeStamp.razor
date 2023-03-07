@@ -1,0 +1,57 @@
+﻿@code{
+    [Parameter, EditorRequired]
+    public long DateSeconds { get; set; }
+}
+
+@implements IDisposable
+
+@using Nostrid.Misc;
+
+@inject NotificationService notificationService
+
+@formattedTimeStamp
+
+@code
+{
+    private string? formattedTimeStamp;
+
+    protected override void OnParametersSet()
+    {
+        formattedTimeStamp = Utils.FormatDate(DateSeconds);
+        notificationService.TimerPeriod += TimerPeriod;
+    }
+
+    private void TimerPeriod(object? sender, EventArgs _)
+    {
+        var newFormattedTimeStamp = Utils.FormatDate(DateSeconds);
+        if (newFormattedTimeStamp != formattedTimeStamp)
+        {
+            formattedTimeStamp = newFormattedTimeStamp;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        notificationService.TimerPeriod -= TimerPeriod;
+    }
+    #endregion
+}
