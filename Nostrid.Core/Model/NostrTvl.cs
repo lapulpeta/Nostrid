@@ -51,6 +51,8 @@ public class Naddr : TvlEntity
         D = exploded.Value.dstr;
     }
 
+    public bool IsValid => D.IsNotNullOrEmpty() && Pubkey.IsNotNullOrEmpty();
+
     public Naddr(List<(NostrTvlType, byte[])> tvl)
     {
         D = Encoding.ASCII.GetString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Special).Item2);

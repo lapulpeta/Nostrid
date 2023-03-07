@@ -182,9 +182,10 @@ namespace Nostrid.Misc
 
         public static string EventIdToString(string id, bool shorten = false)
         {
-            if (id.IsReplaceableId())
+            Naddr naddr;
+            if (id.IsReplaceableId() && (naddr = new Naddr(id)).IsValid)
             {
-                return ShortenBech32(EncodeTvlBech32(new Naddr(id)), true);
+                return ShortenBech32(EncodeTvlBech32(naddr), true);
             }
             else
             {
