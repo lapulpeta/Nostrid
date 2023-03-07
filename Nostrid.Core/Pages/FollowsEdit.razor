@@ -202,17 +202,14 @@
     private void Import()
     {
         var followsToImport = viewerModalContent?.Split(
-            new string[] { Environment.NewLine, "\n" },
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                new string[] { Environment.NewLine, "\n" },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(f => ByteTools.Bech32ToHex(f, "npub") ?? f)
+            .Where(hex => Utils.IsValidNostrId(hex));
 
-        foreach (var follow in followsToImport ?? Enumerable.Empty<string>())
+        if (followsToImport != null)
         {
-            var hex = ByteTools.Bech32ToHex(follow, "npub") ?? follow;
-            if (Utils.IsValidNostrId(hex)
-                && (follows?.TryAdd(hex, new Follow(hex, null, accountService.IsFollowing(hex))) ?? false))
-            {
-                accountService.AddDetailsNeeded(hex);
-            }
+            MergeContacts(followsToImport, null);
         }
 
         viewerModal?.Hide();
@@ -224,7 +221,7 @@
             Environment.NewLine,
             follows?
                 .Where(f => !exportSelected || f.Value.Selected)
-                .Select(f => exportHex ? f.Key : ByteTools.StringToBech32(f.Key, "npub")) ?? Enumerable.Empty<string>());
+                .Select(f => exportHex ? f.Key : ByteTools.HexToBech32(f.Key, "npub")) ?? Enumerable.Empty<string>());
 
         exportModal?.Hide();
         if (string.IsNullOrEmpty(content))
@@ -272,15 +269,16 @@
         InvokeAsync(() => StateHasChanged());
     }
 
-    private void MergeContacts(IEnumerable<string> newFollows, DateTimeOffset eventTime)
+    private void MergeContacts(IEnumerable<string> newFollows, DateTimeOffset? eventTime)
     {
         foreach (var follow in newFollows)
         {
             follows?.AddOrUpdate(
                 follow,
                 new Follow(follow, eventTime, accountService.IsFollowing(follow)),
-                (_, oldv) => oldv.EventTime > eventTime ? oldv : new Follow(follow, eventTime, accountService.IsFollowing(follow)));
-            accountService.AddDetailsNeeded(follow);
+                (_, oldv) => eventTime == null || oldv.EventTime > eventTime 
+                    ? oldv 
+                    : new Follow(follow, eventTime, accountService.IsFollowing(follow)));
         }
     }
 

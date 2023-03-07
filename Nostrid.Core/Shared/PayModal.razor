@@ -18,7 +18,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h1 class="modal-title fs-5" id="staticBackdropLabel">
-                        Pay to <AccountName id="@accountId" OnlyText="true"></AccountName>
+                        Pay to <AccountName Id= "@accountId" OnlyText= "true" />
                     </h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -81,7 +81,7 @@
     private const int MSAT_UNIT = 1000;
 
     private ModalContainer? modalContainer;
-    private string accountId;
+    private string? accountId;
     private State state = State.Loading;
     private Lud06Data? lud06Data;
     private long amount;

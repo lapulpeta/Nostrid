@@ -12,30 +12,34 @@
 @using Nostrid.Misc;
 @using Nostrid.Model;
 
-@inject AccountService _accountService
+@inject AccountService accountService
 
-@if (_details != null && (_details.Lud06Url.IsNotNullOrEmpty() || _details.Lud16Id.IsNotNullOrEmpty()))
+@if (details != null && (details.Lud06Url.IsNotNullOrEmpty() || details.Lud16Id.IsNotNullOrEmpty()))
 {
     @ChildContent
 }
 
 @code
 {
-    private AccountDetails? _details;
+    private AccountDetails? details;
+
+    protected override void OnInitialized()
+    {
+        accountService.AccountDetailsChanged += AccountDetailsChanged;
+    }
 
     protected override void OnParametersSet()
     {
-        base.OnParametersSet();
-
-        _details = _accountService.GetAccountDetails(Id);
-        _accountService.AccountDetailsChanged += AccountDetailsChanged;
+        if (Id == null) return;
+        accountService.AddDetailsNeeded(Id);
+        details = accountService.GetAccountDetails(Id);
     }
 
     private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
     {
         if (data.accountId == Id)
         {
-            _details = data.details;
+            details = data.details;
             InvokeAsync(() => StateHasChanged()); // TODO: this change will be ignored because of ShouldRender=false
         }
     }
@@ -46,26 +50,26 @@
     }
 
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
     private void Cleanup()
     {
-        _accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        accountService.AccountDetailsChanged -= AccountDetailsChanged;
     }
     #endregion
 }

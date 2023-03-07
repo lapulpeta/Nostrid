@@ -12,11 +12,11 @@
 @using Nostrid.Misc;
 @using Nostrid.Model;
 
-@inject AccountService _accountService
+@inject AccountService accountService
 
 <span class="text-break">
-    @if (_details != null && _details.Nip05Id.IsNotNullOrEmpty() && _details.Nip05Valid &&
-    Nip05.DecodeNip05(_details.Nip05Id, out var domain, out var username))
+    @if (details != null && details.Nip05Id.IsNotNullOrEmpty() && details.Nip05Valid &&
+    Nip05.DecodeNip05(details.Nip05Id, out var domain, out var username))
     {
         if (username != "_")
         {
@@ -32,9 +32,9 @@
     }
     else if (Id != null)
     {
-        @(_details?.Name ?? ByteTools.PubkeyToNpub(Id, true))
+        @(details?.Name ?? ByteTools.PubkeyToNpub(Id, true))
     }
-    @if (!OnlyText && (_details?.Lud16Id ?? _details?.Lud06Url).IsNotNullOrEmpty())
+    @if (!OnlyText && (details?.Lud16Id ?? details?.Lud06Url).IsNotNullOrEmpty())
     {
         <i class="bi bi-lightning-charge-fill text-warning ms-1"></i>
     }
@@ -42,46 +42,50 @@
 
 @code
 {
-    private AccountDetails? _details;
+    private AccountDetails? details;
+
+    protected override void OnInitialized()
+    {
+        accountService.AccountDetailsChanged += AccountDetailsChanged;
+    }
 
     protected override void OnParametersSet()
     {
-    base.OnParametersSet();
-
-        _details = _accountService.GetAccountDetails(Id);
-        _accountService.AccountDetailsChanged += AccountDetailsChanged;
+        if (Id == null) return;
+        accountService.AddDetailsNeeded(Id);
+        details = accountService.GetAccountDetails(Id);
     }
 
     private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) data)
     {
         if (data.accountId == Id)
         {
-            _details = data.details;
+            details = data.details;
             InvokeAsync(() => StateHasChanged());
         }
     }
 
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
     private void Cleanup()
     {
-        _accountService.AccountDetailsChanged -= AccountDetailsChanged;
+        accountService.AccountDetailsChanged -= AccountDetailsChanged;
     }
     #endregion
 }
