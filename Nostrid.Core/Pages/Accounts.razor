@@ -30,18 +30,7 @@
                         </button>
                     </div>
                     <div class="card-body text-center d-flex flex-column justify-content-between align-items-center">
-                        @if (!string.IsNullOrEmpty(account.Details?.PictureUrl))
-                        {
-                            <img style="width:64px; height:64px" src="@account.Details?.PictureUrl" class="card-img-top rounded-5" alt="">
-                        }
-                        else
-                        {
-                            <div class="lh-1">
-                                <div class="border rounded-2 overflow-hidden d-inline-block">
-                                    @((MarkupString)Utils.ToSvgIdenticon(account.Id, 64))
-                                </div>
-                            </div>
-                        }
+                        <AccountPicture Id="@account.Id" Size="64" />
                         @if (account.Id != accountEditing)
                         {
                             <AccountName Id="@account.Id" />
@@ -168,7 +157,7 @@
         public string? Ln { get; set; }
     }
 
-    private Dictionary<string, Account> accounts;
+    private Dictionary<string, Account>? accounts;
 
     private string? accountEditing;
     private EditAccountDetails accountDetails = new();
@@ -213,6 +202,12 @@
     {
         var accountIds = new HashSet<string>(eventDatabase.GetAccountIdsWithPk());
         accountService.GetAccountsWithSigners().ForEach(a => accountIds.Add(a));
+
+        accountIds
+            .Except(accounts?.Select(a => a.Key) ?? Enumerable.Empty<string>())
+            .ToList()
+            .ForEach(a => accountService.AddDetailsNeeded(a));
+
         accounts = accountIds.Select(accountId => eventDatabase.GetAccount(accountId)).ToDictionary(account => account.Id, account => account);
     }
 
@@ -363,18 +358,19 @@
             })));
     }
 
-    private bool _disposed;
+    #region Dispose
+    private bool disposed;
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 accountService.AccountDetailsChanged -= accountDetailsChangedEventHandler;
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
@@ -382,4 +378,5 @@
     {
         Dispose(true);
     }
+    #endregion
 }

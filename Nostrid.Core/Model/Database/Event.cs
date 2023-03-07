@@ -60,11 +60,6 @@ public class Event
         return GetMentions().Where(m => m.Type == type).Select(m => m.MentionId).ToList();
     }
 
-    public List<string> GetMentionsIdsPresentInContent(char type)
-    {
-        return GetMentions().Where(m => m.Type == type && Content?.IndexOf($"#[{m.Index}]") > -1).Select(m => m.MentionId).ToList();
-    }
-
     public List<Mention> GetMentions()
     {
         _mentions ??= new(() =>

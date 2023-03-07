@@ -76,12 +76,6 @@
         {
             feedService.AddDetailsNeeded(Event.ReplyToId);
         }
-
-        if (Event != null)
-        {
-            var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
-            accountService.AddDetailsNeeded(accountIds);
-        }
     }
 
     #region Dispose

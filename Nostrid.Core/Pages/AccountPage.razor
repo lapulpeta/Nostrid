@@ -56,14 +56,13 @@
                 <a class="btn btn-outline-primary" href="/dm/@PubKey">Message</a>
             </div>
         }
-        @if ((account.Details?.Lud16Id ?? account.Details?.Lud06Url).IsNotNullOrEmpty())
-        {
+        <PayButton Id="@account.Id">
             <div class="btn-group mb-3 me-3" role="group">
                 <button type="button" class="btn btn-outline-primary" @onclick="@(() => payModal?.Show(account.Id))">
                     <i class="bi bi-lightning-charge"></i> Pay
                 </button>
             </div>
-        }
+        </PayButton>
         @if (IsMainAccountLoaded && IsMainAccount)
         {
             <div class="mb-3 me-3">
@@ -164,7 +163,6 @@
 @code {
     private Account? account;
     private SubscriptionFilter? feedFilter, followsFilter, followersFilter;
-    private SubscriptionFilter[] followsDetailsFilter = { };
     private PayModal? payModal;
     private ModalContainer? followsModal, followersModal;
     private List<string>? follows, followers;
@@ -226,7 +224,6 @@
                     if (follows != null && Enumerable.SequenceEqual(newFollows.OrderBy(e => e), follows.OrderBy(e => e)))
                             return;
                     follows = newFollows;
-                    UpdateSubscriptionForDetails();
                     InvokeAsync(() => StateHasChanged());
                 });
             }
@@ -252,27 +249,10 @@
                     if (followers != null && Enumerable.SequenceEqual(newFollowers.OrderBy(e => e), followers.OrderBy(e => e)))
                         return;
                     followers = newFollowers;
-                    UpdateSubscriptionForDetails();
                     InvokeAsync(() => StateHasChanged());
                 });
             }
         }
-    }
-
-    private static object atomicSwap = new object();
-    private void UpdateSubscriptionForDetails()
-    {
-        SubscriptionFilter[] addedFilters = { }, oldFilters;
-        if ((follows?.Any() ?? false) || (followers?.Any() ?? false))
-        {
-            var accountIds = (follows ?? new List<string>()).Union(followers ?? new List<string>());
-            relayService.AddFilters(addedFilters = AccountDetailsSubscriptionFilter.CreateInBatch(accountIds.ToArray()).ToArray());
-        }
-        lock (atomicSwap)
-        {
-            (followsDetailsFilter, oldFilters) = (addedFilters, followsDetailsFilter);
-        }
-        relayService.DeleteFilters(oldFilters);
     }
 
     private void OpenFollowsModal()
@@ -284,7 +264,6 @@
                 follows = eventDatabase.GetFollowIds(PubKey);
                 InvokeAsync(() => StateHasChanged());
             }
-            UpdateSubscriptionForDetails();
         });
         followsModal?.Show();
     }
@@ -298,7 +277,6 @@
                 followers = eventDatabase.GetFollowerIds(PubKey);
                 InvokeAsync(() => StateHasChanged());
             }
-            UpdateSubscriptionForDetails();
         });
         followersModal?.Show();
     }
@@ -326,7 +304,6 @@
         accountService.AccountFollowsChanged -= AccountFollowsChanged;
         accountService.AccountFollowersChanged -= AccountFollowersChanged;
         relayService.DeleteFilters(feedFilter, followsFilter, followersFilter);
-        relayService.DeleteFilters(followsDetailsFilter);
         if (followersFilter != null)
             accountService.UnregisterFollowerRequestFilter(followersFilter.Id);
     }

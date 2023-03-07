@@ -62,7 +62,6 @@
         }
 
         dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
-        accountService.AddDetailsNeeded(dmPartners);
         dmService.NewDmPair += NewDmPair;
     }
 
@@ -71,12 +70,10 @@
         if (data.accountL == accountService.MainAccount!.Id)
         {
             dmPartners.Add(data.accountH);
-            accountService.AddDetailsNeeded(data.accountH);
         }
         else if (data.accountH == accountService.MainAccount.Id)
         {
             dmPartners.Add(data.accountL);
-            accountService.AddDetailsNeeded(data.accountL);
         }
         else
         {

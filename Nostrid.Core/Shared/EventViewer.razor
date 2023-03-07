@@ -151,9 +151,6 @@
         {
             feedService.NotesReceived += NotesReceived;
         }
-
-        var accountIds = Event.GetMentionsIdsPresentInContent('p').Union(new[] { Event.PublicKey });
-        accountService.AddDetailsNeeded(accountIds);
     }
 
     private void NotesReceived(object? sender, (string _, IEnumerable<Event> events) data)
