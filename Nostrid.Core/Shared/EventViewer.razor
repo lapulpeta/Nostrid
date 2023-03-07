@@ -1,7 +1,6 @@
 ﻿@implements IDisposable
 
 @using Nostrid.Data;
-@using Nostrid.Data.Relays;
 @using Nostrid.Misc;
 @using Nostrid.Model;
 
@@ -44,7 +43,7 @@
             </a>
             <span class="text-secondary">
                 <span>·</span>
-                <span>@Utils.FormatDate(Event?.CreatedAtCurated ?? 0)</span>
+                <span><TimeStamp DateSeconds="@(Event?.CreatedAtCurated ?? 0)" /></span>
                 @if (showDifficulty)
                 {
                     <span>&nbsp;·</span>
