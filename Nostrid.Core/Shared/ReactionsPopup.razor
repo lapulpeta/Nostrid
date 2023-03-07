@@ -39,9 +39,13 @@
             <div class="overflow-y-auto position-realtive" style="max-height: 160px;" tabindex="-1">
                 @if (loading)
                 {
-                    <div class="d-flex flex-row align-items-center justify-content-center p-3">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                    <div style="height: 32px;">
+                        <div class="d-flex flex-column justify-content-center h-100 px-2">
+                            <div class="d-flex flex-row align-items-center placeholder-glow">
+                                <span class="placeholder col-6"></span>
+                                <span class="col-5"></span>
+                                <span class="placeholder col-1"></span>
+                            </div>
                         </div>
                     </div>
                 }
@@ -150,7 +154,17 @@
             updateTask = Task.Delay(TimeSpan.FromSeconds(waitFor)).ContinueWith((_) =>
             {
                 lastUpdate = DateTime.UtcNow;
-                reactionList?.RefreshDataAsync().ContinueWith(_ => reactionCountsElement?.Update());
+                // on first reaction event virtualize is not created
+                if (reactionList != null)
+                {
+                    // update virtualize list, then the section
+                    reactionList.RefreshDataAsync().ContinueWith(_ => reactionCountsElement?.Update());
+                }
+                else
+                {
+                    // updating the section will create the virtualize
+                    reactionCountsElement?.Update();
+                }
                 updateTask = null;
             });
         }
