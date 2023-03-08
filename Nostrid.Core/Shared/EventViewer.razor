@@ -76,43 +76,43 @@
             </span>
         </p>
         <UpdatabableElement @ref="textContent">
-            @switch (Event?.Kind)
-            {
-                case NostrKind.ChannelMessage:
-                case NostrKind.Text:
-                case NostrKind.DM:
-                case NostrKind.LongContent:
-                    <div class="note-content-wrapper @(!allVisible ? "to-expand" : "") @(Expanded ? "expanded" : "")">
+            <div class="note-content-wrapper @(!allVisible ? "to-expand" : "") @(Expanded ? "expanded" : "")">
+                @switch (Event?.Kind)
+                {
+                    case NostrKind.ChannelMessage:
+                    case NostrKind.Text:
+                    case NostrKind.DM:
+                    case NostrKind.LongContent:
                         <div class="text-break note-content">
                             @content
                         </div>
-                        <ElementObserver OnIntersecting="Intersecting"></ElementObserver>
-                    </div>
-                    @if (!allVisible)
-                    {
-                        <a href="#" role="button"
-                            @onclick="@ToggleExpand" 
-                            @onclick:stopPropagation="true"
-                            @onclick:preventDefault="true">See more...</a>
-                    }
-                    break;
-                case NostrKind.Repost:
-                    if (Event.RepostEventId != null)
-                    {
-                        var repostEvent = eventDatabase.GetEventOrNull(Event.RepostEventId);
-                        if (repostEvent == null)
+                        break;
+                    case NostrKind.Repost:
+                        if (Event.RepostEventId != null)
                         {
-                            waitingForRepostedEvent = true;
+                            var repostEvent = eventDatabase.GetEventOrNull(Event.RepostEventId);
+                            if (repostEvent == null)
+                            {
+                                waitingForRepostedEvent = true;
+                            }
+                            else
+                            {
+                                <div role="button" class="border border-secondary rounded-2 p-2"
+                                     @onclick="@(() => navigationManager.NavigateTo($"/note/{repostEvent.Id}"))" @onclick:stopPropagation="true">
+                                    <EventViewer Event="repostEvent" ShowReplyingTo="true" Expanded="true" />
+                                </div>
+                            }
                         }
-                        else
-                        {
-                            <div role="button" class="border border-secondary rounded-2 p-2"
-                                 @onclick="@(() => navigationManager.NavigateTo($"/note/{repostEvent.Id}"))" @onclick:stopPropagation="true">
-                                <EventViewer Event="repostEvent" ShowReplyingTo="true" />
-                            </div>
-                        }
-                    }
-                    break;
+                        break;
+                }
+                <ElementObserver OnIntersecting="Intersecting"></ElementObserver>
+            </div>
+            @if (!allVisible)
+            {
+                <a href="#" role="button"
+                    @onclick="@ToggleExpand" 
+                    @onclick:stopPropagation="true"
+                    @onclick:preventDefault="true">See more...</a>
             }
         </UpdatabableElement>
         @BottomPlaceholder
@@ -123,12 +123,11 @@
     private bool showDifficulty => configService.MainConfig.ShowDifficulty;
     private UpdatabableElement? textContent;
     private bool waitingForRepostedEvent;
-    private RenderFragment content;
+    private RenderFragment? content;
     private bool allVisible = true;
 
     protected override async Task OnParametersSetAsync()
     {
-        base.OnParametersSetAsync();
         if (Event == null) return;
 
         string? rawContent;
