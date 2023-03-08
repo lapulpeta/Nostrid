@@ -15,7 +15,7 @@
     public string EventId { get; set; } = null!;
 }
 
-<div style="width: 325px">
+<div style="width: 325px" @onclick:stopPropagation="true">
     <UpdatabableElement @ref="reactionCountsElement">
         @{
             var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
@@ -55,7 +55,9 @@
                             <div class="d-flex flex-column justify-content-center h-100">
                                 <div class="d-flex flex-row align-items-center">
                                     <div class="flex-grow-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <AccountName @key="@reaction.ReactorId" Id="@reaction.ReactorId"></AccountName>
+                                        <a href="@($"/account/{reaction.ReactorId}")">
+                                            <AccountName @key="@reaction.ReactorId" Id="@reaction.ReactorId"></AccountName>
+                                        </a>
                                     </div>
                                     <div class="fs-4">@NormalizedReaction(reaction.Content)</div>
                                 </div>
