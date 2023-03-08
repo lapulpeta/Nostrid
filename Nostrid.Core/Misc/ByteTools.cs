@@ -105,7 +105,7 @@ namespace Nostrid.Misc
         public static string? EncodeTvlBech32(TvlEntity tvlEntity)
         {
             var tvl = tvlEntity.GetTvl();
-            var bytes = TvlToBytes(tvl);
+            var bytes = tvl.ToBytes();
             return tvlEntity switch
             {
                 Nevent => ByteArrayToBech32(bytes, "nevent"),
@@ -124,7 +124,7 @@ namespace Nostrid.Misc
                     var bytes = Bech32ToByteArray(bech32, pr);
                     if (bytes != null)
                     {
-                        var tvl = BytesToTvl(bytes);
+                        var tvl = new Tvl(bytes);
                         tvlEntity = pr switch
                         {
                             "nevent" => new Nevent(tvl),
@@ -144,25 +144,6 @@ namespace Nostrid.Misc
 
             tvlEntity = null;
             return false;
-        }
-
-        private static List<(NostrTvlType, byte[])> BytesToTvl(byte[] bytes)
-        {
-            List<(NostrTvlType, byte[])> ret = new();
-            for (int i = 0; i < bytes.Length;)
-            {
-                var type = bytes[i];
-                var length = bytes[i + 1];
-                var data = bytes[(i + 2)..(i + 2 + length)];
-                ret.Add(((NostrTvlType)type, data));
-                i += 2 + length;
-            }
-            return ret;
-        }
-
-        private static byte[] TvlToBytes(List<(NostrTvlType, byte[])> tvl)
-        {
-            return tvl.SelectMany(t => new[] { (byte)t.Item1, (byte)t.Item2.Length }.Concat(t.Item2)).ToArray();
         }
 
         public static string PubkeyToNpub(string pubkey, bool shorten = false)

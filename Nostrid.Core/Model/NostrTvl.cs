@@ -1,19 +1,20 @@
+using Nostrid.Misc;
 using System.Buffers.Binary;
 using System.Text;
 
 namespace Nostrid.Model;
 
-public enum NostrTvlType
+public class NostrTvlType
 {
-    Special = 0,
-    Relay = 1,
-    Author = 2,
-    Kind = 3
+    public const byte Special = 0;
+    public const byte Relay = 1;
+    public const byte Author = 2;
+    public const byte Kind = 3;
 }
 
 public abstract class TvlEntity
 {
-    public abstract List<(NostrTvlType, byte[])> GetTvl();
+    public abstract Tvl GetTvl();
 }
 
 // NIP-19: https://github.com/nostr-protocol/nips/blob/master/19.md
@@ -22,12 +23,12 @@ public class Nevent : TvlEntity
 {
     public readonly string EventId;
 
-    public Nevent(List<(NostrTvlType, byte[])> tvl)
+    public Nevent(Tvl tvl)
     {
-        EventId = Convert.ToHexString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Special).Item2).ToLower();
+        EventId = Convert.ToHexString(tvl.FirstOrDefault(t => t.Type == NostrTvlType.Special).Item2).ToLower();
     }
 
-    public override List<(NostrTvlType, byte[])> GetTvl()
+    public override Tvl GetTvl()
     {
         return new() { (NostrTvlType.Special, Convert.FromHexString(EventId)) };
     }
@@ -53,16 +54,16 @@ public class Naddr : TvlEntity
 
     public bool IsValid => D.IsNotNullOrEmpty() && Pubkey.IsNotNullOrEmpty();
 
-    public Naddr(List<(NostrTvlType, byte[])> tvl)
+    public Naddr(Tvl tvl)
     {
-        D = Encoding.ASCII.GetString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Special).Item2);
-        Pubkey = Convert.ToHexString(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Author).Item2).ToLower();
-        Kind = (int)BinaryPrimitives.ReadUInt32BigEndian(tvl.FirstOrDefault(t => t.Item1 == NostrTvlType.Kind).Item2);
+        D = Encoding.ASCII.GetString(tvl.FirstOrDefault(t => t.Type == NostrTvlType.Special).Data);
+        Pubkey = Convert.ToHexString(tvl.FirstOrDefault(t => t.Type == NostrTvlType.Author).Data).ToLower();
+        Kind = (int)BinaryPrimitives.ReadUInt32BigEndian(tvl.FirstOrDefault(t => t.Type == NostrTvlType.Kind).Data);
     }
 
     public string ReplaceableId => EventExtension.GetReplaceableId(Pubkey, Kind, D)!;
 
-    public override List<(NostrTvlType, byte[])> GetTvl()
+    public override Tvl GetTvl()
     {
         byte[] kind = new byte[sizeof(uint)];
         BinaryPrimitives.WriteUInt32BigEndian(kind, (uint)Kind);
