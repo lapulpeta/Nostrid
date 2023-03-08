@@ -1,6 +1,7 @@
 using NBitcoin.Secp256k1;
 using NNostr.Client;
 using Nostrid.Data;
+using Nostrid.Misc;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
@@ -49,6 +50,15 @@ public class LocalSignerFactory
         return await aesEncryptor.Decrypt(Convert.ToBase64String(encryptedKey.EncryptedPk), Convert.ToBase64String(encryptedKey.Iv), Encoding.UTF8.GetBytes(pwd));
     }
 
+    public async Task<string?> DecryptPrivKeyBech32(string encryptedKeyBech32, string pwd)
+    {
+        if (ByteTools.TryDecodeTvlBech32(encryptedKeyBech32, out var tvlEntity) && tvlEntity is EncryptedKey encryptedKey)
+        {
+            return await DecryptPrivKey(encryptedKey, pwd);
+        }
+        return null;
+    }
+
     public async Task<EncryptedKey> EncryptPrivKey(string plaintextKey, string pwd)
     {
         var encryptedKey = new EncryptedKey()
@@ -71,6 +81,11 @@ public class LocalSignerFactory
         encryptedKey.Iv = Convert.FromBase64String(iv64);
 
         return encryptedKey;
+    }
+
+    public async Task<string> EncryptPrivKeyBech32(string plaintextKey, string pwd)
+    {
+        return ByteTools.EncodeTvlBech32(await EncryptPrivKey(plaintextKey, pwd))!;
     }
 }
 

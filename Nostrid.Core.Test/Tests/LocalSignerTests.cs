@@ -34,7 +34,6 @@ namespace Nostrid.Core.Test
             var pwd = Convert.ToBase64String(RandomNumberGenerator.GetBytes(12));
             var encryptedPk = await localSignerFactory.EncryptPrivKey(pk, pwd);
 
-
             var bech32 = ByteTools.EncodeTvlBech32(encryptedPk);
             Assert.IsNotNull(bech32);
             Assert.IsTrue(ByteTools.TryDecodeTvlBech32(bech32, out var tvlEntity));
@@ -44,6 +43,25 @@ namespace Nostrid.Core.Test
 
             var decryptedPk = await localSignerFactory.DecryptPrivKey(encryptedPkFromBech32, pwd);
             Assert.AreEqual(pk, decryptedPk);
+        }
+
+        [TestMethod]
+        public async Task TestEncryptPkBech32WithHelper()
+        {
+            var aesEncryptor = new AesEncryptor();
+            var localSignerFactory = new LocalSignerFactory(aesEncryptor);
+
+            var pk = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower();
+            var pwd = Convert.ToBase64String(RandomNumberGenerator.GetBytes(12));
+            var encryptedPkBech32 = await localSignerFactory.EncryptPrivKeyBech32(pk, pwd);
+
+            Assert.IsNotNull(encryptedPkBech32);
+
+            var decryptedPk = await localSignerFactory.DecryptPrivKeyBech32(encryptedPkBech32, pwd);
+            Assert.AreEqual(pk, decryptedPk);
+
+            decryptedPk = await localSignerFactory.DecryptPrivKeyBech32(encryptedPkBech32, pwd + "!");
+            Assert.AreEqual(null, decryptedPk);
         }
 
     }
