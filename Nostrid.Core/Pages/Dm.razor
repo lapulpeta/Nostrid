@@ -18,7 +18,7 @@
 
 <div class="d-flex flex-column flex-grow-1">
     <div class="fs-4 fw-bolder">Direct Messages with <AccountName Id="@Id" /> </div>
-    <div class="position-relative d-flex flex-column flex-column-reverse flex-grow-1 overflow-y-auto px-3"
+    <div class="position-relative d-flex flex-column flex-column-reverse flex-grow-1 overflow-y-auto px-3 pb-3"
          style="margin: 0 -1rem; flex-basis:0;">
         <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.DM})" ShowAsMessages="true" />
     </div>
