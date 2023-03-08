@@ -2,62 +2,108 @@ using NBitcoin.Secp256k1;
 using NNostr.Client;
 using Nostrid.Data;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Nostrid.Model;
 
 public class LocalSignerFactory
 {
-	private readonly IAesEncryptor aesEncryptor;
+    private readonly IAesEncryptor aesEncryptor;
 
-	public LocalSignerFactory(IAesEncryptor aesEncryptor)
-	{
-		this.aesEncryptor = aesEncryptor;
-	}
+    private const int HashKeySize = 64;
 
-	public bool TryFromPrivKey(string privKey, [NotNullWhen(true)] out LocalSigner? signer)
-	{
-		try
-		{
-			signer = new LocalSigner(privKey, aesEncryptor);
-		}
-		catch
-		{
-			signer = null;
-		}
-		return signer != null;
-	}
+    public LocalSignerFactory(IAesEncryptor aesEncryptor)
+    {
+        this.aesEncryptor = aesEncryptor;
+    }
+
+    public bool TryFromPrivKey(string privKey, [NotNullWhen(true)] out LocalSigner? signer)
+    {
+        try
+        {
+            signer = new LocalSigner(privKey, aesEncryptor);
+        }
+        catch
+        {
+            signer = null;
+        }
+        return signer != null;
+    }
+
+    public async Task<string?> DecryptPrivKey(EncryptedKey encryptedKey, string pwd)
+    {
+        if (encryptedKey == null || encryptedKey.Iv == null || encryptedKey.EncryptedPk == null || encryptedKey.PwdHashSalt == null || encryptedKey.PwdHash == null)
+        {
+            return null;
+        }
+
+        // Check if pwd matches hash
+        var hashToCompare = Rfc2898DeriveBytes.Pbkdf2(pwd, encryptedKey.PwdHashSalt, encryptedKey.HashInterations, HashAlgorithmName.SHA512, 64);
+        if (!hashToCompare.SequenceEqual(encryptedKey.PwdHash))
+        {
+            return null;
+        }
+
+        // Decrypt pwd
+        return await aesEncryptor.Decrypt(Convert.ToBase64String(encryptedKey.EncryptedPk), Convert.ToBase64String(encryptedKey.Iv), Encoding.UTF8.GetBytes(pwd));
+    }
+
+    public async Task<EncryptedKey> EncryptPrivKey(string plaintextKey, string pwd)
+    {
+        var encryptedKey = new EncryptedKey()
+        {
+            HashInterations = 600000,
+            PwdHashSalt = RandomNumberGenerator.GetBytes(HashKeySize),
+        };
+
+        // Hash pwd
+        encryptedKey.PwdHash = Rfc2898DeriveBytes.Pbkdf2(
+            Encoding.UTF8.GetBytes(pwd),
+            encryptedKey.PwdHashSalt,
+            encryptedKey.HashInterations,
+            HashAlgorithmName.SHA512,
+            HashKeySize);
+
+        // Encrypt key with pwd
+        var (encryptedPwd64, iv64) = await aesEncryptor.Encrypt(plaintextKey, Encoding.UTF8.GetBytes(pwd));
+        encryptedKey.EncryptedPk = Convert.FromBase64String(encryptedPwd64);
+        encryptedKey.Iv = Convert.FromBase64String(iv64);
+
+        return encryptedKey;
+    }
 }
 
 public class LocalSigner : ISigner
 {
     private readonly ECPrivKey ecPrivKey;
     private readonly string pubKey;
-	private readonly IAesEncryptor aesEncryptor;
+    private readonly IAesEncryptor aesEncryptor;
 
-	public LocalSigner(string privKey, IAesEncryptor aesEncryptor)
+    public LocalSigner(string privKey, IAesEncryptor aesEncryptor)
     {
         if (!TryGetPubKeyFromPrivKey(privKey, out ecPrivKey, out pubKey))
             throw new FormatException("Invalid privkey");
-		this.aesEncryptor = aesEncryptor;
-	}
+        this.aesEncryptor = aesEncryptor;
+    }
 
-	public static bool TryGetPubKeyFromPrivKey(string privKey, [NotNullWhen(true)] out ECPrivKey? ecPrivKey, [NotNullWhen(true)] out string? pubKey)
-	{
-		try
-		{
-			ecPrivKey = NostrExtensions.ParseKey(privKey);
-			pubKey = NostrExtensions.ToHex(ecPrivKey.CreatePubKey().ToXOnlyPubKey());
-			return true;
-		}
-		catch
-		{
-			ecPrivKey = null;
-			pubKey = null;
-			return false;
-		}
-	}
+    public static bool TryGetPubKeyFromPrivKey(string privKey, [NotNullWhen(true)] out ECPrivKey? ecPrivKey, [NotNullWhen(true)] out string? pubKey)
+    {
+        try
+        {
+            ecPrivKey = NostrExtensions.ParseKey(privKey);
+            pubKey = NostrExtensions.ToHex(ecPrivKey.CreatePubKey().ToXOnlyPubKey());
+            return true;
+        }
+        catch
+        {
+            ecPrivKey = null;
+            pubKey = null;
+            return false;
+        }
+    }
 
-	public async Task<string?> DecryptNip04(string pubkey, string content)
+    public async Task<string?> DecryptNip04(string pubkey, string content)
     {
         try
         {
@@ -105,7 +151,7 @@ public class LocalSigner : ISigner
 
     private static readonly byte[] posBytes = new[] { (byte)02 };
 
-	private static ECPubKey? GetSharedPubkey(ECXOnlyPubKey ecxOnlyPubKey, ECPrivKey key)
+    private static ECPubKey? GetSharedPubkey(ECXOnlyPubKey ecxOnlyPubKey, ECPrivKey key)
     {
         byte[] pubkey = ecxOnlyPubKey.ToBytes();
         byte[] pubkeyext = new byte[pubkey.Length + posBytes.Length];
