@@ -110,6 +110,7 @@ namespace Nostrid.Misc
             {
                 Nevent => ByteArrayToBech32(bytes, "nevent"),
                 Naddr => ByteArrayToBech32(bytes, "naddr"),
+                EncryptedKey => ByteArrayToBech32(bytes, "npk"),
                 _ => null,
             };
         }
@@ -124,11 +125,11 @@ namespace Nostrid.Misc
                     var bytes = Bech32ToByteArray(bech32, pr);
                     if (bytes != null)
                     {
-                        var tvl = new Tvl(bytes);
                         tvlEntity = pr switch
                         {
-                            "nevent" => new Nevent(tvl),
-                            "naddr" => new Naddr(tvl),
+                            "nevent" => new Nevent(new Tvl(bytes)),
+                            "naddr" => new Naddr(new Tvl(bytes)),
+                            "npk" => new EncryptedKey(new Tvl(bytes)),
                             _ => null
                         };
                         if (tvlEntity != null)
