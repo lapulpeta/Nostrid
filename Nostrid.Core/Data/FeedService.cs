@@ -181,9 +181,12 @@ public class FeedService
 
     public List<Event> GetNotesThread(string eventId, out string? standardRootId, out string? replaceableRootId)
     {
+        int[] validRootKinds = new[] { NostrKind.Text, NostrKind.LongContent, NostrKind.Badge };
+        int[] validChildKinds = new[] { NostrKind.Text };
+
         using var db = eventDatabase.CreateContext();
-        var note = db.Events.AsNoTracking().FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == eventId || e.ReplaceableId == eventId));
-        note ??= db.Events.AsNoTracking().FirstOrDefault(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplyToRootId == eventId || e.ReplyToId == eventId));
+        var note = db.Events.AsNoTracking().FirstOrDefault(e => validRootKinds.Contains(e.Kind) && (e.Id == eventId || e.ReplaceableId == eventId));
+        note ??= db.Events.AsNoTracking().FirstOrDefault(e => validChildKinds.Contains(e.Kind) && (e.ReplyToRootId == eventId || e.ReplyToId == eventId));
         if (note == null)
         {
             standardRootId = null;
@@ -213,7 +216,7 @@ public class FeedService
             events = db.Events
                 .AsNoTracking()
                 .Include(e => e.Tags)
-                .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == queryRootId || e.ReplyToRootId == queryRootId))
+                .Where(e => (validRootKinds.Contains(e.Kind) && e.Id == queryRootId) || (validChildKinds.Contains(e.Kind) && e.ReplyToRootId == queryRootId))
                 .ToList();
         }
         
@@ -224,7 +227,8 @@ public class FeedService
             events.AddRange(db.Events
                 .AsNoTracking()
                 .Include(e => e.Tags)
-                .Where(e => !alreadyLoadedEvents.Contains(e.Id) && (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplaceableId == queryRootId || e.ReplyToRootId == queryRootId))
+                .Where(e => !alreadyLoadedEvents.Contains(e.Id))
+                .Where(e => (validRootKinds.Contains(e.Kind) && e.ReplaceableId == queryRootId) || (validChildKinds.Contains(e.Kind) && e.ReplyToRootId == queryRootId))
                 );
         }
 

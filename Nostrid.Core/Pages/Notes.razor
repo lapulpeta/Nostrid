@@ -113,9 +113,15 @@
     {
         Task.Run(() =>
         {
+            int[] validRootKinds = new[] { NostrKind.Text, NostrKind.LongContent, NostrKind.Badge };
+            int[] validChildKinds = new[] { NostrKind.Text };
+
             if (standardRootId == null && replaceableRootId == null)
             {
-                var note = data.events.Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == EventId || e.ReplaceableId == EventId || e.ReplyToRootId == EventId || e.ReplyToId == EventId)).FirstOrDefault();
+                var note = data.events.Where(e =>
+                    ((validRootKinds.Contains(e.Kind)  && (e.Id == EventId || e.ReplaceableId == EventId)) ||
+                     (validChildKinds.Contains(e.Kind) && (e.ReplyToRootId == EventId || e.ReplyToId == EventId)))
+                    ).FirstOrDefault();
                 if (note == null)
                 {
                     return;
@@ -141,7 +147,7 @@
             if (standardRootId.IsNotNullOrEmpty())
             {
                 notesToAdd = data.events
-                .Where(e => (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.Id == standardRootId || e.ReplyToRootId == standardRootId))
+                .Where(e => (validRootKinds.Contains(e.Kind) && e.Id == standardRootId) || (validChildKinds.Contains(e.Kind) && e.ReplyToRootId == standardRootId))
                 .ToList();
             }
 
@@ -149,7 +155,8 @@
             {
                 var alreadyLoadedEvents = notesToAdd.Select(e => e.Id).ToList();
                 notesToAdd.AddRange(data.events
-                .Where(e => !alreadyLoadedEvents.Contains(e.Id) && (e.Kind == NostrKind.Text || e.Kind == NostrKind.LongContent) && (e.ReplaceableId == replaceableRootId || e.ReplyToRootId == replaceableRootId))
+                .Where(e => !alreadyLoadedEvents.Contains(e.Id))
+                .Where(e => (validRootKinds.Contains(e.Kind) && e.ReplaceableId == replaceableRootId) || (validChildKinds.Contains(e.Kind) && e.ReplyToRootId == replaceableRootId))
                 );
             }
             if (!notesToAdd.Any())
