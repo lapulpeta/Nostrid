@@ -18,60 +18,75 @@
 @inject EventDatabase eventDatabase
 @inject NavigationManager navigationManager
 
-<div class="bg-body-tertiary pt-3 ps-3 pe-3" style="margin: -1rem -1rem 0 -1rem;">
-
-    <AccountPicture Id="@account.Id" Size="128" />
-
-    <div class="fs-4 fw-bolder"><AccountName Id="@account.Id" /></div>
-    <div class="fs-7 text-body-tertiary text-break mb-3">
-        @ByteTools.PubkeyToNpub(PubKey)
-        <div class="btn-group">
-            <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+<h1 class="visually-hidden"></h1>
+<div class="mx--3 px-3 pt-3" style="margin-top: -1rem; height: 128px; transition: background-color .2s ease-in-out; background-color: @(backgroundColor ?? "rgba(var(--bs-secondary-bg-rgb),var(--bs-bg-opacity))")!important;"></div>
+<div class="d-flex flex-row" style="height: 69px">
+    <div>
+        <div class="border border-5 rounded-999 d-inline-block translate-middle-y" style="border-color: rgb(var(--bs-body-bg-rgb)) !important;">
+            <AccountPicture Id="@account?.Id" Size="128" OnLoad="OnAccountPictureLoad" />
+        </div>
+    </div>
+    <div class="d-flex flex-row align-items-start justify-content-end flex-grow-1 pt-3" style="margin-right: -.5rem;">
+        @if (IsMainAccountLoaded && IsMainAccount)
+        {
+            <a role="button" @onclick:stopPropagation="true" class="btn btn-outline-secondary mb-2 me-2" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-three-dots-vertical"></i>
             </a>
             <ul class="dropdown-menu">
-                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(PubKey)))" @onclick:stopPropagation="true">Copy Npub</a></li>
-                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(PubKey))" @onclick:stopPropagation="true">Copy Hex</a></li>
-                <li><a role="button" class="dropdown-item" @onclick="@(() => ReloadFollows())" @onclick:stopPropagation="true">Reload Follows</a></li>
+                <li><a role="button" class="dropdown-item" @onclick="@ReloadFollows" @onclick:stopPropagation="true">Reload follows</a></li>
+                <li><a role="button" class="dropdown-item" @onclick="@(() => navigationManager.NavigateTo("follows"))" @onclick:stopPropagation="true">Edit follows</a></li>
+                <li><a role="button" class="dropdown-item" @onclick="@DeleteAccount" @onclick:stopPropagation="true">Delete account</a></li>
             </ul>
-        </div>
-    </div>
-    <p class="text-break">@account.Details?.About</p>
-
-    <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
-        <div class="btn-group me-3 mb-3" role="group" aria-label="First group">
-            <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowsModal">
-                Following <span class="badge text-bg-secondary"><FollowsCounter AccountId="@PubKey" /></span>
+        }
+        <PayButton Id="@account?.Id">
+            <button type="button" class="btn btn-outline-secondary mb-2 me-2" @onclick="@(() => payModal?.Show(account?.Id))">
+                <i class="bi bi-lightning-charge"></i>
+                <span class="d-none d-sm-inline">Pay</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowersModal">
-                Followers <span class="badge text-bg-secondary"><FollowsCounter AccountId="@PubKey" CountFollowers="true" /></span>
-            </button>
-        </div>
+        </PayButton>
         @if (IsMainAccountLoaded && !IsMainAccount)
         {
-            <div class="mb-3 me-3">
-                <FollowButton AccountId="@PubKey" />
-                <MuteButton AccountId="@PubKey" />
-            </div>
-            <div class="mb-3 me-3">
-                <a class="btn btn-outline-primary" href="/dm/@PubKey">Message</a>
-            </div>
+            <MuteButton AccountId="@PubKey" Css="mb-2 me-2" />
+            <a class="btn btn-outline-secondary mb-2 me-2" href="/dm/@PubKey">
+                <i class="bi bi-envelope"></i>
+                <span class="d-none d-sm-inline">Message</span>
+            </a>
+            <FollowButton AccountId="@PubKey" Css="mb-2 me-2" />
         }
-        <PayButton Id="@account.Id">
-            <div class="btn-group mb-3 me-3" role="group">
-                <button type="button" class="btn btn-outline-primary" @onclick="@(() => payModal?.Show(account.Id))">
-                    <i class="bi bi-lightning-charge"></i> Pay
-                </button>
-            </div>
-        </PayButton>
         @if (IsMainAccountLoaded && IsMainAccount)
         {
-            <div class="mb-3 me-3">
-                <button class="btn btn-link px-0" @onclick="@(() => navigationManager.NavigateTo("follows"))">Edit follows</button>
-            </div>
+            <button class="btn btn-primary mb-2 me-2" @onclick="@(() => editAccountModal?.Show())">
+                Edit profile
+            </button>
         }
     </div>
 </div>
+<div class="fs-4 fw-bolder"><AccountName Id="@account?.Id" /></div>
+<div class="fs-7 text-body-tertiary text-break mb-3">
+    <span class="d-none d-sm-inline-block">@ByteTools.PubkeyToNpub(PubKey)</span>
+    <span class="d-sm-none">@ByteTools.PubkeyToNpub(PubKey, true)</span>
+    <div class="btn-group">
+        <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-2 fs-6 text-secondary rounded-5 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-files"></i>
+        </a>
+        <ul class="dropdown-menu">
+            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(PubKey)))" @onclick:stopPropagation="true">Copy Npub</a></li>
+            <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(PubKey))" @onclick:stopPropagation="true">Copy Hex</a></li>
+        </ul>
+    </div>
+</div>
+<AccountAbout Id="@account?.Id" />
+<div class="border-bottom mx--3 px-3">
+    <div class="btn-group me-3 mb-3" role="group" aria-label="First group">
+        <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowsModal">
+            Following <span class="badge text-bg-secondary"><FollowsCounter AccountId="@PubKey" /></span>
+        </button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="OpenFollowersModal">
+            Followers <span class="badge text-bg-secondary"><FollowsCounter AccountId="@PubKey" CountFollowers="true" /></span>
+        </button>
+    </div>
+</div>
+<AccountFeed AccountId="@PubKey" />
 
 <ModalContainer @ref="followsModal">
     <div class="modal fade" tabindex="-1" aria-hidden="true">
@@ -84,7 +99,7 @@
                 <div class="modal-body p-0">
                     @if (follows == null)
                     {
-                        <div class="text-center my-5"> 
+                        <div class="text-center my-5">
                             <div class="spinner-border" role="status">
                                 <span class="visually-hidden">Waiting for feed...</span>
                             </div>
@@ -158,30 +173,36 @@
 </ModalContainer>
 
 <PayModal @ref="payModal" />
-
-<FeedViewer BaseFilter="@feedFilter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+<EditAccountModal @ref="editAccountModal" AccountId="@account?.Id" />
+<ConfirmationModal @ref="confirmationModal" />
 
 @code {
     private Account? account;
-    private SubscriptionFilter? feedFilter, followsFilter, followersFilter;
+    private SubscriptionFilter? followsFilter, followersFilter;
     private PayModal? payModal;
+    private EditAccountModal? editAccountModal;
+    private ConfirmationModal? confirmationModal;
     private ModalContainer? followsModal, followersModal;
     private List<string>? follows, followers;
     private int followsInitialCount, followersInitialCount;
     private Task? updateAfterChange;
     private const int StateHasChangedAfterSeconds = 3;
+    private string? backgroundColor = null;
 
     private bool IsMainAccountLoaded => accountService.MainAccount != null;
     private bool IsMainAccount => IsMainAccountLoaded && PubKey == accountService.MainAccount?.Id;
+    private bool previousIsMainAccountLoaded;
+    private bool previousIsMainAccount;
+
 
     protected override void OnParametersSet()
     {
         Cleanup();
         followsModal?.Hide();
         followersModal?.Hide();
+        backgroundColor = null;
 
         account = accountService.GetAccount(PubKey);
-        feedFilter = new AuthorSubscriptionFilter(PubKey);
 
         relayService.AddFilters(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
         relayService.AddFilters(followersFilter = new FollowersSubscriptionFilter(PubKey) { DontSaveInLocalCache = true });
@@ -189,11 +210,15 @@
 
         accountService.AccountFollowsChanged += AccountFollowsChanged;
         accountService.AccountFollowersChanged += AccountFollowersChanged;
+        accountService.MainAccountChanged += MainAccountChanged;
 
         follows = null;
         followers = null;
         followsInitialCount = eventDatabase.GetFollowCount(PubKey);
         followersInitialCount = eventDatabase.GetFollowerCount(PubKey);
+
+        previousIsMainAccountLoaded = IsMainAccountLoaded;
+        previousIsMainAccount = IsMainAccount;
     }
 
     private void ReloadFollows()
@@ -204,11 +229,26 @@
         relayService.AddFilters(followsFilter = new FollowsAndDetailsSubscriptionFilter(PubKey));
     }
 
+    private void DeleteAccount()
+    {
+        confirmationModal?.Show(ConfirmationModal.Options.Create(
+            "Are you sure you want to delete this account?",
+            "Delete account",
+            ConfirmationModal.Options.Button.CreateNoButton(),
+            ConfirmationModal.Options.Button.CreateYesButton(() =>
+            {
+                accountService.SetMainAccount(null, null);
+                accountService.RemoveSigner(account.Id);
+                eventDatabase.DeleteAccount(account);
+                navigationManager.NavigateTo("/");
+            }, "btn-danger")));
+    }
+
     private static object lockobj = new();
 
     private void AccountFollowsChanged(object? sender, (string accountId, List<string> follows) data)
     {
-        if (_disposed)
+        if (disposed)
             return;
         if (data.accountId != PubKey)
             return;
@@ -223,7 +263,7 @@
                     updateAfterChange = null;
                     var newFollows = eventDatabase.GetFollowIds(PubKey);
                     if (follows != null && Enumerable.SequenceEqual(newFollows.OrderBy(e => e), follows.OrderBy(e => e)))
-                            return;
+                        return;
                     follows = newFollows;
                     InvokeAsync(() => StateHasChanged());
                 });
@@ -233,7 +273,7 @@
 
     private void AccountFollowersChanged(object? sender, string accountId)
     {
-        if (_disposed)
+        if (disposed)
             return;
         if (accountId != PubKey)
             return;
@@ -282,21 +322,38 @@
         followersModal?.Show();
     }
 
+    private void OnAccountPictureLoad(string? rgb)
+    {
+        backgroundColor = !string.IsNullOrEmpty(rgb) ? $"rgba({rgb},0.75)" : null;
+    }
+
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        if (disposed) return;
+        if (previousIsMainAccountLoaded != IsMainAccountLoaded
+             || (IsMainAccountLoaded && previousIsMainAccount != IsMainAccount))
+        {
+            InvokeAsync(StateHasChanged);            
+        }
+        previousIsMainAccountLoaded = IsMainAccountLoaded;
+        previousIsMainAccount = IsMainAccount;
+    }
+
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
@@ -304,7 +361,8 @@
     {
         accountService.AccountFollowsChanged -= AccountFollowsChanged;
         accountService.AccountFollowersChanged -= AccountFollowersChanged;
-        relayService.DeleteFilters(feedFilter, followsFilter, followersFilter);
+        accountService.MainAccountChanged -= MainAccountChanged;
+        relayService.DeleteFilters(followsFilter, followersFilter);
         if (followersFilter != null)
             accountService.UnregisterFollowerRequestFilter(followersFilter.Id);
     }

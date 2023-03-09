@@ -1,9 +1,13 @@
-﻿@using Nostrid.Data
+﻿@implements IDisposable
+
+@using Nostrid.Data
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
 @using System.Collections.Concurrent;
+
 @inject AccountService accountService
 @inject FeedService feedService
+@inject NavigationManager navigationManager
 
 <FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" OnLoaded="@OnLoaded" />
 
@@ -12,9 +16,8 @@
 
     protected override void OnInitialized()
     {
-        if (accountService.MainAccount == null) return;
-
-        filter = new MentionSubscriptionFilter(accountService.MainAccount.Id);
+        accountService.MainAccountChanged += MainAccountChanged;
+        SetFilter();
     }
 
     private void OnLoaded(IEnumerable<NoteTree> notesFeed)
@@ -25,4 +28,39 @@
             accountService.SetLastRead(newestNoteDate);
         }
     }
+
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        if (accountService.MainAccount == null)
+        {
+            navigationManager.NavigateTo("/feed");
+            return;
+        }
+        SetFilter();
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void SetFilter()
+    {
+        filter = new MentionSubscriptionFilter(accountService.MainAccount?.Id);
+    }
+
+    #region Dispose
+    private bool disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                accountService.MainAccountChanged -= MainAccountChanged;
+            }
+
+            disposed = true;
+        }
+    }
+    #endregion
 }

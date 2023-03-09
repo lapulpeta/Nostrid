@@ -18,9 +18,9 @@
 @{
     var isMuting = accountService.IsMuting(AccountId); 
 }
-<button class="btn @Css @(isMuting ? "btn-secondary" : "btn-outline-secondary")"
-        @onclick="@(async () => await MuteUnmute(true))" @onclick:stopPropagation="true">
-    @(!isMuting ? "Mute" : "Unmute")
+<button class="btn @Css @(isMuting ? "btn-secondary" : "btn-outline-secondary")" @onclick="@(async () => await MuteUnmute(true))">
+    <i class="bi @(!isMuting ? "bi-volume-mute" : "bi-volume-mute-fill")"></i>
+    <span class="d-none d-sm-inline">@(!isMuting ? "Mute" : "Unmute")</span>
 </button>
 
 @confirmationModalRenderFragment
@@ -38,7 +38,7 @@
 
     private void AccountMutesChanged(object? sender, (string accountId, List<string> mutes) data)
     {
-        if (_disposed)
+        if (disposed)
             return;
         InvokeAsync(() => StateHasChanged());
     }
@@ -93,20 +93,20 @@
     }
 
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 

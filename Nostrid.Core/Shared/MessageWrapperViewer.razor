@@ -37,102 +37,105 @@
     public Scripts? Scripts { get; set; }
 }
 
-<div @ref="referenceElement" class="d-flex flex-row mb-3 @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "flex-row-reverse align-self-end" : string.Empty)">
-    @if (Tree.Note.Deleted)
-    {
-        <div class="d-flex flex-grow-1 align-items-center justify-content-center text-secondary">Note deleted</div>
-    }
-    else
-    {
-        <div class="flex-shrink-0">
-            <a href="/account/@Tree.Note?.PublicKey" @onclick:stopPropagation="true">
-                <AccountPicture Id="@Tree.Note?.PublicKey"></AccountPicture>
-            </a>
-        </div>
-        <div class="d-flex flex-column align-items-start">
-            <div class="p-2 pt-1 mx-2 rounded shadow-sm position-relative triangle @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "triangle-end bg-success-subtle" : "bg-body-secondary triangle-start")">
-                <MessageViewer Event="@Tree.Note">
-                    <TopContent>
-                        <span class="ms-2 d-inline-block text-secondary"><TimeStamp DateSeconds="@(Tree.Note?.CreatedAtCurated ?? 0)" /></span>
-                        <div class="btn-group">
-                            <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-1 ms-1 rounded-5 fs-6 text-secondary bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </a>
-                            <ul class="dropdown-menu shadow">
-                                @if (accountService.MainAccount != null)
-                                {
-                                    <li>
-                                        <a role="button" class="dropdown-item" @onclick="@Reply" @onclick:stopPropagation="true">
-                                            <i class="bi bi-chat"></i>
-                                            Reply
-                                        </a>
-                                    </li>
-                                    @if (Tree.Note != null 
-                                        && Tree.Note.PublicKey == accountService.MainAccount?.Id)
+<UpdatabableElement @ref="mainSection">
+    <div @ref="referenceElement" class="d-flex flex-row mb-3 @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "flex-row-reverse align-self-end" : string.Empty)">
+        @if (Tree.Note.Deleted)
+        {
+            <div class="d-flex flex-grow-1 align-items-center justify-content-center text-secondary">Note deleted</div>
+        }
+        else
+        {
+            <div class="flex-shrink-0">
+                <a href="/account/@Tree.Note?.PublicKey" @onclick:stopPropagation="true">
+                    <AccountPicture Id="@Tree.Note?.PublicKey"></AccountPicture>
+                </a>
+            </div>
+            <div class="d-flex flex-column align-items-start">
+                <div class="p-2 pt-1 mx-2 rounded shadow-sm position-relative triangle @(accountService.MainAccount?.Id == Tree.Note?.PublicKey ? "triangle-end bg-success-subtle" : "bg-body-secondary triangle-start")">
+                    <MessageViewer Event="@Tree.Note">
+                        <TopContent>
+                            <span class="ms-2 d-inline-block text-secondary"><TimeStamp DateSeconds="@(Tree.Note?.CreatedAtCurated ?? 0)" /></span>
+                            <div class="btn-group">
+                                <a role="button" @onclick:stopPropagation="true" class="d-inline-block lh-1 p-1 ms-1 rounded-5 fs-6 text-secondary bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    @if (accountService.MainAccount != null)
                                     {
                                         <li>
-                                            <a role="button" class="dropdown-item" @onclick="@Delete" @onclick:stopPropagation="true">
-                                                <i class="bi bi-trash3"></i>
-                                                Delete
+                                            <a role="button" class="dropdown-item" @onclick="@Reply" @onclick:stopPropagation="true">
+                                                <i class="bi bi-chat"></i>
+                                                Reply
                                             </a>
                                         </li>
+                                        @if (Tree.Note != null 
+                                            && Tree.Note.PublicKey == accountService.MainAccount?.Id)
+                                        {
+                                            <li>
+                                                <a role="button" class="dropdown-item" @onclick="@Delete" @onclick:stopPropagation="true">
+                                                    <i class="bi bi-trash3"></i>
+                                                    Delete
+                                                </a>
+                                            </li>
+                                        }
+                                    }
+                                    <PayButton Id="@Tree.Note?.PublicKey">
+                                        <li>
+                                            <a role="button" class="dropdown-item" @onclick="@Pay" @onclick:stopPropagation="true">
+                                                <i class="bi bi-lightning-charge"></i>
+                                                Pay
+                                            </a>
+                                        </li>
+                                    </PayButton>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note?.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Message ID</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Message Hex</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note?.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => CopyContentAsync())" @onclick:stopPropagation="true">Copy Content</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => feedService.ResendExistingEvent(Tree.Note))" @onclick:stopPropagation="true">Broadcast</a></li>
+                                </ul>
+                            </div>
+                        </TopContent>
+                    </MessageViewer>
+                </div>
+                <UpdatabableElement @ref="reactionsSection">
+                    @{
+                        const int MAX_GROUPS = 1;
+                        var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
+                        if (groupedReactions?.Any() ?? false)
+                        {
+                            <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
+                                @{
+                                    foreach (var group in groupedReactions.Take(MAX_GROUPS))
+                                    {
+                                        <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
+                                            @NormalizedReaction(group.Reaction)
+                                            <span class="fs-7">@group.Count</span>
+                                        </div>
+                                    }
+                                    var remainingReactionCount = groupedReactions.Skip(MAX_GROUPS).Sum(group => group.Count);
+                                    if (remainingReactionCount > 0)
+                                    {
+                                        <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
+                                            <i class="bi bi-three-dots"></i>
+                                            <span class="fs-7">@remainingReactionCount</span>
+                                        </div>
                                     }
                                 }
-                                <PayButton Id="@Tree.Note?.PublicKey">
-                                    <li>
-                                        <a role="button" class="dropdown-item" @onclick="@Pay" @onclick:stopPropagation="true">
-                                            <i class="bi bi-lightning-charge"></i>
-                                            Pay
-                                        </a>
-                                    </li>
-                                </PayButton>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note?.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Message ID</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Message Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note?.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note?.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => CopyContentAsync())" @onclick:stopPropagation="true">Copy Content</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => feedService.ResendExistingEvent(Tree.Note))" @onclick:stopPropagation="true">Broadcast</a></li>
-                            </ul>
-                        </div>
-                    </TopContent>
-                </MessageViewer>
-            </div>
-            <UpdatabableElement @ref="reactionsSection">
-                @{
-                    const int MAX_GROUPS = 1;
-                    var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
-                    if (groupedReactions?.Any() ?? false)
-                    {
-                        <div class="ms-2 d-flex flex-row fs-6" style="transform: translate(0, -25%);">
-                            @{
-                                foreach (var group in groupedReactions.Take(MAX_GROUPS))
-                                {
-                                    <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
-                                        @NormalizedReaction(group.Reaction)
-                                        <span class="fs-7">@group.Count</span>
-                                    </div>
-                                }
-                                var remainingReactionCount = groupedReactions.Skip(MAX_GROUPS).Sum(group => group.Count);
-                                if (remainingReactionCount > 0)
-                                {
-                                    <div role="button" class="ms-1 badge rounded-pill bg-body text-secondary border shadow-sm">
-                                        <i class="bi bi-three-dots"></i>
-                                        <span class="fs-7">@remainingReactionCount</span>
-                                    </div>
-                                }
-                            }
-                        </div>
+                            </div>
+                        }
                     }
-                }
-            </UpdatabableElement>
-        </div>
-    }
-</div>
+                </UpdatabableElement>
+            </div>
+        }
+    </div>
+</UpdatabableElement>
 
 @code {
     private ElementReference? referenceElement;
     private EventDetailsCount? eventDetailsCount;
     private UpdatabableElement? reactionsSection;
+    private UpdatabableElement? mainSection;
 
     // We never rerender this component with different parameters
     // so all the logic can be done here
@@ -142,6 +145,7 @@
 
         feedService.NoteCountChanged += NoteCountChanged;
         feedService.NoteDeleted += NoteDeleted;
+        accountService.MainAccountChanged += MainAccountChanged;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -205,7 +209,12 @@
             return;
 
         Tree.Note.Deleted = true;
-        InvokeAsync(() => StateHasChanged());
+        mainSection?.Update();
+    }
+
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        mainSection?.Update();
     }
 
     private async Task CopyContentAsync()
@@ -223,27 +232,24 @@
 
     protected override bool ShouldRender()
     {
-        // Never auto refresh, except when deleted
-        // This is a quick hack to avoid wrapping everything in an UpdatabableElement or
-        // adding more complex logic to determine whether to render or not
-        return Tree.Note.Deleted;
+        return false; // Never auto refresh
     }
 
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
@@ -255,6 +261,7 @@
         }
         feedService.NoteCountChanged -= NoteCountChanged;
         feedService.NoteDeleted -= NoteDeleted;
+        accountService.MainAccountChanged -= MainAccountChanged;
     }
     #endregion
 }

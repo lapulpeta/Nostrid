@@ -4,8 +4,10 @@
 @using Nostrid.Data.Relays;
 @using Nostrid.Model;
 @using Nostrid.Misc;
+
 @inject AccountService accountService
 @inject EventDatabase eventDatabase
+@inject NavigationManager navigationManager
 
 @if (follows.Count == 0)
 {
@@ -38,7 +40,12 @@ else
 
     private void SetFilter()
     {
-        follows = accountService.MainAccount == null ? new() : eventDatabase.GetFollowIds(accountService.MainAccount.Id);
+        if (accountService.MainAccount == null)
+        {
+            navigationManager.NavigateTo("/feed");
+            return;
+        }
+        follows = eventDatabase.GetFollowIds(accountService.MainAccount.Id);
         if (follows.Count == 0)
         {
             filter = null;
@@ -50,20 +57,20 @@ else
     }
 
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 accountService.MainAccountChanged -= MainAccountChanged;
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
     #endregion

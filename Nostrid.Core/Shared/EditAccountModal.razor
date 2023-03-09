@@ -1,0 +1,143 @@
+﻿@using Nostrid.Data;
+@using Nostrid.Model;
+
+@inject AccountService accountService
+@inject Lud06Service lud06Service
+
+@code{
+    [Parameter, EditorRequired]
+    public string AccountId { get; set; } = null!;
+}
+
+<ModalContainer @ref="modalContainer">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">Edit account</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <EditForm class="w-100" Model="@accountDetails" OnValidSubmit="@(async () => await SaveAccountDetails())">
+                    <div class="modal-body" style="margin-bottom: -1rem;">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="form-floating mb-3">
+                            <InputText class="form-control" id="name-control" @bind-Value="accountDetails.Name" />
+                            <label for="name-control">Name</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText class="form-control" id="about-control" @bind-Value="accountDetails.About" />
+                            <label for="about-control">About</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText class="form-control" id="picture-control" @bind-Value="accountDetails.PictureUrl" />
+                            <label for="picture-control">Picture URL</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText class="form-control" id="nip05-control" @bind-Value="accountDetails.Nip05Id" />
+                            <label for="nip05-control">NIP-05 ID:</label>
+                        </div>
+                        <div class="form-floating mb-3">
+                            <InputText class="form-control" id="lud16-control" @bind-Value="accountDetails.Ln" />
+                            <label for="lud16-control">LUD-16 or LNURL:</label>
+                        </div>
+                        <div class="text-danger mb-3">@saveError</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">
+                            Save
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</ModalContainer>
+
+@code {
+
+    private Account? account;
+    private ModalContainer? modalContainer;
+    private EditAccountDetails accountDetails = new();
+    private string? saveError;
+
+    public void Show()
+    {
+        account = accountService.GetAccount(AccountId);
+
+        accountDetails.Name = account.Details?.Name;
+        accountDetails.About = account.Details?.About;
+        accountDetails.PictureUrl = account.Details?.PictureUrl;
+        accountDetails.Nip05Id = account.Details?.Nip05Id;
+        accountDetails.Ln = account.Details?.Lud16Id ?? account.Details?.Lud06Url;
+
+        InvokeAsync(StateHasChanged);
+
+        modalContainer?.Show();
+    }
+
+    private async Task SaveAccountDetails()
+    {
+        AccountDetails accountDetailsToSave = new()
+        {
+            Account = account
+        };
+        account.Details = accountDetailsToSave;
+
+        accountDetails.Nip05Id = accountDetails.Nip05Id?.Trim();
+        if (accountDetails.Nip05Id.IsNullOrEmpty())
+        {
+            accountDetails.Nip05Id = null;
+        }
+        else if (!Nip05.IsValidNip05(accountDetails.Nip05Id))
+        {
+            saveError = "Nip05 ID is not valid";
+            return;
+        }
+        accountDetailsToSave.Nip05Id = accountDetails.Nip05Id;
+
+        accountDetails.Ln = accountDetails.Ln?.Trim();
+        if (accountDetails.Ln.IsNullOrEmpty())
+        {
+            accountDetailsToSave.Lud16Id = null;
+            accountDetailsToSave.Lud06Url = null;
+        }
+        else if (lud06Service.IsValidLud16(accountDetails.Ln))
+        {
+            accountDetailsToSave.Lud16Id = accountDetails.Ln;
+            accountDetailsToSave.Lud06Url = null;
+        }
+        else if (lud06Service.TryLud06UrlToUrl(accountDetails.Ln, out var _))
+        {
+            accountDetailsToSave.Lud06Url = accountDetails.Ln;
+            accountDetailsToSave.Lud16Id = null;
+        }
+        else
+        {
+            saveError = "LUD-16 or LNURL invalid";
+            return;
+        }
+        saveError = null;
+
+        accountDetailsToSave.Name = accountDetails.Name;
+        accountDetailsToSave.About = accountDetails.About;
+        accountDetailsToSave.PictureUrl = accountDetails.PictureUrl;
+
+        await accountService.SaveAccountDetails(accountDetailsToSave);
+
+        modalContainer.Hide();
+    }
+
+    public class EditAccountDetails
+    {
+        public string? Name { get; set; }
+
+        public string? About { get; set; }
+
+        public string? PictureUrl { get; set; }
+
+        public string? Nip05Id { get; set; }
+
+        public string? Ln { get; set; }
+    }
+}
