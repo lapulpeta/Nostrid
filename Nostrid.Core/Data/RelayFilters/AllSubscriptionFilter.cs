@@ -6,7 +6,7 @@ namespace Nostrid.Data.Relays;
 
 public class AllSubscriptionFilter : SubscriptionFilter, IRelayFilter, IDbFilter
 {
-    private readonly int[] validKinds = new[] { NostrKind.Text, NostrKind.Relay, NostrKind.Deletion, NostrKind.Repost, NostrKind.Reaction };
+    private readonly int[] validKinds = new[] { NostrKind.Text, NostrKind.Relay, NostrKind.Deletion, NostrKind.Repost, NostrKind.Reaction, NostrKind.Badge };
     
     private readonly EventDatabase eventDatabase;
 

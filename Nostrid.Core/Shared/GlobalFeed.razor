@@ -3,7 +3,7 @@
 
 @inject AllSubscriptionFilterFactory allSubscriptionFilterFactory;
 
-<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost, NostrKind.Badge})" />
 
 @code {
     private SubscriptionFilter? filter;

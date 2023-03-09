@@ -87,6 +87,13 @@
                             @content
                         </div>
                         break;
+                    case NostrKind.Badge:
+                        <div>
+                            Name: @Event.TagData("name")<br/>
+                            Description: @Event.TagData("description")<br />
+                            <img src="@Event.TagData("thumb")" />
+                        </div>
+                        break;
                     case NostrKind.Repost:
                         if (Event.RepostEventId != null)
                         {

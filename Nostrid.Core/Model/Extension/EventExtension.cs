@@ -8,6 +8,11 @@ namespace Nostrid.Model;
 
 public static class EventExtension
 {
+	public static string? TagData(this Event ev, string tag)
+	{
+		return ev.Tags.FirstOrDefault(t => t.Data0 == tag)?.Data1;
+	}
+
 	public static Event ToEvent(this string json)
 	{
 		return JToken.Parse(json).ToObject<NostrEvent>()!.FromNostrEvent();
