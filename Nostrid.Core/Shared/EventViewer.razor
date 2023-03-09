@@ -88,10 +88,15 @@
                         </div>
                         break;
                     case NostrKind.Badge:
-                        <div>
-                            Name: @Event.TagData("name")<br/>
-                            Description: @Event.TagData("description")<br />
-                            <img src="@Event.TagData("thumb")" />
+                        <div class="d-inline-block p-2 border rounded-2 note-content text-break text-center"
+                             style="border-color: rgba(var(--bs-secondary-rgb)) !important;">
+                            <div class="fs-5">
+                                <i class="bi bi-star me-1"></i>
+                                @Event.TagData("name")
+                                <i class="ms-1 bi bi-star"></i>
+                            </div>
+                            <div class="fst-italic">@Event.TagData("description")</div>
+                            <div class="d-flex flex-row justify-content-center mt-1"><AsyncLink Url="@Event.TagData("thumb")"></AsyncLink></div>
                         </div>
                         break;
                     case NostrKind.Repost:
