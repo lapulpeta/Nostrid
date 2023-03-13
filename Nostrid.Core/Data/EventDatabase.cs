@@ -728,6 +728,12 @@ namespace Nostrid.Data
 				.ToList();
         }
 
+        public bool HasMutes(string accountId)
+        {
+            using var db = new Context(_dbfile);
+            return db.Mutes.Any(f => f.AccountId == accountId);
+        }
+
         public Channel GetChannel(string id)
 		{
 			using var db = new Context(_dbfile);
