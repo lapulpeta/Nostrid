@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using Nostrid.Misc;
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 
 namespace Nostrid.Data
@@ -36,28 +37,27 @@ namespace Nostrid.Data
 
         public static async Task<(string? Domain, string? Username, string? Pubkey)> IdToPubkey(string nip05id)
         {
-            if (DecodeNip05(nip05id, out var domain, out var username))
+            if (DecodeNip05(nip05id, out var domain, out var username) && username.IsNotNullOrEmpty())
             {
                 var handler = new HttpClientHandler()
                 {
                     AllowAutoRedirect = false
                 };
                 using var client = new HttpClient(handler);
-                using var response = await client.GetAsync($"https://{domain}/.well-known/nostr.json?name={username}");
-
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    try
+                    using var response = await client.GetAsync($"https://{domain}/.well-known/nostr.json?name={username}");
+                    if (response.IsSuccessStatusCode)
                     {
                         var nipData = await response.Content.ReadFromJsonAsync<Nip05Root>();
-                        if (nipData?.names?.TryGetValue(username, out var hex) ?? false)
+                        if ((nipData?.names?.TryGetValue(username, out var hex) ?? false) && Utils.IsValidNostrId(hex))
                         {
                             return (domain, username, hex);
                         }
                     }
-                    catch
-                    {
-                    }
+                }
+                catch
+                {
                 }
             }
             return (null, null, null);

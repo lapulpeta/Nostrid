@@ -5,7 +5,7 @@
 @inject EventDatabase eventDatabase
 
 <EditForm Model="@textInput" OnValidSubmit="@GoToEventSubmit">
-    <p>Enter npub, note, hex ID or one or more hashtags:</p>
+    <p>Enter npub, naddr, nevent, note, hex ID, NIP-05, or one or more hashtags:</p>
   
     <div class="input-group mb-3">
         <InputText class="form-control" @bind-Value="textInput.Text" />
@@ -28,7 +28,7 @@
     private bool invalidInput;
     private ConfirmationModal? confirmationModal;
 
-    private void GoToEventSubmit()
+    private async Task GoToEventSubmit()
     {
         var input = textInput.Text?.Trim() ?? string.Empty;
 
@@ -128,6 +128,17 @@
         {
             NavigationManager.NavigateTo($"/note/{input}");
             return;
+        }
+
+        // Check NIP-05
+        if (Nip05.IsValidNip05(input))
+        {
+            (_, _, pubkey) = await Nip05.IdToPubkey(input);
+            if (pubkey.IsNotNullOrEmpty())
+            {
+                NavigationManager.NavigateTo($"/account/{pubkey}");
+                return;
+            }
         }
 
         invalidInput = true;
