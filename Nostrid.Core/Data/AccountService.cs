@@ -450,39 +450,23 @@ public class AccountService
 
             if (Utils.MustUpdate(eventToProcess.CreatedAt, account.MutesLastUpdate))
             {
-                //if (followerRequestFilters.TryGetValue(filterId, out var requesterId))
-                //{
-                //    // If we received this because someone is requesting his followers then we don't save all the list, just this single follow
-                //    if (newFollowList.Contains(requesterId) && !eventDatabase.IsFollowing(account.Id, requesterId))
-                //    {
-                //        eventDatabase.AddFollow(account.Id, requesterId);
+                eventDatabase.SetMutes(account.Id, newPublicMuteList, newPrivateMuteList);
 
-                //        update = () =>
-                //        {
-                //            AccountFollowersChanged?.Invoke(this, requesterId);
-                //        };
-                //    }
-                //}
-                //else
+                mutingCache.Clear();
+
+                account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+
+                eventDatabase.SaveAccount(account);
+
+                if (account.Id == mainAccount?.Id)
                 {
-                    eventDatabase.SetMutes(account.Id, newPublicMuteList, newPrivateMuteList);
-
-                    mutingCache.Clear();
-
-                    account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
-
-                    eventDatabase.SaveAccount(account);
-
-                    if (account.Id == mainAccount?.Id)
-                    {
-                        SetMainAccount(account);
-                    }
-
-                    update = () =>
-                    {
-                        AccountMutesChanged?.Invoke(this, (account.Id, newPublicMuteList.Union(newPrivateMuteList).ToList()));
-                    };
+                    SetMainAccount(account);
                 }
+
+                update = () =>
+                {
+                    AccountMutesChanged?.Invoke(this, (account.Id, newPublicMuteList.Union(newPrivateMuteList).ToList()));
+                };
             }
         }
 
