@@ -84,7 +84,7 @@ public class DmService
 
         var dms = db.Events.Where(e => e.Kind == NostrKind.DM && (e.PublicKey == accountId || e.DmToId == accountId));
         // Exclude mutes
-        dms = dms.Where(e => !db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == e.PublicKey));
+        dms = dms.Where(e => !db.Mutes.Any(m => m.AccountId == accountId && (m.MuteId == e.PublicKey || m.MuteId == e.DmToId) ));
 		var query1 = lastReads.Join(dms, lr => lr.Account, e => e.PublicKey, (lr, e) => new { e.CreatedAt, lr.LastRead }).Where(x =>  x.CreatedAt > x.LastRead);
         var query2 = lastReads.Join(dms, lr => lr.Account, e => e.DmToId, (lr, e) => new { e.CreatedAt, lr.LastRead }).Where(x => x.CreatedAt > x.LastRead);
         return query1.Count() + query2.Count();
