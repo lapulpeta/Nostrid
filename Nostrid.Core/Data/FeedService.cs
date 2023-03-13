@@ -650,7 +650,7 @@ public class FeedService
 
         var mentionsFilter = accountService.MainAccountMentionsFilter.Clone();
         mentionsFilter.LimitFilterData.Since = accountService.MainAccount.LastNotificationRead.ToUniversalTime();
-        return eventDatabase.GetNotesCount(mentionsFilter.GetFilters());
+        return eventDatabase.GetNotesCount(mentionsFilter.GetFilters(), accountService.MainAccount.Id);
     }
 
     public EventDetailsCount GetEventDetailsCount(string eventId)

@@ -339,11 +339,16 @@ namespace Nostrid.Data
 			return query.Include(e => e.Tags).ToList();
 		}
 
-		public int GetNotesCount(NostrSubscriptionFilter[] filters)
+		public int GetNotesCount(NostrSubscriptionFilter[] filters, string? excludeMutesFromId = null)
 		{
 			using var db = new Context(_dbfile);
 			int count = 0;
-			foreach (var filter in filters)
+			var events = db.Events.Where(e => e.Kind == 1);
+			if (excludeMutesFromId.IsNotNullOrEmpty())
+			{
+				events = events.Where(e => !db.Mutes.Any(m => m.AccountId == excludeMutesFromId && m.MuteId == e.PublicKey));
+			}
+            foreach (var filter in filters)
 			{
 				count += ApplyFilter(db.Events.Where(e => e.Kind == 1), filter).Count();
 			}
@@ -699,10 +704,17 @@ namespace Nostrid.Data
             tx.Commit();
         }
 
-        public bool IsMuting(string accountId, string muteId, bool priv)
+        public bool IsMuting(string accountId, string muteId, bool? priv = null)
         {
             using var db = new Context(_dbfile);
-            return db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == muteId && m.IsPrivate == priv);
+			if (priv.HasValue)
+			{
+				return db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == muteId && m.IsPrivate == priv.Value);
+			}
+			else
+			{
+                return db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == muteId);
+            }
         }
 
         public List<(string MuteId, bool IsPrivate)> GetMuteIds(string accountId)
