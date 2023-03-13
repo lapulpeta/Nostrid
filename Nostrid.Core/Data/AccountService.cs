@@ -454,7 +454,7 @@ public class AccountService
 
                 mutingCache.Clear();
 
-                account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+                account.MutesLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
 
                 eventDatabase.SaveAccount(account);
 
