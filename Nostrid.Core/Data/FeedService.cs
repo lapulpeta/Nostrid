@@ -72,6 +72,9 @@ public class FeedService
             case NostrKind.ChannelMetadata:
                 channelService.HandleChannelCreationOrMetadata(eventToProcess);
                 break;
+            case NostrKind.Mutes:
+                Task.Run(() => accountService.HandleMuteList(eventToProcess));
+                break;
         }
     }
 

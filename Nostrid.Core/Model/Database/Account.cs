@@ -10,6 +10,8 @@ public class Account
 
     public DateTimeOffset? FollowsLastUpdate { get; set; }
 
+    public DateTimeOffset? MutesLastUpdate { get; set; }
+
     public DateTime LastNotificationRead { get; set; }
 }
 

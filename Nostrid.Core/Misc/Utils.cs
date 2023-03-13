@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using Nostrid.Model;
 
 namespace Nostrid.Misc
 {
@@ -16,6 +17,11 @@ namespace Nostrid.Misc
         private static readonly Regex accountMentionBech32Regex = AccountMentionBech32Regex();
         private static readonly Regex noteMentionBech32Regex = NoteMentionBech32Regex();
         private static readonly Regex onlyHashtagRegex = OnlyHashtagRegex();
+
+        public static bool MustUpdate(DateTimeOffset? eventCreatedAt, DateTimeOffset? lastUpdate)
+        {
+            return !eventCreatedAt.HasValue || !lastUpdate.HasValue || eventCreatedAt.Value > lastUpdate.Value;
+        }
 
         public static double Between(double value, double min, double max)
         {

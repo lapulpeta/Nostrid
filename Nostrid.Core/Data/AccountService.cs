@@ -4,7 +4,6 @@ using Nostrid.Misc;
 using Nostrid.Model;
 using System.Collections.Concurrent;
 using System.Text.Json;
-
 namespace Nostrid.Data;
 
 public class AccountService
@@ -24,6 +23,7 @@ public class AccountService
     public event EventHandler? MainAccountChanged;
     public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
     public event EventHandler<(string accountId, List<string> follows)>? AccountFollowsChanged;
+    public event EventHandler<(string accountId, List<string> mutes)>? AccountMutesChanged;
     public event EventHandler<string>? AccountFollowersChanged;
     public event EventHandler? MentionsUpdated;
 
@@ -306,6 +306,160 @@ public class AccountService
 
         update?.Invoke();
     }
+
+    #region Muting // TODO: combine muting with following
+
+    public async Task MuteUnmute(string muteId, bool unmute, bool priv)
+    {
+        lock (eventDatabase)
+        {
+            if ((unmute && !IsMuting(muteId, priv)) ||
+                (!unmute && IsMuting(muteId, priv)))
+                return;
+
+            if (unmute)
+                eventDatabase.RemoveMute(MainAccount.Id, muteId, priv);
+            else
+                eventDatabase.AddMute(MainAccount.Id, muteId, priv);
+        }
+        await SendMuteList();
+    }
+
+    public bool IsMuting(string accountToCheckId, bool priv)
+    {
+        return eventDatabase.IsMuting(MainAccount.Id, accountToCheckId, priv);
+    }
+
+    public async Task<bool> SendMuteList()
+    {
+        var accountId = MainAccount!.Id;
+        var nostrEvent = new NostrEvent()
+        {
+            CreatedAt = DateTimeOffset.UtcNow,
+            Kind = NostrKind.Mutes,
+            PublicKey = accountId,
+            Tags = new(),
+        };
+
+        var privateMuteList = new List<string>();
+        foreach (var (muteId, priv) in eventDatabase.GetMuteIds(accountId))
+        {
+            if (priv)
+            {
+                privateMuteList.Add(muteId);
+            }
+            else
+            {
+                nostrEvent.Tags.Add(new NostrEventTag() { TagIdentifier = "p", Data = { muteId } });
+            }
+        }
+        nostrEvent.Content = await EncryptMuteList(accountId, privateMuteList);
+
+        if (!await MainAccountSigner.Sign(nostrEvent))
+            return false;
+        relayService.SendEvent(nostrEvent);
+        return true;
+    }
+
+    private async Task<List<string>> DecryptMuteList(string pubkey, string content)
+    {
+        try
+        {
+            var decryptedContent = await MainAccountSigner!.DecryptNip04(pubkey, content);
+            if (decryptedContent.IsNotNullOrEmpty())
+            {
+                var decryptedTags = JsonSerializer.Deserialize<List<List<string>>>(decryptedContent);
+                if (decryptedTags != null)
+                {
+                    return decryptedTags.Where(pair => pair.FirstOrDefault() == "p" && pair.Count > 1).Select(pair => pair[1]).ToList();
+                }
+            }
+        }
+        catch
+        {
+        }
+        return new();
+    }
+
+    private async Task<string> EncryptMuteList(string pubkey, List<string> mutes)
+    {
+        try
+        {
+            var decryptedContentList = mutes.Select(m => new List<string>() { "p", m });
+            var decryptedContent = JsonSerializer.Serialize(decryptedContentList) ?? string.Empty;
+
+            return await MainAccountSigner!.EncryptNip04(pubkey, decryptedContent) ?? string.Empty;
+        }
+        catch
+        {
+        }
+        return string.Empty;
+    }
+
+    // NIP-51: https://github.com/nostr-protocol/nips/blob/master/51.md
+    public async Task HandleMuteList(Event eventToProcess)
+    {
+        if (eventToProcess.PublicKey != mainAccount?.Id) // Only save own mute list
+        {
+            return;
+        }
+
+        Action? update = null;
+
+        // Decrypt private list
+        List<string> newPrivateMuteList = new();
+        if (eventToProcess.Content.IsNotNullOrEmpty())
+        {
+            newPrivateMuteList = await DecryptMuteList(eventToProcess.PublicKey, eventToProcess.Content);
+        }
+
+        var newPublicMuteList = eventToProcess.Tags.Where(t => t.Data0 == "p" && t.Data1.IsNotNullOrEmpty()).Select(t => t.Data1!).Distinct().ToList();
+
+        lock (eventDatabase)
+        {
+
+            var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
+
+            if (Utils.MustUpdate(eventToProcess.CreatedAt, account.MutesLastUpdate))
+            {
+                //if (followerRequestFilters.TryGetValue(filterId, out var requesterId))
+                //{
+                //    // If we received this because someone is requesting his followers then we don't save all the list, just this single follow
+                //    if (newFollowList.Contains(requesterId) && !eventDatabase.IsFollowing(account.Id, requesterId))
+                //    {
+                //        eventDatabase.AddFollow(account.Id, requesterId);
+
+                //        update = () =>
+                //        {
+                //            AccountFollowersChanged?.Invoke(this, requesterId);
+                //        };
+                //    }
+                //}
+                //else
+                {
+                    eventDatabase.SetMutes(account.Id, newPublicMuteList, newPrivateMuteList);
+
+                    account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
+
+                    eventDatabase.SaveAccount(account);
+
+                    if (account.Id == mainAccount?.Id)
+                    {
+                        SetMainAccount(account);
+                    }
+
+                    update = () =>
+                    {
+                        AccountMutesChanged?.Invoke(this, (account.Id, newPublicMuteList.Union(newPrivateMuteList).ToList()));
+                    };
+                }
+            }
+        }
+
+        update?.Invoke();
+    }
+
+    #endregion
 
     public string GetAccountName(string accountId)
     {

@@ -1,0 +1,109 @@
+﻿@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject EventDatabase eventDatabase
+@inject AccountService accountService
+
+@code {
+    [Parameter, EditorRequired]
+    public string AccountId { get; set; } = null!;
+
+    [Parameter]
+    public string? Css { get; set; }
+}
+
+@{
+    var isMuting = accountService.IsMuting(AccountId, true); 
+}
+<button class="btn @Css @(isMuting ? "btn-primary" : "btn-danger")"
+        @onclick="@(async () => await MuteUnmute(true))" @onclick:stopPropagation="true">
+    @(!isMuting ? "Mute" : "Unmute")
+</button>
+
+@confirmationModalRenderFragment
+
+@code
+{
+    private RenderFragment? confirmationModalRenderFragment;
+    private ConfirmationModal? confirmationModal;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        accountService.AccountMutesChanged += AccountMutesChanged;
+    }
+
+    private void AccountMutesChanged(object? sender, (string accountId, List<string> mutes) data)
+    {
+        if (_disposed)
+            return;
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task MuteUnmute(bool showConfirmation = true)
+    {
+        var mute = !accountService.IsMuting(AccountId, true);
+        //var hasFollows = accountService.MainAccount != null && eventDatabase.HasFollows(accountService.MainAccount.Id);
+        //if (showConfirmation && follow && !hasFollows)
+        //{
+        //    if (confirmationModalRenderFragment == null)
+        //    {
+        //        confirmationModalRenderFragment = new RenderFragment(builder =>
+        //        {
+        //            builder.OpenElement(0, "div");
+        //            builder.AddEventStopPropagationAttribute(1, "onclick", true);
+        //            builder.OpenComponent<ConfirmationModal>(2);
+        //            builder.AddComponentReferenceCapture(3, instance => { confirmationModal = instance as ConfirmationModal; });
+        //            builder.CloseComponent();
+        //            builder.CloseElement();
+        //        });
+        //        await InvokeAsync(() => ShowConfirmation());
+        //    }
+        //    else
+        //    {
+        //        ShowConfirmation();
+        //    }
+        //}
+        //else
+        {
+            await accountService.MuteUnmute(AccountId, !mute, true);
+        }
+    }
+
+    //private void ShowConfirmation()
+    //{
+    //    confirmationModal?.Show(
+    //        ConfirmationModal.Options.Create(
+    //            "Is this your first follow ever? We haven't seen any other follows yet. If you continue, you will have one follow in total.<br /><b>Are you sure you want to continue?</b>",
+    //            "Follow account",
+    //            ConfirmationModal.Options.Button.CreateButton("Yes, this is my first follow", async () => await MuteUnmute(false), "btn-outline-secondary"),
+    //            ConfirmationModal.Options.Button.CreateButton("No, I'll wait until I receive all my follows", null, "btn-outline-secondary")));
+    //}
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        accountService.AccountMutesChanged -= AccountMutesChanged;
+    }
+    #endregion
+}

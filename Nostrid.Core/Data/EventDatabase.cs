@@ -609,7 +609,13 @@ namespace Nostrid.Data
 			db.SaveChanges();
 		}
 
-		public void SetFollows(string accountId, IEnumerable<string> followIds)
+        public void RemoveFollow(string accountId, string followId)
+        {
+            using var db = new Context(_dbfile);
+            db.Follows.Where(f => f.AccountId == accountId && f.FollowId == followId).ExecuteDelete();
+        }
+
+        public void SetFollows(string accountId, IEnumerable<string> followIds)
 		{
 			using var db = new Context(_dbfile);
 			db.Follows.Where(f => f.AccountId == accountId).ExecuteDelete();
@@ -620,18 +626,12 @@ namespace Nostrid.Data
 			db.SaveChanges();
 		}
 
-		public void ClearFollows(string accountId)
+        public void ClearFollows(string accountId)
 		{
 			using var db = new Context(_dbfile);
 			db.Events.Where(e => e.Kind == NostrKind.Contacts && e.PublicKey == accountId).ExecuteDelete();
 			db.Follows.Where(f => f.AccountId == accountId).ExecuteDelete();
 			db.Accounts.Where(a => a.Id == accountId).ExecuteUpdate(a => a.SetProperty(a => a.FollowsLastUpdate, (DateTimeOffset?)null));
-		}
-
-		public void RemoveFollow(string accountId, string followId)
-		{
-			using var db = new Context(_dbfile);
-			db.Follows.Where(f => f.AccountId == accountId && f.FollowId == followId).ExecuteDelete();
 		}
 
 		public List<string> GetFollowIds(string accountId)
@@ -670,7 +670,48 @@ namespace Nostrid.Data
 			return db.Follows.Count(f => f.FollowId == accountId);
 		}
 
-		public Channel GetChannel(string id)
+        public void AddMute(string accountId, string muteId, bool priv)
+        {
+            using var db = new Context(_dbfile);
+            db.Add(new Mute() { AccountId = accountId, MuteId = muteId, IsPrivate = priv });
+            db.SaveChanges();
+        }
+
+        public void RemoveMute(string accountId, string muteId, bool priv)
+        {
+            using var db = new Context(_dbfile);
+            db.Mutes.Where(m => m.AccountId == accountId && m.MuteId == muteId && m.IsPrivate == priv).ExecuteDelete();
+        }
+
+        public void SetMutes(string accountId, IEnumerable<string> publicList, IEnumerable<string> privateList)
+        {
+            using var db = new Context(_dbfile);
+            using var tx = db.Database.BeginTransaction();
+            db.Mutes.Where(f => f.AccountId == accountId).ExecuteDelete();
+            db.AddRange(publicList.Select(id => new Mute() { AccountId = accountId, MuteId = id }));
+            db.AddRange(privateList.Select(id => new Mute() { AccountId = accountId, MuteId = id, IsPrivate = true }));
+            db.SaveChanges();
+            tx.Commit();
+        }
+
+        public bool IsMuting(string accountId, string muteId, bool priv)
+        {
+            using var db = new Context(_dbfile);
+            return db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == muteId && m.IsPrivate == priv);
+        }
+
+        public List<(string MuteId, bool IsPrivate)> GetMuteIds(string accountId)
+        {
+            using var db = new Context(_dbfile);
+			return db.Mutes
+				.Where(f => f.AccountId == accountId)
+				.Select(f => new { f.MuteId, f.IsPrivate })
+				.AsEnumerable()
+				.Select(f => (f.MuteId, f.IsPrivate))
+				.ToList();
+        }
+
+        public Channel GetChannel(string id)
 		{
 			using var db = new Context(_dbfile);
 			return db.Channels.Include(c => c.Details).FirstOrDefault(c => c.Id == id) ?? new Channel() { Id = id };
