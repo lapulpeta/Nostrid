@@ -89,116 +89,143 @@
             </div>
         }
     </UpdatabableElement>
-    @if (Tree.Note.Deleted)
-    {
-        <div class="d-flex flex-row align-items-center flex-grow-1">
-            <div>
-                <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;">
-                    <i class="bi bi-x-lg"></i>
-                </div>
-                @if (Tree.Children.Count > 0)
-                {
-                    <div class="flex-grow-1 d-flex flex-row">
-                        <div class="tree-placeholder-width-half"></div>
-                        <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+    <UpdatabableElement @ref="mainSection">
+        @if (Tree.Note.Deleted)
+        {
+            <div class="d-flex flex-row align-items-center flex-grow-1">
+                <div>
+                    <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;">
+                        <i class="bi bi-x-lg"></i>
                     </div>
-                }
-            </div>
-            <div class="ms-2 position-relative">
-                <div class="opacity-25 position-relative" style="filter: blur(1px);">
-                    <span class="placeholder placeholder-xs d-block" style="width: 100px;"></span>
-                    <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
-                    <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
-                </div>
-                <span class="position-absolute top-50 start-50 translate-middle badge text-bg-secondary rounded-pill">Deleted</span>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="d-flex flex-grow-1 flex-column">
-            <EventViewer Event="@Tree.Note" ShowReplyingTo="@(TreeLayout.Length == 1 && !OnlyChild)" Expanded="@(Tree.Note.Id == MainEventId)">
-                <LeftPlaceholder>
-                    <UpdatabableElement @ref="leftPlaceholder">
-                        @if (Tree.Children.Count > 0)
-                        {
-                            <div class="flex-grow-1 d-flex flex-row">
-                                <div class="tree-placeholder-width-half"></div>
-                                <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
-                            </div>
-                        }
-                    </UpdatabableElement>
-                </LeftPlaceholder>
-                <BottomPlaceholder>
-                    <UpdatabableElement @ref="bottomPlaceholder">
-                        <div class="w-100 mt-1 d-flex flex-row" style="margin-right:-1.5rem;">
-                            @if (accountService.MainAccount != null)
-                            {
-                                <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                    <i class="bi bi-chat"></i>
-                                </a>
-                                <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                    <i class="bi bi-repeat"></i>
-                                    @if (eventDetailsCount?.Reposts > 0)
-                                    {
-                                        <span class="fs-7 lh-sm">&nbsp;@eventDetailsCount.Reposts</span>
-                                    }
-                                </a>
-                                <a role="button" @onclick:stopPropagation="true"
-                                    class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi @(!likeClicked ? "bi-heart" : "bi-heart-fill")"></i>
-                                    @{
-                                        var reactionsCount = eventDetailsCount?.ReactionGroups.Sum(r => r.Value);
-                                        if (reactionsCount > 0)
-                                        {
-                                            <span class="fs-7 lh-sm">&nbsp;@reactionsCount</span>
-                                        }
-                                    }
-                                </a>
-                                <div class="dropdown-menu p-1 shadow" style="min-width: initial;">
-                                    <ReactionsPopup EventId="@(Tree.Note.ReplaceableId ?? Tree.Note.Id)" />
-                                </div>
-                                @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
-                                {
-                                    <a role="button" @onclick="@Delete" @onclick:stopPropagation="true"
-                                       class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                        <i class="bi bi-trash3"></i>
-                                    </a>
-                                }
-                            }
-                            <PayButton Id="@Tree.Note.PublicKey">
-                                <a role="button" @onclick="@Pay" @onclick:stopPropagation="true"
-                                   class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
-                                    <i class="bi bi-lightning-charge"></i>
-                                    @if (eventDetailsCount?.Zaps > 0)
-                                    {
-                                        <span class="fs-7 lh-sm">&nbsp;@eventDetailsCount.Zaps</span>
-                                    }
-                                </a>
-                            </PayButton>
-                            <a role="button" @onclick:stopPropagation="true"
-                               class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </a>
-                            <ul class="dropdown-menu shadow">
-                                @if (Tree.Note.ReplaceableId.IsNotNullOrEmpty())
-                                {
-                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.EncodeTvlBech32(new Naddr(Tree.Note.ReplaceableId)) ?? string.Empty))" @onclick:stopPropagation="true">Copy Naddr</a></li>
-                                }
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Note ID</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Note Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
-                                <li><a role="button" class="dropdown-item" @onclick="@(() => feedService.ResendExistingEvent(Tree.Note))" @onclick:stopPropagation="true">Broadcast</a></li>
-                            </ul>
+                    @if (Tree.Children.Count > 0)
+                    {
+                        <div class="flex-grow-1 d-flex flex-row">
+                            <div class="tree-placeholder-width-half"></div>
+                            <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
                         </div>
-                    </UpdatabableElement>
-                </BottomPlaceholder>
-            </EventViewer>
-        </div>
-    }
+                    }
+                </div>
+                <div class="ms-2 position-relative">
+                    <div class="opacity-25 position-relative" style="filter: blur(1px);">
+                        <span class="placeholder placeholder-xs d-block" style="width: 100px;"></span>
+                        <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
+                        <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
+                    </div>
+                    <span class="position-absolute top-50 start-50 translate-middle badge text-bg-secondary rounded-pill">Deleted</span>
+                </div>
+            </div>
+        }
+        else if (accountService.IsMuting(Tree.Note.PublicKey))
+        {
+            <div class="d-flex flex-row align-items-center flex-grow-1">
+                <div>
+                    <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;">
+                        <i class="bi bi-volume-mute fs-4"></i>
+                    </div>
+                    @if (Tree.Children.Count > 0)
+                    {
+                        <div class="flex-grow-1 d-flex flex-row">
+                            <div class="tree-placeholder-width-half"></div>
+                            <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+                        </div>
+                    }
+                </div>
+                <div class="ms-2 position-relative">
+                    <div class="opacity-25 position-relative" style="filter: blur(1px);">
+                        <span class="placeholder placeholder-xs d-block" style="width: 100px;"></span>
+                        <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
+                        <span class="placeholder placeholder-xs mt-1 d-block" style="width: 200px;"></span>
+                    </div>
+                    <span class="position-absolute top-50 start-50 translate-middle badge text-bg-secondary rounded-pill">Muted</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-grow-1 flex-column">
+                <EventViewer Event="@Tree.Note" ShowReplyingTo="@(TreeLayout.Length == 1 && !OnlyChild)" Expanded="@(Tree.Note.Id == MainEventId)">
+                    <LeftPlaceholder>
+                        <UpdatabableElement @ref="leftPlaceholder">
+                            @if (Tree.Children.Count > 0)
+                            {
+                                <div class="flex-grow-1 d-flex flex-row">
+                                    <div class="tree-placeholder-width-half"></div>
+                                    <div class="bg-secondary opacity-75 tree-line-width" style="margin-bottom: -1.07rem;"></div>
+                                </div>
+                            }
+                        </UpdatabableElement>
+                    </LeftPlaceholder>
+                    <BottomPlaceholder>
+                        <UpdatabableElement @ref="bottomPlaceholder">
+                            <div class="w-100 mt-1 d-flex flex-row" style="margin-right:-1.5rem;">
+                                @if (accountService.MainAccount != null)
+                                {
+                                    <a role="button" @onclick="Reply" @onclick:stopPropagation="true" class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                        <i class="bi bi-chat"></i>
+                                    </a>
+                                    <a role="button" @onclick="@Repost" @onclick:stopPropagation="true" class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                        <i class="bi bi-repeat"></i>
+                                        @if (eventDetailsCount?.Reposts > 0)
+                                        {
+                                            <span class="fs-7 lh-sm">&nbsp;@eventDetailsCount.Reposts</span>
+                                        }
+                                    </a>
+                                    <a role="button" @onclick:stopPropagation="true"
+                                        class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi @(!likeClicked ? "bi-heart" : "bi-heart-fill")"></i>
+                                        @{
+                                            var reactionsCount = eventDetailsCount?.ReactionGroups.Sum(r => r.Value);
+                                            if (reactionsCount > 0)
+                                            {
+                                                <span class="fs-7 lh-sm">&nbsp;@reactionsCount</span>
+                                            }
+                                        }
+                                    </a>
+                                    <div class="dropdown-menu p-1 shadow" style="min-width: initial;">
+                                        <ReactionsPopup EventId="@(Tree.Note.ReplaceableId ?? Tree.Note.Id)" />
+                                    </div>
+                                    @if (Tree.Note.PublicKey == accountService.MainAccount.Id)
+                                    {
+                                        <a role="button" @onclick="@Delete" @onclick:stopPropagation="true"
+                                           class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                            <i class="bi bi-trash3"></i>
+                                        </a>
+                                    }
+                                }
+                                <PayButton Id="@Tree.Note.PublicKey">
+                                    <a role="button" @onclick="@Pay" @onclick:stopPropagation="true"
+                                       class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover">
+                                        <i class="bi bi-lightning-charge"></i>
+                                        @if (eventDetailsCount?.Zaps > 0)
+                                        {
+                                            <span class="fs-7 lh-sm">&nbsp;@eventDetailsCount.Zaps</span>
+                                        }
+                                    </a>
+                                </PayButton>
+                                <a role="button" @onclick:stopPropagation="true"
+                                   class="d-flex lh-1 p-2 rounded-5 fs-6 text-secondary me-4 bg-primary-opacity-10-hover" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </a>
+                                <ul class="dropdown-menu shadow">
+                                    @if (Tree.Note.ReplaceableId.IsNotNullOrEmpty())
+                                    {
+                                        <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.EncodeTvlBech32(new Naddr(Tree.Note.ReplaceableId)) ?? string.Empty))" @onclick:stopPropagation="true">Copy Naddr</a></li>
+                                    }
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNote(Tree.Note.Id ?? string.Empty)))" @onclick:stopPropagation="true">Copy Note ID</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Id ?? string.Empty))" @onclick:stopPropagation="true">Copy Note Hex</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(ByteTools.PubkeyToNpub(Tree.Note.PublicKey ?? string.Empty)))" @onclick:stopPropagation="true">Copy Account Npub</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.PublicKey ?? string.Empty))" @onclick:stopPropagation="true">Copy Account Hex</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => clipboardService.CopyAsync(Tree.Note.Content ?? string.Empty))" @onclick:stopPropagation="true">Copy Content</a></li>
+                                    <li><a role="button" class="dropdown-item" @onclick="@(() => feedService.ResendExistingEvent(Tree.Note))" @onclick:stopPropagation="true">Broadcast</a></li>
+                                </ul>
+                            </div>
+                        </UpdatabableElement>
+                    </BottomPlaceholder>
+                </EventViewer>
+            </div>
+        }
+    </UpdatabableElement>
 </div>
 
 <UpdatabableElement @ref="treeChildrenSection">
@@ -239,7 +266,7 @@
     private ElementReference? referenceElement;
     private NoteTreeViewer? NoteTreeViewerRef;
     private EventDetailsCount? eventDetailsCount;
-    private UpdatabableElement? bottomPlaceholder, leftPlaceholder, treeLayoutSection, treeChildrenSection;
+    private UpdatabableElement? bottomPlaceholder, leftPlaceholder, treeLayoutSection, treeChildrenSection, mainSection;
     private int[]? previousLayout;
     private bool previousHasChildren;
     private bool previousOnlyChild;
@@ -287,6 +314,7 @@
             // If this note receives a reaction from main account then show it
             likeClicked = feedService.AccountReacted(Tree.Note.ReplaceableId ?? Tree.Note.Id, accountService.MainAccount.Id);
             feedService.NoteReacted += NoteReacted;
+            accountService.AccountMutesChanged += AccountMutesChanged;
         }
     }
 
@@ -329,6 +357,14 @@
         return (new ITreeItem[] { this }).Concat(NoteTreeViewerRef?.GetTreeItems() ?? Enumerable.Empty<ITreeItem>());
     }
 
+    private void AccountMutesChanged(object? sender, (string accountId, List<string> mutes) data)
+    {
+        if (_disposed || accountService.MainAccount?.Id != data.accountId)
+            return;
+
+        mainSection?.Update();
+    }
+
     private void NoteCountChanged(object? sender, (string eventId, EventDetailsCount delta) data)
     {
         if (_disposed || (Tree.Note.Id != data.eventId && Tree.Note.ReplaceableId != data.eventId))
@@ -344,7 +380,7 @@
             return;
 
         Tree.Note.Deleted = true;
-        InvokeAsync(() => StateHasChanged());
+        mainSection?.Update();
     }
 
     private void NoteReacted(object? sender, (string eventId, string reactorId) data)
@@ -366,10 +402,7 @@
 
     protected override bool ShouldRender()
     {
-        // Never auto refresh, except when deleted
-        // This is a quick hack to avoid wrapping everything in an UpdatabableElement or
-        // adding more complex logic to determine whether to render or not
-        return Tree.Note.Deleted; 
+        return false; // Never auto refresh
     }
 
     #region Dispose
@@ -399,6 +432,7 @@
         feedService.NoteCountChanged -= NoteCountChanged;
         feedService.NoteDeleted -= NoteDeleted;
         feedService.NoteReacted -= NoteReacted;
+        accountService.AccountMutesChanged -= AccountMutesChanged;
     }
     #endregion
 }

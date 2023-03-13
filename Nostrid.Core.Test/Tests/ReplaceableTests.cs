@@ -45,7 +45,7 @@ namespace Nostrid.Core.Test
 		}
 
 		[TestMethod]
-		public void TestReplace()
+		public void TestReplaceParams()
 		{
 			using var tempdb = new TempDb();
 
@@ -164,7 +164,7 @@ namespace Nostrid.Core.Test
 		}
 
 		[TestMethod]
-		public void TestReplace2()
+		public void TestReplaceParams2()
 		{
 			using var tempdb = new TempDb();
 
@@ -276,5 +276,151 @@ namespace Nostrid.Core.Test
 				Assert.AreEqual(1, db.Events.Count(e => e.ReplaceableId == replaceableId && e.Id == ev.Id));
 			}
 		}
-	}
+
+        [TestMethod]
+        public void TestReplace()
+        {
+            using var tempdb = new TempDb();
+
+            var eventDatabase = new EventDatabase();
+            eventDatabase.InitDatabase(tempdb.DbName);
+
+            var relay = new Relay() { Uri = "xxxx" };
+
+            eventDatabase.SaveRelay(relay);
+
+            NostrEvent nostrev;
+            Event ev;
+
+            var pubkey = TestUtils.GetRandomNostrId();
+
+            // Create first replaceable event
+
+            nostrev = new NostrEvent()
+            {
+                Content = "Test",
+                Kind = 11111,
+                Tags = new()
+                {
+                    new()
+                    {
+                        TagIdentifier = "d", Data = new(){ "testd" }
+                    }
+                },
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(-2),
+                PublicKey = pubkey,
+            };
+            nostrev.Id = nostrev.ComputeId();
+            nostrev.Signature = TestUtils.GetRandomNostrId(); // Signature doesn't matter
+            ev = nostrev.FromNostrEvent();
+            var id = ev.Id;
+
+            var replaceableId = ev.ReplaceableId;
+
+            eventDatabase.SaveNewEvent(ev, relay);
+
+            // It should be added
+
+            {
+                using var db = eventDatabase.CreateContext();
+                Assert.AreEqual(1, db.Events.Count(e => e.ReplaceableId == replaceableId && e.Id == id));
+            }
+
+            // Create second replaceable event that should replace the previous one
+
+            nostrev = new NostrEvent()
+            {
+                Content = "Test2",
+                Kind = 11111,
+                Tags = new()
+                {
+                    new()
+                    {
+                        TagIdentifier = "d", Data = new(){ "testd2" } // Different d shouldn't matter
+                    }
+                },
+                CreatedAt = DateTimeOffset.UtcNow,
+                PublicKey = pubkey,
+            };
+            nostrev.Id = nostrev.ComputeId();
+            nostrev.Signature = TestUtils.GetRandomNostrId(); // Signature doesn't matter
+            ev = nostrev.FromNostrEvent();
+            var id2 = ev.Id;
+
+            Assert.AreEqual(replaceableId, ev.ReplaceableId, "The replacing event should have the same replaceableId");
+
+            // It should have replaced the first one
+
+            eventDatabase.SaveNewEvent(ev, relay);
+
+            {
+                using var db = eventDatabase.CreateContext();
+                Assert.AreEqual(0, db.Events.Count(e => e.Id == id));
+                Assert.AreEqual(1, db.Events.Count(e => e.ReplaceableId == replaceableId && e.Id == id2));
+            }
+
+            // Create a third event with date between first and second events
+
+            nostrev = new NostrEvent()
+            {
+                Content = "Test3",
+                Kind = 11111,
+                Tags = new()
+                {
+                    new()
+                    {
+                        TagIdentifier = "d", Data = new(){ "testd2" } // Same d shouldn't matter
+                    }
+                },
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
+                PublicKey = pubkey,
+            };
+            nostrev.Id = nostrev.ComputeId();
+            nostrev.Signature = TestUtils.GetRandomNostrId(); // Signature doesn't matter
+            ev = nostrev.FromNostrEvent();
+            var id3 = ev.Id;
+
+            Assert.AreEqual(replaceableId, ev.ReplaceableId, "The replacing event should have the same replaceableId");
+
+            eventDatabase.SaveNewEvent(ev, relay);
+
+            // Nothing should have changed
+
+            {
+                using var db = eventDatabase.CreateContext();
+                Assert.AreEqual(0, db.Events.Count(e => e.Id == id));
+                Assert.AreEqual(1, db.Events.Count(e => e.ReplaceableId == replaceableId && e.Id == id2));
+                Assert.AreEqual(0, db.Events.Count(e => e.Id == id3));
+            }
+
+            // Create a fourth event with date after second event
+
+            nostrev = new NostrEvent()
+            {
+                Content = "Test4",
+                Kind = 11111,
+                Tags = new(), // No d, shouldn't matter
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(1),
+                PublicKey = pubkey,
+            };
+            nostrev.Id = nostrev.ComputeId();
+            nostrev.Signature = TestUtils.GetRandomNostrId(); // Signature doesn't matter
+            ev = nostrev.FromNostrEvent();
+            var id4 = ev.Id;
+
+            Assert.AreEqual(replaceableId, ev.ReplaceableId, "The replacing event should have the same replaceableId");
+
+            eventDatabase.SaveNewEvent(ev, relay);
+
+            // Nothing should have changed
+
+            {
+                using var db = eventDatabase.CreateContext();
+                Assert.AreEqual(0, db.Events.Count(e => e.Id == id));
+                Assert.AreEqual(0, db.Events.Count(e => e.Id == id2));
+                Assert.AreEqual(0, db.Events.Count(e => e.Id == id3));
+                Assert.AreEqual(1, db.Events.Count(e => e.ReplaceableId == replaceableId && e.Id == id4));
+            }
+        }
+    }
 }

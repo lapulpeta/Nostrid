@@ -44,14 +44,19 @@ public class DmService
     {
         using var db = eventDatabase.CreateContext();
         return
-            db.DmPairs.Where(p => p.AccountL == accountId).Select(p => p.AccountH).Union(
-            db.DmPairs.Where(p => p.AccountH == accountId).Select(p => p.AccountL))
+            db.DmPairs.Where(p => p.AccountL == accountId && !db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == p.AccountH)).Select(p => p.AccountH).Union(
+            db.DmPairs.Where(p => p.AccountH == accountId && !db.Mutes.Any(m => m.AccountId == accountId && m.MuteId == p.AccountL)).Select(p => p.AccountL))
             .Distinct()
             .ToList();
     }
 
     public int GetUnreadCount(string accountId, string otherAccountId)
     {
+        if (eventDatabase.IsMuting(accountId, otherAccountId))
+        {
+            return 0;
+        }
+
         using var db = eventDatabase.CreateContext();
         var accountIsL = accountId.CompareTo(otherAccountId) < 0;
 
@@ -78,6 +83,8 @@ public class DmService
             db.DmPairs.Where(p => p.AccountH == accountId).Select(p => new { Account = p.AccountL, LastRead = p.LastReadH }));
 
         var dms = db.Events.Where(e => e.Kind == NostrKind.DM && (e.PublicKey == accountId || e.DmToId == accountId));
+        // Exclude mutes
+        dms = dms.Where(e => !db.Mutes.Any(m => m.AccountId == accountId && (m.MuteId == e.PublicKey || m.MuteId == e.DmToId) ));
 		var query1 = lastReads.Join(dms, lr => lr.Account, e => e.PublicKey, (lr, e) => new { e.CreatedAt, lr.LastRead }).Where(x =>  x.CreatedAt > x.LastRead);
         var query2 = lastReads.Join(dms, lr => lr.Account, e => e.DmToId, (lr, e) => new { e.CreatedAt, lr.LastRead }).Where(x => x.CreatedAt > x.LastRead);
         return query1.Count() + query2.Count();

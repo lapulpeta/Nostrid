@@ -1,0 +1,118 @@
+﻿@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+
+@implements IDisposable
+
+@inject EventDatabase eventDatabase
+@inject AccountService accountService
+
+@code {
+    [Parameter, EditorRequired]
+    public string AccountId { get; set; } = null!;
+
+    [Parameter]
+    public string? Css { get; set; }
+}
+
+@{
+    var isMuting = accountService.IsMuting(AccountId); 
+}
+<button class="btn @Css @(isMuting ? "btn-secondary" : "btn-outline-secondary")"
+        @onclick="@(async () => await MuteUnmute(true))" @onclick:stopPropagation="true">
+    @(!isMuting ? "Mute" : "Unmute")
+</button>
+
+@confirmationModalRenderFragment
+
+@code
+{
+    private RenderFragment? confirmationModalRenderFragment;
+    private ConfirmationModal? confirmationModal;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        accountService.AccountMutesChanged += AccountMutesChanged;
+    }
+
+    private void AccountMutesChanged(object? sender, (string accountId, List<string> mutes) data)
+    {
+        if (_disposed)
+            return;
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task MuteUnmute(bool showConfirmation = true)
+    {
+        if (accountService.MainAccount == null)
+        {
+            return;
+        }
+
+        var mutePriv = accountService.IsMuting(AccountId, true);
+        var mutePub = accountService.IsMuting(AccountId, false);
+        if (mutePriv || mutePub) // If muted in any, unmute both
+        {
+            await accountService.MuteUnmute(AccountId, unmute:true);
+        }
+        else if (showConfirmation && !eventDatabase.HasMutes(accountService.MainAccount.Id))
+        {
+            if (confirmationModalRenderFragment == null)
+            {
+                confirmationModalRenderFragment = new RenderFragment(builder =>
+                {
+                    builder.OpenElement(0, "div");
+                    builder.AddEventStopPropagationAttribute(1, "onclick", true);
+                    builder.OpenComponent<ConfirmationModal>(2);
+                    builder.AddComponentReferenceCapture(3, instance => { confirmationModal = instance as ConfirmationModal; });
+                    builder.CloseComponent();
+                    builder.CloseElement();
+                });
+                await InvokeAsync(() => ShowConfirmation());
+            }
+            else
+            {
+                ShowConfirmation();
+            }
+        }
+        else // If not muted then mute in private
+        {
+            await accountService.MuteUnmute(AccountId, unmute:false, priv:true);
+        }
+    }
+
+    private void ShowConfirmation()
+    {
+        confirmationModal?.Show(
+            ConfirmationModal.Options.Create(
+                "Is this your first muted account ever? We haven't seen any other yet. If you continue, you will have one muted account in total.<br /><b>Are you sure you want to continue?</b>",
+                "Mute account",
+                ConfirmationModal.Options.Button.CreateButton("Yes, this is my first mute", async () => await MuteUnmute(false), "btn-outline-secondary"),
+                ConfirmationModal.Options.Button.CreateButton("No, I'll wait until I receive all my mutes", null, "btn-outline-secondary")));
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        accountService.AccountMutesChanged -= AccountMutesChanged;
+    }
+    #endregion
+}

@@ -67,11 +67,11 @@
 
     private void NewDmPair(object? sender, (string accountL, string accountH) data)
     {
-        if (data.accountL == accountService.MainAccount!.Id)
+        if (data.accountL == accountService.MainAccount!.Id && !accountService.IsMuting(data.accountH))
         {
             dmPartners.Add(data.accountH);
         }
-        else if (data.accountH == accountService.MainAccount.Id)
+        else if (data.accountH == accountService.MainAccount.Id && !accountService.IsMuting(data.accountL))
         {
             dmPartners.Add(data.accountL);
         }
