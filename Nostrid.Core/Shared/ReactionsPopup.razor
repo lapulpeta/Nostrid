@@ -15,7 +15,7 @@
     public string EventId { get; set; } = null!;
 }
 
-<div style="width: 325px" @onclick:stopPropagation="true">
+<div style="width: 370px" @onclick:stopPropagation="true">
     <UpdatabableElement @ref="reactionCountsElement">
         @{
             var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
@@ -87,7 +87,7 @@
     {
         <div class="fs-3 d-flex flex-row" style="margin: 0 -.5rem -.5rem 0;">
             @{
-                var reactions = new string[] { "+", "-", "🤙", "❤️", "😂", "😭", "😡", "😮" };
+                var reactions = new string[] { "+", "-", "🤙", "❤️", "😂", "😭", "😡", "😮", "💯" };
                 foreach (var reaction in reactions)
                 {
                     <a @onclick="@(() => Like(reaction))" @onclick:stopPropagation="true" class="me-2 mb-2 bg-primary-opacity-10-hover">
