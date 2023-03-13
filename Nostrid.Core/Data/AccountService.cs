@@ -19,6 +19,7 @@ public class AccountService
     private readonly ConcurrentDictionary<string, ISigner> knownSigners = new();
     private readonly ConcurrentDictionary<string, DateTime> detailsNeededIds = new();
     private readonly ConcurrentDictionary<string, string> followerRequestFilters = new();
+    private readonly ConcurrentDictionary<(string, string, bool), bool> mutingCache = new();
 
     public event EventHandler? MainAccountChanged;
     public event EventHandler<(string accountId, AccountDetails details)>? AccountDetailsChanged;
@@ -26,7 +27,6 @@ public class AccountService
     public event EventHandler<(string accountId, List<string> mutes)>? AccountMutesChanged;
     public event EventHandler<string>? AccountFollowersChanged;
     public event EventHandler? MentionsUpdated;
-
 
     public SubscriptionFilter? MainAccountMentionsFilter { get; private set; }
 
@@ -325,9 +325,18 @@ public class AccountService
         await SendMuteList();
     }
 
+    public bool IsMuting(string accountToCheckId)
+    {
+        return IsMuting(accountToCheckId, true) || IsMuting(accountToCheckId, false);
+    }
+
     public bool IsMuting(string accountToCheckId, bool priv)
     {
-        return eventDatabase.IsMuting(MainAccount.Id, accountToCheckId, priv);
+        if (MainAccount == null)
+        {
+            return false;
+        }
+        return mutingCache.GetOrAdd((MainAccount.Id, accountToCheckId, priv), (_) => eventDatabase.IsMuting(MainAccount.Id, accountToCheckId, priv));
     }
 
     public async Task<bool> SendMuteList()
@@ -417,7 +426,6 @@ public class AccountService
 
         lock (eventDatabase)
         {
-
             var account = eventDatabase.GetAccount(eventToProcess.PublicKey);
 
             if (Utils.MustUpdate(eventToProcess.CreatedAt, account.MutesLastUpdate))
@@ -438,6 +446,8 @@ public class AccountService
                 //else
                 {
                     eventDatabase.SetMutes(account.Id, newPublicMuteList, newPrivateMuteList);
+
+                    mutingCache.Clear();
 
                     account.FollowsLastUpdate = eventToProcess.CreatedAt ?? DateTimeOffset.UtcNow;
 

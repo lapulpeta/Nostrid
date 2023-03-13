@@ -60,6 +60,7 @@ namespace Nostrid.Data
 				using var db = new Context(_dbfile);
 				await db.AccountDetails.ExecuteDeleteAsync();
 				await db.Follows.ExecuteDeleteAsync();
+				await db.Mutes.ExecuteDeleteAsync();
 				await db.Accounts.Where(a => a.PrivKey == null).ExecuteDeleteAsync();
 				await db.Accounts.Where(a => a.PrivKey != null).ExecuteUpdateAsync(a => a.SetProperty(a => a.FollowsLastUpdate, (DateTime?)null));
 				await db.EventSeen.ExecuteDeleteAsync();
@@ -254,7 +255,7 @@ namespace Nostrid.Data
 				.Run();
 		}
 
-		public bool SaveNewEvent(Event ev, Relay relay)
+		public bool SaveNewEvent(Event ev, Relay? relay = null)
 		{
 			IDbContextTransaction? tx = null;
 
@@ -278,7 +279,7 @@ namespace Nostrid.Data
 
 					// All older events are deleted. If there are any newer then the UNIQUE constraint will
 					// cause the insert to fail
-					int deleted = db.Events
+					db.Events
 						.Where(e => e.CreatedAt < ev.CreatedAt && e.ReplaceableId == ev.ReplaceableId)
 						.ExecuteDelete();
 				}
@@ -296,7 +297,10 @@ namespace Nostrid.Data
 			}
 			finally
 			{
-				SaveSeen(ev.Id, relay.Id, db);
+				if (relay != null)
+				{
+					SaveSeen(ev.Id, relay.Id, db);
+				}
 			}
 		}
 
@@ -438,9 +442,10 @@ namespace Nostrid.Data
 			ev.Broadcast = broadcast;
 			ev.CanEcho = true;
 
-			db.Add(ev);
-			db.SaveChanges();
-			DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
+			if (SaveNewEvent(ev))
+			{
+				DatabaseHasChanged?.Invoke(this, EventArgs.Empty);
+			}
 		}
 
 		public void AddSeenBy(string ownEventId, long relayId)
