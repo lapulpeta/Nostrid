@@ -309,7 +309,7 @@ public class AccountService
 
     #region Muting // TODO: combine muting with following
 
-    public async Task MuteUnmute(string muteId, bool unmute, bool priv)
+    public async Task MuteUnmute(string muteId, bool unmute, bool? priv = null)
     {
         lock (eventDatabase)
         {
@@ -318,25 +318,44 @@ public class AccountService
                 return;
 
             if (unmute)
-                eventDatabase.RemoveMute(MainAccount.Id, muteId, priv);
+            {
+                if (priv.HasValue)
+                {
+                    eventDatabase.RemoveMute(MainAccount.Id, muteId, priv.Value);
+                }
+                else
+                {
+                    eventDatabase.RemoveMute(MainAccount.Id, muteId, true);
+                    eventDatabase.RemoveMute(MainAccount.Id, muteId, false);
+                }
+            }
             else
-                eventDatabase.AddMute(MainAccount.Id, muteId, priv);
+            {
+                if (priv.HasValue)
+                {
+                    eventDatabase.AddMute(MainAccount.Id, muteId, priv.Value);
+                }
+                else
+                {
+                    eventDatabase.AddMute(MainAccount.Id, muteId, true);
+                    eventDatabase.AddMute(MainAccount.Id, muteId, false);
+                }
+            }
         }
         await SendMuteList();
     }
 
-    public bool IsMuting(string accountToCheckId)
-    {
-        return IsMuting(accountToCheckId, true) || IsMuting(accountToCheckId, false);
-    }
-
-    public bool IsMuting(string accountToCheckId, bool priv)
+    public bool IsMuting(string accountToCheckId, bool? priv = null)
     {
         if (MainAccount == null)
         {
             return false;
         }
-        return mutingCache.GetOrAdd((MainAccount.Id, accountToCheckId, priv), (_) => eventDatabase.IsMuting(MainAccount.Id, accountToCheckId, priv));
+        if (priv == null)
+        {
+            return IsMuting(accountToCheckId, true) || IsMuting(accountToCheckId, false);
+        }
+        return mutingCache.GetOrAdd((MainAccount.Id, accountToCheckId, priv.Value), (_) => eventDatabase.IsMuting(MainAccount.Id, accountToCheckId, priv.Value));
     }
 
     public async Task<bool> SendMuteList()

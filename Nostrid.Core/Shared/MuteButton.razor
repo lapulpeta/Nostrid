@@ -16,10 +16,10 @@
 }
 
 @{
-    var isMuting = accountService.IsMuting(AccountId, true); 
+    var isMuting = accountService.IsMuting(AccountId); 
 }
 <button class="btn @Css @(isMuting ? "btn-primary" : "btn-danger")"
-        @onclick="@(async () => await MuteUnmute(true))" @onclick:stopPropagation="true">
+        @onclick="MuteUnmute" @onclick:stopPropagation="true">
     @(!isMuting ? "Mute" : "Unmute")
 </button>
 
@@ -43,45 +43,19 @@
         InvokeAsync(() => StateHasChanged());
     }
 
-    private async Task MuteUnmute(bool showConfirmation = true)
+    private async Task MuteUnmute()
     {
-        var mute = !accountService.IsMuting(AccountId, true);
-        //var hasFollows = accountService.MainAccount != null && eventDatabase.HasFollows(accountService.MainAccount.Id);
-        //if (showConfirmation && follow && !hasFollows)
-        //{
-        //    if (confirmationModalRenderFragment == null)
-        //    {
-        //        confirmationModalRenderFragment = new RenderFragment(builder =>
-        //        {
-        //            builder.OpenElement(0, "div");
-        //            builder.AddEventStopPropagationAttribute(1, "onclick", true);
-        //            builder.OpenComponent<ConfirmationModal>(2);
-        //            builder.AddComponentReferenceCapture(3, instance => { confirmationModal = instance as ConfirmationModal; });
-        //            builder.CloseComponent();
-        //            builder.CloseElement();
-        //        });
-        //        await InvokeAsync(() => ShowConfirmation());
-        //    }
-        //    else
-        //    {
-        //        ShowConfirmation();
-        //    }
-        //}
-        //else
+        var mutePriv = accountService.IsMuting(AccountId, true);
+        var mutePub = accountService.IsMuting(AccountId, false);
+        if (mutePriv || mutePub) // If muted in any, unmute both
         {
-            await accountService.MuteUnmute(AccountId, !mute, true);
+            await accountService.MuteUnmute(AccountId, unmute:true);
+        }
+        else // If not muted then mute in private
+        {
+            await accountService.MuteUnmute(AccountId, unmute:false, priv:true);
         }
     }
-
-    //private void ShowConfirmation()
-    //{
-    //    confirmationModal?.Show(
-    //        ConfirmationModal.Options.Create(
-    //            "Is this your first follow ever? We haven't seen any other follows yet. If you continue, you will have one follow in total.<br /><b>Are you sure you want to continue?</b>",
-    //            "Follow account",
-    //            ConfirmationModal.Options.Button.CreateButton("Yes, this is my first follow", async () => await MuteUnmute(false), "btn-outline-secondary"),
-    //            ConfirmationModal.Options.Button.CreateButton("No, I'll wait until I receive all my follows", null, "btn-outline-secondary")));
-    //}
 
     #region Dispose
     private bool _disposed;
