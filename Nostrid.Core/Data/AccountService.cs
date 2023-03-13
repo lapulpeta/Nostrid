@@ -386,6 +386,7 @@ public class AccountService
         if (!await MainAccountSigner.Sign(nostrEvent))
             return false;
         relayService.SendEvent(nostrEvent);
+        mutingCache.Clear();
         return true;
     }
 
