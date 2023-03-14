@@ -1,0 +1,239 @@
+﻿@using Nostrid.Data;
+@using Nostrid.Misc;
+@using Nostrid.Model;
+@using System.Security.Cryptography;
+
+@implements IDisposable
+
+@inject AccountService accountService
+@inject Lud06Service lud06Service
+@inject EventDatabase eventDatabase
+@inject ConfigService configService
+@inject LocalSignerFactory localSignerFactory
+@inject NavigationManager navigationManager
+
+<ModalContainer @ref="modalContainer">
+    <div class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel">
+                        @if (!creatingNewAccount)
+                        {
+                            <text>Select account</text>
+                        }
+                        else
+                        {
+                            <text>Add account</text>
+                        }
+                    </h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                @if (!creatingNewAccount)
+                {
+                    <div class="modal-body p-0">
+                        @foreach (var account in accounts.Values)
+                        {
+                            <div role="button" @onclick="() => SelectAccount(account)"
+                             class="d-flex flex-row align-items-center p-3 bg-tertiary-hover @(accountService.MainAccount?.Id == account.Id ? "bg-body-secondary" : "")">
+                                <div class="d-flex flex-shrink-0">
+                                    <AccountPicture Id="@account.Id" Size="48" />
+                                </div>
+                                <div class="d-flex flex-column flex-grow-1 ms-3">
+                                    @*<div class="fs-7 mb-1 lh-1 text-body-tertiary text-break"></div>*@
+                                    <div class="d-flex flex-row align-items-center">
+                                        <div class="fs-5 fw-bolder lh-1 flex-grow-1">
+                                            <AccountName Id="@account.Id" />
+                                        </div>
+                                    </div>
+                                    <div class="fs-7 mt-1 lh-1 text-body-tertiary text-break">@ByteTools.PubkeyToNpub(account.Id)</div>
+                                </div>
+                            </div>
+                        }
+                        <div class="bg-body sticky-bottom border-top">
+                            <div role="button" @onclick="() => ToggleCreateAccount()"
+                                 class="d-flex flex-row align-items-center p-3 bg-tertiary-hover">
+                                <div class="d-flex flex-shrink-0">
+                                    <div class="d-flex flex-row align-items-center flex-grow-1">
+                                        <div class="d-flex flex-row align-items-center justify-content-center rounded-5 border" style="width: 48px; height: 48px;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column flex-grow-1 ms-3">
+                                    <div class="d-flex flex-row align-items-center">
+                                        <div class="fs-5 lh-1 flex-grow-1">
+                                            Add account
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <EditForm class="flex-grow-1 d-flex flex-column" Model="@createNewAccountModel" OnValidSubmit="@CreateNewAccount">
+                        <div class="modal-body justify-content-center d-flex flex-column">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary />
+                            <div class="align-self-start mb-1">
+                                <span>Insert or</span>
+                                <a href="javascript:void(0);" @onclick="GeneratePrivateKey">
+                                    generate a private key
+                                </a>
+                            </div>
+                            <InputTextArea rows="3" style="resize: none;" class="form-control" @bind-Value="createNewAccountModel.Text" />
+                        </div>
+                        <div class="modal-footer">
+                            @if (eventDatabase.GetAccountIdsWithPk().Any() || accountService.GetAccountsWithSigners().Any())
+                            {
+                                <button type="button" @onclick="@(() => ToggleCreateAccount(false))" class="btn btn-secondary">
+                                    Select existing account
+                                </button>
+                            }
+                            <button type="submit" class="btn btn-primary">
+                                Add account
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</ModalContainer>
+
+@code {
+
+    private ModalContainer? modalContainer;
+    private Dictionary<string, Account>? accounts;
+    private bool creatingNewAccount = false;
+    public TextInput createNewAccountModel = new();
+
+    protected override void OnInitialized()
+    {
+        LoadAccounts();
+        accountService.AccountDetailsChanged += AccountDetailsChanged;
+    }
+
+    public void Show(bool createNewAccount = false)
+    {
+        ToggleCreateAccount(createNewAccount);
+        InvokeAsync(StateHasChanged);
+        modalContainer?.Show();
+    }
+
+    private void AccountDetailsChanged(object? sender, (string accountId, AccountDetails details) eventArgs)
+    {
+        Account account;
+        if (accounts.TryGetValue(eventArgs.accountId, out account))
+        {
+            account.Details = eventArgs.details;
+            InvokeAsync(() =>
+            {
+                StateHasChanged();
+            });
+        }
+    }
+
+    private void LoadAccounts()
+    {
+        var accountIds = new HashSet<string>(eventDatabase.GetAccountIdsWithPk());
+        accountService.GetAccountsWithSigners().ForEach(a => accountIds.Add(a));
+
+        accountIds
+            .Except(accounts?.Select(a => a.Key) ?? Enumerable.Empty<string>())
+            .ToList()
+            .ForEach(a => accountService.AddDetailsNeeded(a));
+
+        accounts = accountIds.Select(accountId => eventDatabase.GetAccount(accountId)).ToDictionary(account => account.Id, account => account);
+    }
+
+    private void SelectAccount(Account? account)
+    {
+        if (account == null)
+        {
+            accountService.SetMainAccount(null, null);
+        }
+        else if (accountService.HasSigner(account.Id))
+        {
+            accountService.SetMainAccount(account);
+            var config = configService.MainConfig;
+            config.MainAccountId = account?.Id;
+            configService.MainConfig = config;
+        }
+        else if (localSignerFactory.TryFromPrivKey(account.PrivKey, out var signer))
+        {
+            accountService.SetMainAccount(account, signer);
+            var config = configService.MainConfig;
+            config.MainAccountId = account?.Id;
+            configService.MainConfig = config;
+        }
+        modalContainer?.Hide();
+    }
+
+    private void ToggleCreateAccount(bool? createNewAccount = null)
+    {
+        createNewAccountModel = new();
+        creatingNewAccount = createNewAccount ?? !creatingNewAccount;
+        if (!creatingNewAccount) LoadAccounts();
+    }
+
+    private void GeneratePrivateKey()
+    {
+        createNewAccountModel.Text = ByteTools.PubkeyToNsec(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower());
+    }
+
+    private async Task CreateNewAccount()
+    {
+        string privkey = null;
+
+        if (Utils.IsValidNostrId(createNewAccountModel.Text))
+        {
+            privkey = createNewAccountModel.Text;
+        }
+        else if (ByteTools.TryDecodeBech32(createNewAccountModel.Text, out var prefix, out var hex) && prefix == "nsec" && !string.IsNullOrEmpty(hex))
+        {
+            privkey = hex;
+        }
+
+        if (privkey.IsNotNullOrEmpty() && localSignerFactory.TryFromPrivKey(privkey, out var signer))
+        {
+            var account = new Model.Account()
+                {
+                    PrivKey = privkey,
+                    Id = await signer.GetPubKey(),
+                };
+            eventDatabase.SaveAccount(account);
+            SelectAccount(account);
+            navigationManager.NavigateTo($"account/{account.Id}");
+            modalContainer?.Hide();
+        }
+        else
+        {
+            //TODO: mark private key as invalid
+        }
+    }
+
+    #region Dispose
+    private bool disposed;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                accountService.AccountDetailsChanged -= AccountDetailsChanged;
+            }
+
+            disposed = true;
+        }
+    }
+
+    void IDisposable.Dispose()
+    {
+        Dispose(true);
+    }
+    #endregion
+}

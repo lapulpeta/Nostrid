@@ -11,298 +11,30 @@
 @inject EventDatabase eventDatabase
 @inject Lud06Service lud06Service
 @inject LocalSignerFactory localSignerFactory
-@implements IDisposable
 
-<h2>Accounts</h2>
-
-<div class="container-fluid p-0">
-    <div class="row g-3">
-        @foreach (var account in accounts.Values)
-        {
-            <div class="col-md-6 col-lg-4 col-xl-3 col-xxl-3">
-                <div class="card h-100 @(accountService.MainAccount?.Id == account.Id ? "border-primary" : "")">
-                    <div class="position-absolute" style="top: 5px; right: 5px;">
-                        <button type="button" class="btn btn-light" @onclick="@(() => RemoveAccount(account))">
-                            <i class="bi bi-trash3-fill"></i>
-                        </button>
-                        <button type="button" class="btn btn-light" @onclick="() => ToggleEditAccountDetails(account)">
-                            <i class="bi @(account.Id != accountEditing ? "bi-pencil-fill" : "bi-x-lg")"></i>
-                        </button>
-                    </div>
-                    <div class="card-body text-center d-flex flex-column justify-content-between align-items-center">
-                        <AccountPicture Id="@account.Id" Size="64" />
-                        @if (account.Id != accountEditing)
-                        {
-                            <AccountName Id="@account.Id" />
-                            @if (!string.IsNullOrEmpty(account.Details?.About))
-                            {
-                                <div class="mt-3">
-                                    <p class="card-text m-0 text-break">@account.Details?.About</p>
-                                </div>   
-                            }
-                            <button class="mt-3 btn btn-outline-primary w-100 @(accountService.MainAccount?.Id == account.Id ? "disabled" : "")" @onclick="() => SelectAccount(account)">
-                                @(accountService.MainAccount?.Id == account.Id ? "Loaded" : "Load")
-                            </button>
-                        }
-                        else
-                        {
-                            <EditForm class="w-100" Model="@accountDetails" OnValidSubmit="@(async () => await SaveAccountDetails(account))">
-                                <DataAnnotationsValidator />
-                                <ValidationSummary />
-                                <div class="form-floating mt-3">
-                                    <InputText class="form-control" id="name-control" @bind-Value="accountDetails.Name" />
-                                    <label for="name-control">Name</label>
-                                </div>
-                                <div class="form-floating mt-3">
-                                    <InputText class="form-control" id="about-control" @bind-Value="accountDetails.About" />
-                                    <label for="about-control">About</label>
-                                </div>
-                                <div class="form-floating mt-3">
-                                    <InputText class="form-control" id="picture-control" @bind-Value="accountDetails.PictureUrl" />
-                                    <label for="picture-control">Picture URL</label>
-                                </div>
-                                <div class="form-floating mt-3">
-                                    <InputText class="form-control" id="nip05-control" @bind-Value="accountDetails.Nip05Id" />
-                                    <label for="nip05-control">NIP-05 ID:</label>
-                                </div>
-                                <div class="form-floating mt-3">
-                                    <InputText class="form-control" id="lud16-control" @bind-Value="accountDetails.Ln" />
-                                    <label for="lud16-control">LUD-16 or LNURL:</label>
-                                </div>
-                                <button type="submit" class="btn btn-outline-primary w-100 mt-3">
-                                    Save
-                                </button>
-                                <div class="text-danger">@saveError</div>
-                            </EditForm>
-                        }
-                    </div>
-                    <div class="card-footer text-muted fs-7">
-                        <div class="flex-grow-1 text-break">
-                            Npub: @ByteTools.PubkeyToNpub(account.Id)
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-        <div class="col-md-6 col-lg-4 col-xl-3 col-xxl-3">
-            <div class="card h-100">
-                <div class="position-absolute" style="top: 5px; right: 5px;">
-                    @if (accountCreating)
-                    {
-                        <button class="btn btn-light " @onclick="ToggleCreateAccount">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    }
-                </div>
-                <div class="card-body text-center d-flex flex-column justify-content-center align-items-center">
-                    @if (!accountCreating)
-                    {
-                        <button class="btn btn-light" @onclick="ToggleCreateAccount">
-                            <i class="bi bi-person-plus"></i>
-                            <div>Add account</div>
-                        </button>
-                    }
-                    else
-                    {
-                        <div class="lh-1">
-                            <div class="border rounded-2 overflow-hidden d-inline-block">
-                                @((MarkupString)Utils.ToSvgIdenticon(PublicKey, 64))
-                            </div>
-                        </div>
-                        <EditForm class="w-100" Model="@privateKeyModel" OnValidSubmit="@CreateNewAccount">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary />
-                            <div class="input-group mt-3">
-                                <div class="form-floating">
-                                    <InputText class="form-control" id="private-key-control" @bind-Value="privateKeyModel.Text" />
-                                    <label for="private-key-control">Private Key</label>
-                                </div>
-                                <button class="btn btn-outline-secondary" type="button" @onclick="GeneratePrivateKey">
-                                    <i class="bi bi-arrow-repeat"></i>
-                                </button>
-                            </div>
-                            <button type="submit" class="btn btn-outline-primary w-100 mt-3">
-                                Create/Restore
-                            </button>
-                        </EditForm>
-                    }
-                </div>
-                @if (accountCreating)
-                {
-                    <div class="card-footer text-muted fs-7">
-                        <div class="flex-grow-1 text-break">
-                            Npub: @ByteTools.PubkeyToNpub(PublicKey)
-                        </div>
-                    </div>
-                }
-            </div>
+<div class="d-flex flex-shrink-0" style="width: 48px;">
+    <div class="lh-1">
+        <div class="border rounded-2 overflow-hidden d-inline-block">
+            @((MarkupString)Utils.ToSvgIdenticon(PublicKey, 48))
         </div>
     </div>
 </div>
-
-<ConfirmationModal @ref="confirmationModal" />
+<div class="d-flex flex-column flex-grow-1 ms-3">
+    <div class="d-flex flex-row align-items-center">
+            
+    </div>
+</div>
 
 @code {
 
-    public class EditAccountDetails
-    {
-        public string? Name { get; set; }
-
-        public string? About { get; set; }
-
-        public string? PictureUrl { get; set; }
-
-        public string? Nip05Id { get; set; }
-
-        public string? Ln { get; set; }
-    }
-
-    private Dictionary<string, Account>? accounts;
-
-    private string? accountEditing;
-    private EditAccountDetails accountDetails = new();
-
-    private bool accountCreating;
     public TextInput privateKeyModel = new();
-
-    private string? saveError;
-
-    private string PublicKey 
-    { 
+    private string PublicKey
+    {
         get
         {
             return LocalSigner.TryGetPubKeyFromPrivKey(privateKeyModel.Text, out var _, out var pubKey) ? pubKey : string.Empty;
         }
     }
-
-    EventHandler<(string accountId, AccountDetails details)> accountDetailsChangedEventHandler;
-
-    private ConfirmationModal? confirmationModal;
-
-    protected override void OnInitialized()
-    {
-        LoadAccounts();
-        accountDetailsChangedEventHandler = (sender, eventArgs) =>
-        {
-            Account account;
-            if (accounts.TryGetValue(eventArgs.accountId, out account))
-            {
-                account.Details = eventArgs.details;
-                InvokeAsync(() =>
-                {
-                    StateHasChanged();
-                });
-            }
-        };
-        accountService.AccountDetailsChanged += accountDetailsChangedEventHandler;
-        base.OnInitialized();
-    }
-
-    private void LoadAccounts()
-    {
-        var accountIds = new HashSet<string>(eventDatabase.GetAccountIdsWithPk());
-        accountService.GetAccountsWithSigners().ForEach(a => accountIds.Add(a));
-
-        accountIds
-            .Except(accounts?.Select(a => a.Key) ?? Enumerable.Empty<string>())
-            .ToList()
-            .ForEach(a => accountService.AddDetailsNeeded(a));
-
-        accounts = accountIds.Select(accountId => eventDatabase.GetAccount(accountId)).ToDictionary(account => account.Id, account => account);
-    }
-
-    private void SelectAccount(Account? account)
-    {
-        if (account == null)
-        {
-            accountService.SetMainAccount(null, null);
-        }
-        else if (accountService.HasSigner(account.Id))
-        {
-            accountService.SetMainAccount(account);
-            var config = configService.MainConfig;
-            config.MainAccountId = account?.Id;
-            configService.MainConfig = config;
-        }
-        else if (localSignerFactory.TryFromPrivKey(account.PrivKey, out var signer))
-        {
-            accountService.SetMainAccount(account, signer);
-            var config = configService.MainConfig;
-            config.MainAccountId = account?.Id;
-            configService.MainConfig = config;
-        }
-    }
-
-    private void ToggleEditAccountDetails(Account account)
-    {
-        accountEditing = accountEditing == account.Id ? null : account.Id;
-        accountDetails.Name = account.Details?.Name;
-        accountDetails.About = account.Details?.About;
-        accountDetails.PictureUrl = account.Details?.PictureUrl;
-        accountDetails.Nip05Id = account.Details?.Nip05Id;
-        accountDetails.Ln = account.Details?.Lud16Id ?? account.Details?.Lud06Url;
-        saveError = null;
-    }
-
-    // TODO: move save account details to profile
-    private async Task SaveAccountDetails(Account account)
-    {
-        AccountDetails accountDetailsToSave = new()
-            {
-                Account = account
-            };
-        account.Details = accountDetailsToSave;
-
-        accountDetails.Nip05Id = accountDetails.Nip05Id?.Trim();
-        if (accountDetails.Nip05Id.IsNullOrEmpty())
-        {
-            accountDetails.Nip05Id = null;
-        }
-        else if (!Nip05.IsValidNip05(accountDetails.Nip05Id))
-        {
-            saveError = "Nip05 ID is not valid";
-            return;
-        }
-        accountDetailsToSave.Nip05Id = accountDetails.Nip05Id;
-
-        accountDetails.Ln = accountDetails.Ln?.Trim();
-        if (accountDetails.Ln.IsNullOrEmpty())
-        {
-            accountDetailsToSave.Lud16Id = null;
-            accountDetailsToSave.Lud06Url = null;
-        }
-        else if (lud06Service.IsValidLud16(accountDetails.Ln))
-        {
-            accountDetailsToSave.Lud16Id = accountDetails.Ln;
-            accountDetailsToSave.Lud06Url = null;
-        }
-        else if (lud06Service.TryLud06UrlToUrl(accountDetails.Ln, out var _))
-        {
-            accountDetailsToSave.Lud06Url = accountDetails.Ln;
-            accountDetailsToSave.Lud16Id = null;
-        }
-        else
-        {
-            saveError = "LUD-16 or LNURL invalid";
-            return;
-        }
-        saveError = null;
-
-        accountDetailsToSave.Name = accountDetails.Name;
-        accountDetailsToSave.About = accountDetails.About;
-        accountDetailsToSave.PictureUrl = accountDetails.PictureUrl;
-
-        SelectAccount(account);
-        await accountService.SaveAccountDetails(accountDetailsToSave);
-        accountEditing = null;
-        LoadAccounts();
-    }
-
-    private void ToggleCreateAccount()
-    {
-        accountCreating = !accountCreating;
-    }
-
     private void GeneratePrivateKey()
     {
         privateKeyModel.Text = ByteTools.PubkeyToNsec(Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLower());
@@ -329,54 +61,10 @@
                     Id = await signer.GetPubKey(),
                 };
             eventDatabase.SaveAccount(account);
-            ToggleCreateAccount();
-            LoadAccounts();
-            SelectAccount(account);
         }
         else
         {
             //TODO: mark private key as invalid    
         }
     }
-
-    private void RemoveAccount(Account account)
-    {
-        confirmationModal?.Show(ConfirmationModal.Options.Create(
-            "Are you sure you want to delete this account?",
-            "Delete account",
-            ConfirmationModal.Options.Button.CreateNoButton(),
-            ConfirmationModal.Options.Button.CreateYesButton(() =>
-            {
-                if (account.Id == accountService.MainAccount?.Id)
-                {
-                    SelectAccount(null);
-                }
-                accountService.RemoveSigner(account.Id);
-                eventDatabase.DeleteAccount(account);
-                LoadAccounts();
-                InvokeAsync(() => StateHasChanged());
-            })));
-    }
-
-    #region Dispose
-    private bool disposed;
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!disposed)
-        {
-            if (disposing)
-            {
-                accountService.AccountDetailsChanged -= accountDetailsChangedEventHandler;
-            }
-
-            disposed = true;
-        }
-    }
-
-    void IDisposable.Dispose()
-    {
-        Dispose(true);
-    }
-    #endregion
 }

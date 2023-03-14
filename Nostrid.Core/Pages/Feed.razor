@@ -14,13 +14,13 @@
     <ul class="sticky-top nav nav-pills-2 d-flex flex-row mx--3 bg-body border-bottom">
         <li class="nav-item flex-grow-1">
             <NavLink class="nav-link text-center bg-tertiary-hover rounded-0" href="/feed" Match="NavLinkMatch.All">
-                <span class="py-3">Global</span> 
-	        </NavLink>
+                <span class="py-3">Global</span>
+            </NavLink>
         </li>
         <li class="nav-item flex-grow-1">
             <NavLink class="nav-link text-center bg-tertiary-hover rounded-0" href="/feed/#following">
                 <span class="py-3">Following</span>
-	        </NavLink>
+            </NavLink>
         </li>
         <li class="nav-item flex-grow-1">
             <NavLink class="nav-link text-center bg-tertiary-hover rounded-0" href="/feed/#mentions">
@@ -35,7 +35,7 @@
                         }
                     </UpdatabableElement>
                 </span>
-	        </NavLink>
+            </NavLink>
         </li>
     </ul>
 
@@ -70,7 +70,8 @@ else
         fragment = new Uri(navigationManager.Uri).Fragment;
         navigationManager.LocationChanged += LocationChanged;
         notificationService.NotificationNumberChanged += NotificationNumberChanged;
-		(mentionsCount, _) = notificationService.GetNotificationNumber();
+        (mentionsCount, _) = notificationService.GetNotificationNumber();
+        accountService.MainAccountChanged += MainAccountChanged;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -97,21 +98,26 @@ else
         mentionsElement?.Update();
     }
 
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        InvokeAsync(() => StateHasChanged());
+    }
+
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
@@ -119,6 +125,7 @@ else
     {
         navigationManager.LocationChanged -= LocationChanged;
         notificationService.NotificationNumberChanged -= NotificationNumberChanged;
+        accountService.MainAccountChanged -= MainAccountChanged;
     }
     #endregion
 }

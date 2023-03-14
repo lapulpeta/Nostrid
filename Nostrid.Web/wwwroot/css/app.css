@@ -199,6 +199,14 @@ a, .btn-link {
         background-color: rgba(var(--bs-tertiary-bg-rgb),var(--bs-bg-opacity));
     }
 
+.bg-secondary-hover {
+    transition: background-color ease-in-out .1s;
+}
+
+    .bg-secondary-hover:hover {
+        background-color: rgba(var(--bs-secondary-bg-rgb),var(--bs-bg-opacity));
+    }
+
 .rounded-999 {
     border-radius: 999px !important;
 }

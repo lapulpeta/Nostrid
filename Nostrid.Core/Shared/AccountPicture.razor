@@ -4,6 +4,12 @@
 
     [Parameter]
     public int Size { get; set; } = 48;
+
+    [CascadingParameter]
+    public Scripts? Scripts { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> OnLoad { get; set; }
 }
 
 @implements IDisposable
@@ -16,7 +22,8 @@
 
 @if (details != null && details.PictureUrl.IsNotNullOrEmpty() && Uri.IsWellFormedUriString(details.PictureUrl, UriKind.Absolute))
 {
-    <img style="width:@(Size)px; height:@(Size)px" src="@details.PictureUrl" class="card-img-top rounded-999" alt="">
+    <img style="width:@(Size)px; height:@(Size)px" src="@details.PictureUrl" class="card-img-top rounded-999" alt=""
+         @ref="image" @onload="HandleOnLoad" crossorigin="anonymous">
 }
 else if (Id.IsNotNullOrEmpty())
 {
@@ -27,6 +34,7 @@ else if (Id.IsNotNullOrEmpty())
 
 @code
 {
+    private ElementReference? image;
     private AccountDetails? details;
 
     protected override void OnInitialized()
@@ -47,6 +55,30 @@ else if (Id.IsNotNullOrEmpty())
         {
             details = data.details;
             InvokeAsync(() => StateHasChanged());
+        }
+    }
+
+    private async Task HandleOnLoad()
+    {
+        if (!OnLoad.HasDelegate) return;
+        if (Scripts == null || image == null)
+        {
+            await OnLoad.InvokeAsync(null);
+        }
+        else
+        {
+            Scripts.InvokeAfterRender(async () =>
+            {
+                try
+                {
+                    var avgColor = await Scripts.InvokeAsync<string>("getAverageRGB", image);
+                    await OnLoad.InvokeAsync(avgColor);
+                }
+                catch
+                {
+                    await OnLoad.InvokeAsync(null);
+                }
+            });
         }
     }
 

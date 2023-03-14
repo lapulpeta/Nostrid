@@ -1,12 +1,80 @@
 ﻿@page "/explore"
 
-<h2>Explore</h2>
-<div class="row">
-    <div class="col-lg-6">
-        <Navigator />
-    </div>
+@implements IDisposable
+
+@using Nostrid.Data;
+
+@inject AccountService accountService
+@inject FeedService feedService
+@inject NavigationManager navigationManager
+
+<h3 class="border-bottom mx--3 px-3 pb-2">Explore</h3>
+<div class="sticky-top bg-body border-bottom mx--3 ps-2 mb-3">
+	<Navigator />
 </div>
 
+<UpdatabableElement @ref="savedFeedSources">
+	@if (accountService.MainAccount != null)
+	{
+		var feedSources = feedService.GetFeedSources(accountService.MainAccount.Id);
+		if (feedSources.Count > 0)
+		{
+			<h5>Saved hashtags</h5>
+			@foreach (var feedSource in feedSources)
+			{
+				<div role="button" class="mx--3 px-3 py-2 d-flex flex-row align-items-center bg-tertiary-hover"
+					@onclick="@(() => navigationManager.NavigateTo($"/feed/{feedSource.Id}"))" @onclick:stopPropagation="true">
+					<div class="flex-grow-1">
+						<NavLink class="text-nowrap fs-5" href="#">
+							<i class="bi bi-hash" aria-hidden="true"></i>@string.Join(", ", feedSource.Hashtags.ToArray())
+						</NavLink>
+					</div>
+					<div>
+						<a class="fs-5 lh-1 text-body" @onclick="@(() => RemoveSavedFeed(feedSource.Id))" @onclick:stopPropagation="true">
+							<i class="bi bi-x-lg"></i>
+						</a>
+					</div>
+				</div>
+			}
+		}
+	}
+</UpdatabableElement>
+
 @code {
-    
+
+	private UpdatabableElement? savedFeedSources;
+
+	protected override void OnInitialized()
+	{
+		accountService.MainAccountChanged += MainAccountChanged;
+	}
+
+	private void MainAccountChanged(object? sender, EventArgs args)
+	{
+		InvokeAsync(() => StateHasChanged());
+	}
+
+	private void RemoveSavedFeed(long id)
+	{
+		feedService.DeleteFeedSource(id);
+	}
+
+	#region Dispose
+	private bool disposed;
+
+	public void Dispose() => Dispose(true);
+
+	protected virtual void Dispose(bool disposing)
+	{
+		if (!disposed)
+		{
+			if (disposing)
+			{
+				accountService.MainAccountChanged -= MainAccountChanged;
+			}
+
+			disposed = true;
+		}
+	}
+	#endregion
 }

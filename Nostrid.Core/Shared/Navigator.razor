@@ -1,24 +1,22 @@
 ﻿@using Nostrid.Data;
 @using Nostrid.Misc;
 @using Nostrid.Model;
+
 @inject NavigationManager NavigationManager
 @inject EventDatabase eventDatabase
 
 <EditForm Model="@textInput" OnValidSubmit="@GoToEventSubmit">
-    <p>Enter npub, naddr, nevent, note, hex ID, NIP-05, or one or more hashtags:</p>
-  
-    <div class="input-group mb-3">
-        <InputText class="form-control" @bind-Value="textInput.Text" />
-        <button disabled="@working" class="btn btn-primary" type="submit">Go</button>
-    </div>
-
     <DataAnnotationsValidator />
     <ValidationSummary />
-
-    @if (invalidInput)
-    {
-        <p class="text-danger">I don't understand that</p>
-    }
+    <div class="d-flex flex-row align-items-center">
+        <InputText class="form-control glow-0 border-0 py-3 flex-grow-1" style="outline: none;" @bind-Value="textInput.Text"
+                   placeholder="Enter npub, naddr, nevent, note, hex ID, NIP-05, or one or more hashtags" />
+        @if (invalidInput)
+        {
+            <i class="bi bi-exclamation-circle fs-5 text-danger"></i>
+        }
+        <button disabled="@working" class="btn btn-link fs-2 text-body" type="submit"><i class="bi bi-arrow-right"></i></button>
+    </div>
 </EditForm>
 
 <ConfirmationModal @ref="confirmationModal" />
@@ -123,7 +121,7 @@
             }
             if (hashtags.Any())
             {
-                NavigationManager.NavigateTo($"/tag/{string.Join(",", hashtags.ToArray())}");
+                NavigationManager.NavigateTo($"feed/tag/{string.Join(",", hashtags.ToArray())}");
                 return;
             }
 

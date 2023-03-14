@@ -17,7 +17,7 @@
     public Scripts? Scripts { get; set; }
 }
 
-<h2 class="mb-0">Options</h2>
+<h3 class="mb-0">Options</h3>
 
 <ConfigSection @ref="ConfigSectionRef" ConfigSections="configSections">
     <Header>
@@ -227,54 +227,56 @@
                 <button class="btn btn-sm py-1 btn-outline-secondary" type="button" @onclick="@AddNewRelay">Add</button>
             </div>
         </li>
-        @foreach (var relay in relays)
-        {
-            <li class="list-group-item">
-                <div class="row g-2 align-items-center">
-                    <div class="col-sm-6 col-lg-8">
-                        <label>
-                            <span class="bi bi-circle-fill @(IsRelayConnected(relay.Id) ? "text-success" : "text-danger")"></span>
-                            @relay.Uri
-                        </label>
-                        @if (relay.IsPaid)
-                        {
-                            <a class="ms-3 btn btn-sm btn-outline-secondary" href="@Utils.GetRelayMainAddress(relay.Uri)">Pay</a>
-                        }
-                        @if (accountService.MainAccount != null && canBroadcast && IsRelayConnected(relay.Id))
-                        {
-                            <a class="ms-3 btn btn-sm btn-outline-secondary" @onclick="@(() => Broadcast(relay.Id))">Upload all</a>
-                        }
-                    </div>
-                    <div class="col-sm-6 col-lg-4 d-flex flex-row">
-                        <div class="d-flex flex-row flex-grow-1 align-items-center justify-content-sm-end justify-content-md-end">
-                            @if (configModel.ManualRelayManagement)
+        <UpdatabableElement @ref="relayList">
+            @foreach (var relay in relays)
+            {
+                <li class="list-group-item">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-sm-6 col-lg-8">
+                            <label>
+                                <span class="bi bi-circle-fill @(IsRelayConnected(relay.Id) ? "text-success" : "text-danger")"></span>
+                                @relay.Uri
+                            </label>
+                            @if (relay.IsPaid)
                             {
-                                <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
-                                    <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
-                                            checked="@relay.Read" id="relayRead@(relay.Id)"
-                                            @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
-                                    <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
-                                </div>
-                                <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
-                                    <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
-                                            checked="@relay.Write" id="relayWrite@(relay.Id)"
-                                            @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
-                                    <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
-                                </div>
+                                <a class="ms-3 btn btn-sm btn-outline-secondary" href="@Utils.GetRelayMainAddress(relay.Uri)">Pay</a>
                             }
-                            else
+                            @if (accountService.MainAccount != null && canBroadcast && IsRelayConnected(relay.Id))
                             {
-                                <label class="me-1" for="relayPriority@(relay.Id)">Priority</label>
-                                <span class="me-3 badge text-bg-light">@relay.Priority</span>
-                                <input class="flex-grow-1 me-4 form-range" type="range" min="0" max="10" step="1" id="relayPriority@(relay.Id)"
-                                        @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
+                                <a class="ms-3 btn btn-sm btn-outline-secondary" @onclick="@(() => Broadcast(relay.Id))">Upload all</a>
                             }
                         </div>
-                        <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
+                        <div class="col-sm-6 col-lg-4 d-flex flex-row">
+                            <div class="d-flex flex-row flex-grow-1 align-items-center justify-content-sm-end justify-content-md-end">
+                                @if (configModel.ManualRelayManagement)
+                                {
+                                    <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                        <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                                checked="@relay.Read" id="relayRead@(relay.Id)"
+                                                @onchange="@(args => { relay.Read = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                        <label class="form-check-label" for="relayRead@(relay.Id)">Read</label>
+                                    </div>
+                                    <div class="form-check form-switch p-0 m-0 me-4 text-nowrap">
+                                        <input type="checkbox" class="form-check-input m-0 me-1 fs-4" role="switch"
+                                                checked="@relay.Write" id="relayWrite@(relay.Id)"
+                                                @onchange="@(args => { relay.Write = args.Value as bool? ?? false; SaveRelay(relay); })" />
+                                        <label class="form-check-label" for="relayWrite@(relay.Id)">Write</label>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <label class="me-1" for="relayPriority@(relay.Id)">Priority</label>
+                                    <span class="me-3 badge text-bg-light">@relay.Priority</span>
+                                    <input class="flex-grow-1 me-4 form-range" type="range" min="0" max="10" step="1" id="relayPriority@(relay.Id)"
+                                            @bind-value="@relay.Priority" @bind-value:event="oninput" @onchange="() => SaveRelay(relay)" />
+                                }
+                            </div>
+                            <button type="button" class="btn-close" @onclick="() => DeleteRelay(relay)"></button>
+                        </div>
                     </div>
-                </div>
-            </li>
-        }
+                </li>
+            }
+        </UpdatabableElement>
     </Body>
 </ConfigSection>
 
@@ -349,6 +351,8 @@
     private string newRelayUri = string.Empty;
     private ConcurrentDictionary<long, bool> relayStatus = new();
     private bool canBroadcast = true;
+    private UpdatabableElement? relayList;
+    private string? mainAccountId;
 
     // Proxy
     private bool isUriValid = true;
@@ -367,10 +371,12 @@
     {
         base.OnInitialized();
         configModel = configService.MainConfig;
+        mainAccountId = accountService.MainAccount?.Id;
         ReloadRelays();
         relayService.ClientsStateChanged += ClientsStateChanged;
         relayService.ClientStatusChanged += ClientStatusChanged;
         eventDatabase.OptimizationComplete += OptimizationComplete;
+        accountService.MainAccountChanged += MainAccountChanged;
     }
 
     private void ReloadRelays()
@@ -471,21 +477,30 @@
             .ContinueWith((_) => { canBroadcast = true; InvokeAsync(() => StateHasChanged()); } );
     }
 
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        if (mainAccountId.IsNullOrEmpty() != accountService.MainAccount?.Id.IsNullOrEmpty())
+        {
+            ReloadRelays();
+            relayList?.Update();
+        }
+    }
+
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
@@ -494,6 +509,7 @@
         relayService.ClientsStateChanged -= ClientsStateChanged;
         relayService.ClientStatusChanged -= ClientStatusChanged;
         eventDatabase.OptimizationComplete -= OptimizationComplete;
+        accountService.MainAccountChanged -= MainAccountChanged;
     }
     #endregion
 }

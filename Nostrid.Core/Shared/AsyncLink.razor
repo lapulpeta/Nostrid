@@ -12,18 +12,18 @@
 
 @if (mediaType == MediaType.Image)
 {
-    <img src="@Url" alt="Note attachment" />
+    <img src="@Url" alt="Note attachment" crossorigin="anonymous" />
 } 
 else if (mediaType == MediaType.Video)
 {
-    <video controls>
+    <video controls crossorigin="anonymous">
         <source src="@Url" type="@mediaTypeHeader">
         Video not supported
     </video>
 }
 else if (mediaType == MediaType.Audio)
 {
-    <audio controls>
+    <audio controls crossorigin="anonymous">
         <source src="@Url" type="@mediaTypeHeader">
         Audio not supported
     </audio>

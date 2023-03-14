@@ -15,6 +15,7 @@
 @inject AccountService accountService
 @inject DmService dmService
 @inject NotificationService notificationService
+@inject NavigationManager navigationManager
 
 <div class="d-flex flex-column flex-grow-1">
     <div class="fs-4 fw-bolder">Direct Messages with <AccountName Id="@Id" /> </div>
@@ -31,17 +32,35 @@
     private SubscriptionFilter? filter;
     private string? accountId;
 
+    protected override void OnInitialized()
+    {
+        accountService.MainAccountChanged += MainAccountChanged;
+        dmService.NewDm += NewDm;
+    }
+
     protected override void OnParametersSet()
     {
-        if (accountService.MainAccount == null)
-        {
-            return;
-        }
+        SetFilter();
+    }
+
+    protected void SetFilter()
+    {
         accountId = accountService.MainAccount.Id;
         UpdateLastRead();
         notificationService.AddDmBlock(accountId, Id);
-        dmService.NewDm += NewDm;
         filter = new DmSubscriptionFilter(accountId, Id);
+    }
+
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        if (accountService.MainAccount == null)
+        {
+            navigationManager.NavigateTo("/");
+        }
+        else if (accountService.MainAccount.Id != accountId)
+        {
+            navigationManager.NavigateTo("/dms");
+        }
     }
 
     private void NewDm(object? sender, (string senderId, string receiverId) data)
@@ -58,20 +77,20 @@
     }
 
     #region Dispose
-    private bool _disposed;
+    private bool disposed;
 
     public void Dispose() => Dispose(true);
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!_disposed)
+        if (!disposed)
         {
             if (disposing)
             {
                 Cleanup();
             }
 
-            _disposed = true;
+            disposed = true;
         }
     }
 
@@ -79,6 +98,7 @@
     {
         notificationService.RemoveDmBlock(accountId, Id);
         dmService.NewDm -= NewDm;
+        accountService.MainAccountChanged -= MainAccountChanged;
     }
     #endregion
 }

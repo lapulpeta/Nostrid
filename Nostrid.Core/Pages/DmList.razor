@@ -4,7 +4,7 @@
 @using Nostrid.Data;
 @using System.Collections.Concurrent;
 @using Nostrid.Misc;
-@using Nostrid.Model;
+@using Nostrid.Model
 
 @implements IDisposable
 
@@ -13,7 +13,7 @@
 @inject NavigationManager navigationManager
 @inject RelayService relayService
 
-<h4>Direct Messages</h4>
+<h3>Messages</h3>
 <div style="margin-bottom: -1rem;">
     <div class="px-3 py-3 border-top" style="margin: 0 -1rem;">
         <EditForm Model="@searchText" OnValidSubmit="@Search">
@@ -23,34 +23,37 @@
             </div>
         </EditForm>
     </div>
-    @foreach (var partnerId in dmPartners)
-    {
-        <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
-            @onclick="@(() => NavigateTo(partnerId))" style="margin: 0 -1rem;">
-            <div class="flex-shrink-0">
-                <AccountPicture Id="@partnerId" />
-            </div>
-            <div class="flex-grow-1 px-2 text-break">
-                <div class="fw-bold">
-                    <AccountName Id="@partnerId" />
+    <UpdatabableElement @ref="partnerList">
+        @foreach (var partnerId in dmPartners)
+        {
+            <div role="button" class="d-flex flex-row align-items-center px-2 px-lg-3 py-2 border-top bg-tertiary-hover"
+                @onclick="@(() => NavigateTo(partnerId))" style="margin: 0 -1rem;">
+                <div class="flex-shrink-0">
+                    <AccountPicture Id="@partnerId" />
                 </div>
-                <div class="fs-7 text-secondary">@partnerId</div>
+                <div class="flex-grow-1 px-2 text-break">
+                    <div class="fw-bold">
+                        <AccountName Id="@partnerId" />
+                    </div>
+                    <div class="fs-7 text-secondary">@partnerId</div>
+                </div>
+                <div>
+                    <UnreadDmCounter AccountId="@accountService.MainAccount?.Id" OtherAccountId="@partnerId">
+                        <span class="badge text-bg-danger rounded-pill">
+                            @context
+                        </span>
+                    </UnreadDmCounter>
+                </div>
             </div>
-            <div>
-                <UnreadDmCounter AccountId="@accountService.MainAccount?.Id" OtherAccountId="@partnerId">
-                    <span class="badge text-bg-danger rounded-pill">
-                        @context
-                    </span>
-                </UnreadDmCounter>
-            </div>
-        </div>
-    }
+        }
+    </UpdatabableElement>
 </div>
 
 @code {
     private HashSet<string> dmPartners = new();
     private TextInput searchText = new();
     private bool invalidInput = false;
+    private UpdatabableElement? partnerList;
 
     protected override void OnInitialized()
     {
@@ -63,6 +66,7 @@
 
         dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
         dmService.NewDmPair += NewDmPair;
+        accountService.MainAccountChanged += MainAccountChanged;
     }
 
     private void NewDmPair(object? sender, (string accountL, string accountH) data)
@@ -80,6 +84,12 @@
             return;
         }
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        dmPartners = new(dmService.GetDmPartners(accountService.MainAccount.Id));
+        partnerList?.Update();
     }
 
     private void Search()
@@ -124,6 +134,7 @@
     private void Cleanup()
     {
         dmService.NewDmPair -= NewDmPair;
+        accountService.MainAccountChanged -= MainAccountChanged;
     }
     #endregion
 }

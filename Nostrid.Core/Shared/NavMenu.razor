@@ -3,11 +3,9 @@
 @using Nostrid.Misc;
 
 @inject RelayService relayService
-@inject FeedService feedService
 @inject EventDatabase eventDatabase
 @inject AccountService accountService
 @inject NotificationService notificationService
-@inject DmService dmService
 @inject IJSRuntime jsRuntime
 
 @implements IDisposable
@@ -24,15 +22,59 @@
 <div class="d-flex flex-row flex-grow-1">
 
 	<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
-		<div class="offcanvas-header d-md-none">
-			<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-		</div>
-		<div class="offcanvas-body d-flex flex-column flex-grow-1 pt-0">
-			<a class="d-none d-md-block py-3 text-center" href="/">Nostrid</a>
-			<nav class="flex-grow-1" style="min-width: 150px;">
+		<div class="offcanvas-body d-flex flex-column flex-grow-1">
+		
+			<UpdatabableElement @ref="loggedInElements">
+				<div class="d-flex flex-row align-items-center justify-content-between">
+					@if (accountService.MainAccount != null)
+					{
+						<a href="@($"account/{accountService.MainAccount?.Id}")" @onclick="HideOffCanvasMenu">
+							<AccountPicture Id="@accountService.MainAccount?.Id" Size="48"></AccountPicture>
+						</a>
+					}
+					<div>
+						@{
+							var otherAccountsCount = eventDatabase.GetAccountIdsWithPk()
+								.Concat(accountService.GetAccountsWithSigners())
+								.Where(accountId => accountId != accountService.MainAccount?.Id)
+								.Distinct()
+								.Count();
+						}
+						@if (otherAccountsCount > 0)
+						{
+							<a @onclick="@(async () => { accountsModal?.Show(); await HideOffCanvasMenu(); })" role="button" class="btn btn-sm @(accountService.MainAccount == null ? "btn-primary" : "btn-outline-secondary") rounded-5 fs-6 me-2">
+								<i class="bi bi-arrow-left-right"></i>
+								@if (accountService.MainAccount == null)
+								{
+									<span class="me-2">&nbsp;Select account</span>
+								}
+							</a>
+						}
+						<a @onclick="@(async () => { accountsModal?.Show(true); await HideOffCanvasMenu(); })" role="button" class="btn btn-sm @(accountService.MainAccount == null && otherAccountsCount == 0 ? "btn-primary" : "btn-outline-secondary") rounded-5 fs-6">
+							<i class="bi bi-plus-lg"></i> 
+							@if (accountService.MainAccount == null && otherAccountsCount == 0)
+							{
+								<span class="me-2">&nbsp;Add account</span>
+							}
+						</a>
+					</div>
+				</div>
+				@if (accountService.MainAccount != null)
+				{
+					<div class="fw-bold mt-2 text-nowrap overflow-hidden account-name flex-shrink-0">
+						<a href="@($"account/{accountService.MainAccount?.Id}")" @onclick="HideOffCanvasMenu">
+							<AccountName Id="@accountService.MainAccount?.Id" OnlyText="true"></AccountName>
+						</a>
+					</div>
+				}
+			</UpdatabableElement>
+
+			<hr style="-webkit-mask: linear-gradient(to right, #000, #0000) !important;" />
+
+			<nav class="flex-grow-1 w-100">
 				<ul class="nav nav-pills flex-column fs-5">
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="/feed" @onclick="HideOffCanvasMenu">
+					<li class="nav-item">
+						<NavLink class="nav-link text-nowrap bg-secondary-hover" href="/feed" @onclick="HideOffCanvasMenu">
 							<i class="bi bi-house display-inactive" aria-hidden="true"></i>
 							<i class="bi bi-house-fill display-active" aria-hidden="true"></i>
 							<span>Feed</span>
@@ -46,33 +88,37 @@
 							</UpdatabableElement>
 						</NavLink>
 					</li>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="long" @onclick="HideOffCanvasMenu">
+					<li class="nav-item">
+						<NavLink class="nav-link text-nowrap bg-secondary-hover" href="long" @onclick="HideOffCanvasMenu">
 							<i class="bi bi-pen display-inactive" aria-hidden="true"></i>
 							<i class="bi bi-pen-fill display-active" aria-hidden="true"></i>
 							<span>Blogs</span>
 						</NavLink>
 					</li>
-					@*<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="/favorites" @onclick="HideOffCanvasMenu">
-							<i class="bi bi-heart display-inactive" aria-hidden="true"></i>
-							<i class="bi bi-heart-fill display-active" aria-hidden="true"></i>
-							<span>Favorites</span>
+					<li class="nav-item">
+						<NavLink class="nav-link text-nowrap bg-secondary-hover" href="channels" @onclick="HideOffCanvasMenu">
+							<i class="bi bi-tv display-inactive" aria-hidden="true"></i>
+							<i class="bi bi-tv-fill display-active" aria-hidden="true"></i>
+							<span>Channels</span>
 						</NavLink>
-					</li>*@
-					<UpdatabableElement @ref="@loggedInElements">
+					</li>
+					<li class="nav-item">
+						<NavLink class="nav-link text-nowrap bg-secondary-hover" href="explore" @onclick="HideOffCanvasMenu">
+							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-inactive" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+							</svg>
+							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+								<path d="M 10.249 9.251 C 12.366 6.363 10.562 2.268 7.004 1.879 C 3.445 1.49 0.801 5.099 2.243 8.375 C 3.442 11.098 6.853 12.011 9.25 10.251 C 9.271 10.28 10.28 9.271 10.249 9.25 L 10.249 9.251 Z" />
+							</svg>
+							<span>Explore</span>
+						</NavLink>
+					</li>
+					<UpdatabableElement @ref="@loggedInElements2">
 						@if (accountService.MainAccount != null)
 						{
-							@foreach (var feedSource in feedService.GetFeedSources(accountService.MainAccount.Id))
-							{
-								<li class="nav-item pb-2">
-									<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="@($"/favorite/feed/{feedSource.Id}")" @onclick="HideOffCanvasMenu">
-										<span class="bi bi-house-heart-fill" aria-hidden="true"></span> @string.Join(", ", feedSource.Hashtags.ToArray())
-									</NavLink>
-								</li>
-							}
-							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="dms" @onclick="HideOffCanvasMenu">
+							<li class="nav-item">
+								<NavLink class="nav-link text-nowrap bg-secondary-hover" href="dms" @onclick="HideOffCanvasMenu">
 									<i class="bi bi-envelope display-inactive" aria-hidden="true"></i>
 									<i class="bi bi-envelope-fill display-active" aria-hidden="true"></i>
 									<span>Messages</span>
@@ -88,48 +134,11 @@
 							</li>
 						}
 					</UpdatabableElement>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="explore" @onclick="HideOffCanvasMenu">
-							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-inactive" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-								<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
-							</svg>
-							<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-								<path d="M 6.5 13 C 7.883 13.002 9.231 12.561 10.345 11.742 L 10.344 11.742 C 10.374 11.782 10.406 11.82 10.442 11.857 L 14.292 15.707 C 14.836 16.252 15.766 16.003 15.966 15.259 C 16.058 14.914 15.96 14.546 15.707 14.293 L 11.857 10.443 C 11.821 10.407 11.783 10.373 11.742 10.343 C 12.561 9.229 13.002 7.882 13 6.5 C 12.999 2.911 10.089 0.001 6.5 0 C 1.496 0 -1.631 5.417 0.871 9.75 C 2.032 11.761 4.178 13 6.5 13 Z" />
-							</svg>
-							<span>Explore</span>
-						</NavLink>
-					</li>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="channels" @onclick="HideOffCanvasMenu">
-							<i class="bi bi-tv display-inactive" aria-hidden="true"></i>
-							<i class="bi bi-tv-fill display-active" aria-hidden="true"></i>
-							<span>Channels</span>
-						</NavLink>
-					</li>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="config" @onclick="HideOffCanvasMenu">
+					<li class="nav-item">
+						<NavLink class="nav-link text-nowrap bg-secondary-hover" href="config" @onclick="HideOffCanvasMenu">
 							<i class="bi bi-gear display-inactive" aria-hidden="true"></i>
 							<i class="bi bi-gear-fill display-active" aria-hidden="true"></i>
 							<span>Settings</span>
-						</NavLink>
-					</li>
-					<UpdatabableElement @ref="loggedInElements2">
-						@if (accountService.MainAccount != null)
-						{
-							<li class="nav-item pb-2">
-								<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="@($"account/{accountService.MainAccount.Id}")" @onclick="HideOffCanvasMenu">
-									<i class="bi bi-person display-inactive" aria-hidden="true"></i>
-									<i class="bi bi-person-fill display-active" aria-hidden="true"></i>
-									<span>Me</span>
-								</NavLink>
-							</li>
-						}
-					</UpdatabableElement>
-					<li class="nav-item pb-2">
-						<NavLink class="nav-link text-nowrap bg-tertiary-hover" href="accounts" @onclick="HideOffCanvasMenu">
-							<i class="bi bi-people display-inactive" aria-hidden="true"></i>
-							<i class="bi bi-people-fill display-active" aria-hidden="true"></i>
-							<span>Accounts</span>
 						</NavLink>
 					</li>
 				</ul>
@@ -137,12 +146,12 @@
 			<div>
 				<div class="text-nowrap">
 					<UpdatabableElement @ref="relayElements">
-						<environment include="Development">
+						@*<environment include="Development">
 							<div>
 								Filters: @relayService.FiltersCount
 								Rate Limited: @relayService.RateLimitedRelays<br />
 							</div>
-						</environment>
+						</environment>*@
 						@{
 							<text>Relays</text>
 							if (relayService.RelaysMonitor.IsAuto)
@@ -177,13 +186,15 @@
 				<div class="flex-grow-1 d-flex flex-row justify-content-between align-items-center">
 					<NavLink class="nav-link" href="#">
 						<UpdatabableElement @ref="loggedInElements3">
-							<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
+							<a href="@($"account/{accountService.MainAccount?.Id}")" @onclick="HideOffCanvasMenu">
+								<AccountPicture Id="@accountService.MainAccount?.Id" Size="35"></AccountPicture>
+							</a>
 						</UpdatabableElement>
 					</NavLink>
 					<div class="flex-grow-1 text-center">
 						<a class="navbar-brand m-0" href="/">Nostrid</a>
 					</div>
-					<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
+					<button title="Navigation menu" class="position-relative navbar-toggler p-1 m-0 glow-0" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" style="margin: 12px 0;">
 						<span class="navbar-toggler-icon"></span>
 					</button>
 				</div>
@@ -191,11 +202,19 @@
 		</div>
 
 		<div class="position-relative d-flex flex-column flex-grow-1 overflow-y-auto">
-			@ChildContent
+			<CascadingValue Value="@accountsModal">
+				@ChildContent
+			</CascadingValue>
 		</div>
 
 		<nav class="navbar navbar-light bg-body-tertiary d-md-none p-0 border-top">
 			<ul class="nav flex-grow-1 d-flex text-center">
+				<li class="nav-item flex-grow-1">
+					<NavLink class="nav-link fs-4 text-body" role="button"
+						@onclick="@(async () => await jsRuntime.InvokeVoidAsync("history.back"))">
+						<i class="bi bi-chevron-left" aria-hidden="true"></i>
+					</NavLink>
+				</li>
 				<li class="nav-item flex-grow-1">
 					<NavLink class="nav-link fs-4 text-body" href="/feed">
 						<span class="position-relative">
@@ -225,7 +244,8 @@
 							<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
 						</svg>
 						<svg style="width: 17.5px; height: 17.5px; margin-top: -4px;" class="display-active" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16">
-							<path d="M 6.5 13 C 7.883 13.002 9.231 12.561 10.345 11.742 L 10.344 11.742 C 10.374 11.782 10.406 11.82 10.442 11.857 L 14.292 15.707 C 14.836 16.252 15.766 16.003 15.966 15.259 C 16.058 14.914 15.96 14.546 15.707 14.293 L 11.857 10.443 C 11.821 10.407 11.783 10.373 11.742 10.343 C 12.561 9.229 13.002 7.882 13 6.5 C 12.999 2.911 10.089 0.001 6.5 0 C 1.496 0 -1.631 5.417 0.871 9.75 C 2.032 11.761 4.178 13 6.5 13 Z" />
+							<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+							<path d="M 10.249 9.251 C 12.366 6.363 10.562 2.268 7.004 1.879 C 3.445 1.49 0.801 5.099 2.243 8.375 C 3.442 11.098 6.853 12.011 9.25 10.251 C 9.271 10.28 10.28 9.271 10.249 9.25 L 10.249 9.251 Z" />
 						</svg>
 					</NavLink>
 				</li>
@@ -252,10 +272,13 @@
 	</div>
 </div>
 
+<AccountsModal @ref="accountsModal" />
+
 @code {
 
 	private int mentionsCount, unreadDmCount;
 	private UpdatabableElement? mentionsElement, mentionsElement2, loggedInElements, loggedInElements2, loggedInElements3, relayElements, dmElement, dmElement2;
+	private AccountsModal? accountsModal;
 
 	private void NotificationNumberChanged(object? sender, (int mentionsCount, int unreadDmCount) data)
 	{
@@ -310,20 +333,20 @@
 	}
 
 	#region Dispose
-	private bool _disposed;
+	private bool disposed;
 
 	public void Dispose() => Dispose(true);
 
 	protected virtual void Dispose(bool disposing)
 	{
-		if (!_disposed)
+		if (!disposed)
 		{
 			if (disposing)
 			{
 				Cleanup();
 			}
 
-			_disposed = true;
+			disposed = true;
 		}
 	}
 

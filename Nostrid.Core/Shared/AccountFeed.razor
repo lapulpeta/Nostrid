@@ -1,0 +1,47 @@
+﻿@using Nostrid.Data;
+@using Nostrid.Model;
+@using Nostrid.Data.Relays;
+
+@implements IDisposable
+
+@inject RelayService relayService
+
+@code{
+    [Parameter]
+    public string AccountId { get; set; }
+}
+
+<FeedViewer BaseFilter="@filter" MessageKinds="@(new[]{NostrKind.Text, NostrKind.Repost})" />
+
+@code {
+    private SubscriptionFilter? filter;
+
+    protected override void OnParametersSet()
+    {
+        filter = new AuthorSubscriptionFilter(AccountId);
+    }
+
+    #region Dispose
+    private bool _disposed;
+
+    public void Dispose() => Dispose(true);
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                Cleanup();
+            }
+
+            _disposed = true;
+        }
+    }
+
+    private void Cleanup()
+    {
+        relayService.DeleteFilters(filter);
+    }
+    #endregion
+}

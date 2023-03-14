@@ -81,6 +81,13 @@ var findClosestScrollContainer = function (element) {
     return null;
 };
 
+export function getAverageRGB(img) {
+    var context = document.createElement('canvas').getContext('2d');
+    context.imageSmoothingEnabled = true;
+    context.drawImage(img, 0, 0, 1, 1);
+    return context.getImageData(0, 0, 1, 1).data.slice(0, 3).join(",");
+}
+
 (() => {
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))

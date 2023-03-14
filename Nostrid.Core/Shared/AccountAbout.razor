@@ -1,43 +1,19 @@
 ﻿@code{
     [Parameter, EditorRequired]
     public string Id { get; set; } = null!;
-
-    [Parameter]
-    public bool OnlyText { get; set; }
 }
 
 @implements IDisposable
 
 @using Nostrid.Data;
-@using Nostrid.Misc;
 @using Nostrid.Model;
 
 @inject AccountService accountService
 
-<span class="text-break">
-    @if (details != null && details.Nip05Id.IsNotNullOrEmpty() && details.Nip05Valid &&
-    Nip05.DecodeNip05(details.Nip05Id, out var domain, out var username))
-    {
-        if (username != "_")
-        {
-            @username
-        }
-        <wbr />
-        @(username != "_" ? "@" : "")@domain
-        @if (!OnlyText)
-        {
-            <i class="text-success bi bi-patch-check-fill ms-1"></i>
-        }
-    }
-    else if (Id != null)
-    {
-        @(details?.Name ?? ByteTools.PubkeyToNpub(Id, true))
-    }
-    @if (!OnlyText && (details?.Lud16Id ?? details?.Lud06Url).IsNotNullOrEmpty())
-    {
-        <i class="bi bi-lightning-charge-fill text-warning ms-1"></i>
-    }
-</span>
+@if (details?.About.IsNotNullOrEmpty() ?? false)
+{
+    <div class="text-break mb-3" style="margin-top: -.5rem;">@details?.About</div>
+}
 
 @code
 {
