@@ -42,6 +42,6 @@
             OwnerId = accountService.MainAccount.Id,
         };
         feedService.SaveFeedSource(feedSource);
-        navigationManager.NavigateTo($"/favorite/feed/{feedSource.Id}");
+        navigationManager.NavigateTo($"/feed/{feedSource.Id}");
     }
 }

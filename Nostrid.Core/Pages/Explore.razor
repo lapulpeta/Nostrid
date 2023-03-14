@@ -23,11 +23,9 @@
 			@foreach (var feedSource in feedSources)
 			{
 				<div role="button" class="mx--3 px-3 py-2 d-flex flex-row align-items-center bg-tertiary-hover"
-					@onclick="@(() => navigationManager.NavigateTo($"/feed/{feedSource.Id}"))" @onclick:stopPropagation="true">
-					<div class="flex-grow-1">
-						<NavLink class="text-nowrap fs-5" href="#">
-							<i class="bi bi-hash" aria-hidden="true"></i>@string.Join(", ", feedSource.Hashtags.ToArray())
-						</NavLink>
+					@onclick="@(() => navigationManager.NavigateTo($"/feed/{feedSource.Id}"))">
+					<div class="flex-grow-1 fs-5">
+						<i class="bi bi-hash" aria-hidden="true"></i>@string.Join(", ", feedSource.Hashtags.ToArray())
 					</div>
 					<div>
 						<a class="fs-5 lh-1 text-body" @onclick="@(() => RemoveSavedFeed(feedSource.Id))" @onclick:stopPropagation="true">
