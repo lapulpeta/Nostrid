@@ -38,8 +38,17 @@ namespace Nostrid.Data
 
         public RenderFragment GetContent(string content, List<Mention>? mentions)
         {
-            var html = Markdown.Parse(content.Replace("\n", "\u0020\u0020\n"), pipeline).ToHtml(pipeline);
-            
+            string html;
+
+            try
+            {
+                html = Markdown.Parse(content.Replace("\n", "\u0020\u0020\n"), pipeline).ToHtml(pipeline);
+            }
+            catch (Exception ex)
+            {
+                html = Markdown.Parse($"```\nMarkdown failed:\n{ex}```", pipeline).ToHtml(pipeline);
+            }
+
             html = htmlSanitizer.Sanitize(html);
 
             var document = new HtmlDocument();
