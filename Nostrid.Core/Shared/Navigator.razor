@@ -9,14 +9,14 @@
   
     <div class="input-group mb-3">
         <InputText class="form-control" @bind-Value="textInput.Text" />
-        <button class="btn btn-primary" type="submit">Go</button>
+        <button disabled="@working" class="btn btn-primary" type="submit">Go</button>
     </div>
 
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     @if (invalidInput)
-    {   
+    {
         <p class="text-danger">I don't understand that</p>
     }
 </EditForm>
@@ -25,120 +25,131 @@
 
 @code {
     private TextInput textInput = new();
-    private bool invalidInput;
+    private bool invalidInput, working;
     private ConfirmationModal? confirmationModal;
 
     private async Task GoToEventSubmit()
     {
         var input = textInput.Text?.Trim() ?? string.Empty;
 
-        // Check hex
-        if (Utils.IsValidNostrId(input))
+        working = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
         {
-            if (eventDatabase.TryDetermineHexType(input, out var type))
+
+            // Check hex
+            if (Utils.IsValidNostrId(input))
             {
-                switch (type)
+                if (eventDatabase.TryDetermineHexType(input, out var type))
                 {
-                    case IdType.Account:
-                        NavigationManager.NavigateTo($"/account/{input}");
+                    switch (type)
+                    {
+                        case IdType.Account:
+                            NavigationManager.NavigateTo($"/account/{input}");
+                            return;
+                        case IdType.Channel:
+                            NavigationManager.NavigateTo($"/channel/{input}");
+                            return;
+                        case IdType.Event:
+                            NavigationManager.NavigateTo($"/note/{input}");
+                            return;
+                    }
+                }
+                confirmationModal?.Show(
+                    ConfirmationModal.Options.Create(
+                        "This seems to be a hex ID but we can't figure out the type",
+                        "Select ID type",
+                        ConfirmationModal.Options.Button.CreateButton("Cancel", null),
+                        ConfirmationModal.Options.Button.CreateButton("Account", () =>
+                        {
+                            NavigationManager.NavigateTo($"/account/{input}");
+                        }),
+                        ConfirmationModal.Options.Button.CreateButton("Channel", () =>
+                        {
+                            NavigationManager.NavigateTo($"/channel/{input}");
+                        }),
+                        ConfirmationModal.Options.Button.CreateButton("Event", () =>
+                        {
+                            NavigationManager.NavigateTo($"/note/{input}");
+                        })
+                    )
+                );
+                return;
+            }
+
+            // Check bech32
+            var (prefix, pubkey) = ByteTools.DecodeBech32(input);
+            if (prefix != null && Utils.IsValidNostrId(pubkey))
+            {
+                switch (prefix)
+                {
+                    case "npub":
+                        NavigationManager.NavigateTo($"/account/{pubkey}");
                         return;
-                    case IdType.Channel:
-                        NavigationManager.NavigateTo($"/channel/{input}");
+                    case "note":
+                        NavigationManager.NavigateTo($"/note/{pubkey}");
                         return;
-                    case IdType.Event:
-                        NavigationManager.NavigateTo($"/note/{input}");
+                    default:
+                        invalidInput = true;
                         return;
                 }
             }
-            confirmationModal?.Show(
-                ConfirmationModal.Options.Create(
-                    "This seems to be a hex ID but we can't figure out the type",
-                    "Select ID type",
-                    ConfirmationModal.Options.Button.CreateButton("Cancel", null),
-                    ConfirmationModal.Options.Button.CreateButton("Account", () =>
-                    {
-                        NavigationManager.NavigateTo($"/account/{input}");
-                    }),
-                    ConfirmationModal.Options.Button.CreateButton("Channel", () =>
-                    {
-                        NavigationManager.NavigateTo($"/channel/{input}");
-                    }),
-                    ConfirmationModal.Options.Button.CreateButton("Event", () =>
-                    {
+
+            // Check TVL bech32
+            if (ByteTools.TryDecodeTvlBech32(input, out var tvlEntity))
+            {
+                switch (tvlEntity)
+                {
+                    case Nevent nevent:
+                    case Naddr naddr:
                         NavigationManager.NavigateTo($"/note/{input}");
-                    })
-                )
-            );
-            return;
-        }
-
-        // Check bech32
-        var (prefix, pubkey) = ByteTools.DecodeBech32(input);
-        if (prefix != null && Utils.IsValidNostrId(pubkey))
-        {
-            switch (prefix)
-            {
-                case "npub":
-                    NavigationManager.NavigateTo($"/account/{pubkey}");
-                    return;
-                case "note":
-                    NavigationManager.NavigateTo($"/note/{pubkey}");
-                    return;
-                default:
-                    invalidInput = true;
-                    return;
+                        return;
+                    default:
+                        invalidInput = true;
+                        return;
+                }
             }
-        }
 
-        // Check TVL bech32
-        if (ByteTools.TryDecodeTvlBech32(input, out var tvlEntity))
-        {
-            switch (tvlEntity)
+            // Check tag
+            var words = input.Split(" ");
+            var hashtags = new List<string>();
+            foreach (var word in words)
             {
-                case Nevent nevent:
-                case Naddr naddr:
-                    NavigationManager.NavigateTo($"/note/{input}");
-                    return;
-                default:
-                    invalidInput = true;
-                    return;
+                if (Utils.IsHashTag(word))
+                    hashtags.Add(Utils.GetHashTag(word));
+                else if (Utils.IsHashTag("#" + word))
+                    hashtags.Add(Utils.GetHashTag("#" + word));
             }
-        }
-
-        // Check tag
-        var words = input.Split(" ");
-        var hashtags = new List<string>();
-        foreach (var word in words)
-        {
-            if (Utils.IsHashTag(word))
-                hashtags.Add(Utils.GetHashTag(word));
-            else if (Utils.IsHashTag("#" + word))
-                hashtags.Add(Utils.GetHashTag("#" + word));
-        }
-        if (hashtags.Any())
-        {
-            NavigationManager.NavigateTo($"/tag/{string.Join(",", hashtags.ToArray())}");
-            return;
-        }
-
-        // Check replaceable ID
-        if (input.IsReplaceableIdStrict())
-        {
-            NavigationManager.NavigateTo($"/note/{input}");
-            return;
-        }
-
-        // Check NIP-05
-        if (Nip05.IsValidNip05(input))
-        {
-            (_, _, pubkey) = await Nip05.IdToPubkey(input);
-            if (pubkey.IsNotNullOrEmpty())
+            if (hashtags.Any())
             {
-                NavigationManager.NavigateTo($"/account/{pubkey}");
+                NavigationManager.NavigateTo($"/tag/{string.Join(",", hashtags.ToArray())}");
                 return;
             }
-        }
 
-        invalidInput = true;
+            // Check replaceable ID
+            if (input.IsReplaceableIdStrict())
+            {
+                NavigationManager.NavigateTo($"/note/{input}");
+                return;
+            }
+
+            // Check NIP-05
+            if (Nip05.IsValidNip05(input))
+            {
+                (_, _, pubkey) = await Nip05.IdToPubkey(input);
+                if (pubkey.IsNotNullOrEmpty())
+                {
+                    NavigationManager.NavigateTo($"/account/{pubkey}");
+                    return;
+                }
+            }
+
+            invalidInput = true;
+        }
+        finally
+        {
+            working = false;
+        }
     }
 }
