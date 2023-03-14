@@ -96,10 +96,8 @@
             switch (tvlEntity)
             {
                 case Nevent nevent:
-                    NavigationManager.NavigateTo($"/note/{nevent.EventId}");
-                    return;
                 case Naddr naddr:
-                    NavigationManager.NavigateTo($"/note/{naddr.ReplaceableId}");
+                    NavigationManager.NavigateTo($"/note/{input}");
                     return;
                 default:
                     invalidInput = true;

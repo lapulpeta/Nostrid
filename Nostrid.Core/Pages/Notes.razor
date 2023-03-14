@@ -64,6 +64,16 @@
     {
         Cleanup();
 
+        if (ByteTools.TryDecodeTvlBech32(EventId, out var tvlEntity))
+        {
+            EventId = tvlEntity switch
+            {
+                Nevent nevent => nevent.EventId,
+                Naddr naddr => naddr.ReplaceableId,
+                _ => EventId,
+            };
+        }
+
         cancellationTokenSource = new();
 
         feedService.NotesReceived += ReceivedNotes;

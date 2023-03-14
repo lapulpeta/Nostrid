@@ -207,18 +207,18 @@ public static class EventExtension
 		return true;
     }
 
-    public static (string pubkey, int kind, string dstr)? ExplodeReplaceableId(string? naddr)
+    public static (string pubkey, int kind, string dstr)? ExplodeReplaceableId(string? replaceableId)
 	{
-		if (naddr == null)
+		if (replaceableId == null)
 		{
 			return null;
 		}
-		var parts = naddr.Split(":");
-		if (parts.Length != 3 || !int.TryParse(parts[0], out int kind))
+		var parts = replaceableId.Split(":");
+		if (parts.Length < 3 || !int.TryParse(parts[0], out int kind))
 		{
 			return null;
 		}
-		return (parts[1], kind, parts[2]);
+		return (parts[1], kind, string.Join(":", parts[2..]));
 	}
 
 	public static string? GetReplaceableId(string pubkey, int kindd, string? dstr)

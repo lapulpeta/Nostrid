@@ -1,5 +1,6 @@
 using NNostr.Client;
 using Nostrid.Data;
+using Nostrid.Misc;
 using Nostrid.Model;
 
 namespace Nostrid.Core.Test
@@ -421,6 +422,24 @@ namespace Nostrid.Core.Test
                 Assert.AreEqual(0, db.Events.Count(e => e.Id == id3));
                 Assert.AreEqual(1, db.Events.Count(e => e.ReplaceableId == replaceableId && e.Id == id4));
             }
+        }
+
+		[TestMethod]
+		public void TestExplodeIdWithExtraColons()
+		{
+			var ret = ByteTools.TryDecodeTvlBech32("naddr1qqlksar5wpen5te0w3n8gcewd9hj7mtpwf68juedvfjkuap0d9ehxat995cnxv3e946xsefdwf6kwur4d3k8xttgv9mx2ttzv4nh2m30qgszsfr2amdk0jnmy5qukevqmspvky4s9j4va50h9xakr9wsv2cs3tgrqsqqqa286akejz", out var tvlEntity);
+			Assert.IsTrue(ret);
+			var naddr = tvlEntity as Naddr;
+			Assert.IsNotNull(naddr);
+
+			var replaceableId = naddr.ReplaceableId;
+			Assert.AreEqual("30023:28246aeedb67ca7b2501cb6580dc02cb12b02caaced1f729bb6195d062b108ad:https://tftc.io/martys-bent/issue-1329-the-rugpulls-have-begun/", replaceableId);
+            
+			var explodedId = EventExtension.ExplodeReplaceableId(replaceableId);
+            Assert.IsNotNull(explodedId);
+            Assert.AreEqual(30023, explodedId.Value.kind);
+            Assert.AreEqual("28246aeedb67ca7b2501cb6580dc02cb12b02caaced1f729bb6195d062b108ad", explodedId.Value.pubkey);
+            Assert.AreEqual("https://tftc.io/martys-bent/issue-1329-the-rugpulls-have-begun/", explodedId.Value.dstr);
         }
     }
 }
