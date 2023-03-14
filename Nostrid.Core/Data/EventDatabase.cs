@@ -63,6 +63,7 @@ namespace Nostrid.Data
 				await db.Mutes.ExecuteDeleteAsync();
 				await db.Accounts.Where(a => a.PrivKey == null).ExecuteDeleteAsync();
 				await db.Accounts.Where(a => a.PrivKey != null).ExecuteUpdateAsync(a => a.SetProperty(a => a.FollowsLastUpdate, (DateTime?)null));
+				await db.Accounts.Where(a => a.PrivKey != null).ExecuteUpdateAsync(a => a.SetProperty(a => a.MutesLastUpdate, (DateTime?)null));
 				await db.EventSeen.ExecuteDeleteAsync();
 				await db.TagDatas.ExecuteDeleteAsync();
 				await db.Events.ExecuteDeleteAsync();
