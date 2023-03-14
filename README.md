@@ -39,6 +39,7 @@ For a quick start check out the [Installation](#Installation) section below.
 - [x] Follows editor that can recover old follows
 - [x] Import and export of follows
 - [x] Direct messages
+- [x] NIP-51 muting
 - [x] Long-form content aka blogs - PARTIAL (can read, cannot yet write)
 - [x] Channels - PARTIAL (can join and participate but can't create channels yet)
 - [x] NIP-57 zaps - PARTIAL (can display zaps but can only send standard Lightning payments)
@@ -76,6 +77,7 @@ For a quick start check out the [Installation](#Installation) section below.
 - ❌ NIP-42: Authentication of clients to relays
 - ❌ NIP-46: Nostr Connect
 - ✅ NIP-50: Keywords filter
+- ✅ NIP-51: Lists (muting only)
 - ❌ NIP-56: Reporting
 - ✅ NIP-57: Lightning Zaps (read only)
 - ❌ NIP-58: Badges
