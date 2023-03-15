@@ -161,10 +161,6 @@ a, .btn-link {
     border-radius: 0.375rem !important;
 }
 
-.note-content code {
-    white-space: break-spaces;
-}
-
 /* BOOTSTRAP EXTENSIONS */
 [data-bs-theme=dark] {
     --bs-body-bg: #1e1e1e;
