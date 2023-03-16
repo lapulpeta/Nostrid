@@ -179,6 +179,10 @@ a, .btn-link {
     font-size: .65rem;
 }
 
+.text-break wbr {
+    display: none;
+}
+
 .bg-primary-opacity-10-hover {
     transition: background-color ease-in-out .1s;
 }
