@@ -25,14 +25,14 @@
 		<div class="offcanvas-body d-flex flex-column flex-grow-1">
 		
 			<UpdatabableElement @ref="loggedInElements">
-				<div class="d-flex flex-row align-items-center justify-content-between">
+				<div class="d-flex flex-row align-items-center">
 					@if (accountService.MainAccount != null)
 					{
-						<a href="@($"account/{accountService.MainAccount?.Id}")" @onclick="HideOffCanvasMenu">
+						<a href="@($"account/{accountService.MainAccount?.Id}")" @onclick="HideOffCanvasMenu" class="me-3">
 							<AccountPicture Id="@accountService.MainAccount?.Id" Size="48"></AccountPicture>
 						</a>
 					}
-					<div>
+					<div class="flex-grow-1 d-flex flex-row align-items-center justify-content-end">
 						@{
 							var otherAccountsCount = eventDatabase.GetAccountIdsWithPk()
 								.Concat(accountService.GetAccountsWithSigners())
@@ -43,19 +43,28 @@
 						@if (otherAccountsCount > 0)
 						{
 							<a @onclick="@(async () => { accountsModal?.Show(); await HideOffCanvasMenu(); })" role="button" class="btn btn-sm @(accountService.MainAccount == null ? "btn-primary" : "btn-outline-secondary") rounded-5 fs-6 me-2">
-								<i class="bi bi-arrow-left-right"></i>
 								@if (accountService.MainAccount == null)
 								{
 									<span class="me-2">&nbsp;Select account</span>
 								}
+								else
+								{
+									<i class="bi bi-arrow-left-right"></i>
+								}
 							</a>
 						}
 						<a @onclick="@(async () => { accountsModal?.Show(true); await HideOffCanvasMenu(); })" role="button" class="btn btn-sm @(accountService.MainAccount == null && otherAccountsCount == 0 ? "btn-primary" : "btn-outline-secondary") rounded-5 fs-6">
-							<i class="bi bi-plus-lg"></i> 
 							@if (accountService.MainAccount == null && otherAccountsCount == 0)
 							{
 								<span class="me-2">&nbsp;Add account</span>
 							}
+							else
+							{
+								<i class="bi bi-plus-lg"></i> 
+							}
+						</a>
+						<a @onclick="@(async () => await jsRuntime.InvokeVoidAsync("history.back"))" role="button" class="btn btn-sm btn-outline-secondary rounded-5 fs-6 d-none d-md-block" style="margin-left: auto;">
+							<i class="bi bi-arrow-left"></i>
 						</a>
 					</div>
 				</div>
