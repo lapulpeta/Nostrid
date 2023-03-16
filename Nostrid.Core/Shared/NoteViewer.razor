@@ -307,15 +307,13 @@
         rendered = true;
 
         eventDetailsCount = feedService.GetEventDetailsCount(Tree.Note.ReplaceableId ?? Tree.Note.Id);
+        likeClicked = accountService.MainAccount != null && feedService.AccountReacted(Tree.Note.ReplaceableId ?? Tree.Note.Id, accountService.MainAccount.Id);
+
         feedService.NoteCountChanged += NoteCountChanged;
         feedService.NoteDeleted += NoteDeleted;
-        if (accountService.MainAccount != null)
-        {
-            // If this note receives a reaction from main account then show it
-            likeClicked = feedService.AccountReacted(Tree.Note.ReplaceableId ?? Tree.Note.Id, accountService.MainAccount.Id);
-            feedService.NoteReacted += NoteReacted;
-            accountService.AccountMutesChanged += AccountMutesChanged;
-        }
+        feedService.NoteReacted += NoteReacted;
+        accountService.AccountMutesChanged += AccountMutesChanged;
+        accountService.MainAccountChanged += MainAccountChanged;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -365,6 +363,16 @@
         mainSection?.Update();
     }
 
+    private void MainAccountChanged(object? sender, EventArgs args)
+    {
+        if (_disposed)
+            return;
+
+        likeClicked = accountService.MainAccount != null && feedService.AccountReacted(Tree.Note.ReplaceableId ?? Tree.Note.Id, accountService.MainAccount.Id);
+        
+        mainSection?.Update();
+    }
+
     private void NoteCountChanged(object? sender, (string eventId, EventDetailsCount delta) data)
     {
         if (_disposed || (Tree.Note.Id != data.eventId && Tree.Note.ReplaceableId != data.eventId))
@@ -385,7 +393,10 @@
 
     private void NoteReacted(object? sender, (string eventId, string reactorId) data)
     {
-        if (_disposed || (Tree.Note.Id != data.eventId && Tree.Note.ReplaceableId != data.eventId) || accountService.MainAccount!.Id != data.reactorId)
+        if (_disposed 
+            || (Tree.Note.Id != data.eventId && Tree.Note.ReplaceableId != data.eventId) 
+            || accountService.MainAccount == null
+            || accountService.MainAccount.Id != data.reactorId)
             return;
 
         likeClicked = true;
@@ -433,6 +444,7 @@
         feedService.NoteDeleted -= NoteDeleted;
         feedService.NoteReacted -= NoteReacted;
         accountService.AccountMutesChanged -= AccountMutesChanged;
+        accountService.MainAccountChanged -= MainAccountChanged;
     }
     #endregion
 }
