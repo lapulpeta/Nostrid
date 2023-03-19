@@ -65,11 +65,10 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="bootstrap" Version="5.3.0-alpha1" />
         <PackageReference Include="Plugin.LocalNotification" Version="10.1.4" />
+
+        <PackageReference Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" Include="Microsoft.WindowsAppSDK" Version="1.2.230313.1" />
     </ItemGroup>
 
     <ItemGroup>
