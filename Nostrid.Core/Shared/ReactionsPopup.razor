@@ -15,7 +15,7 @@
     public string EventId { get; set; } = null!;
 }
 
-<div style="width: 370px" @onclick:stopPropagation="true">
+<div @onclick:stopPropagation="true">
     <UpdatabableElement @ref="reactionCountsElement">
         @{
             var groupedReactions = eventDetailsCount?.ReactionGroups.Select(g => new { Reaction = g.Key, Count = g.Value }).OrderByDescending(r => r.Count);
@@ -23,48 +23,23 @@
         }
         @if (groupedReactionsSum > 0)
         {
-            <div class="d-flex flex-row overflow-x-auto" style="margin-right: -.25rem;">
+            <div class="d-flex flex-row overflow-x-auto">
                 @foreach (var reactionGroup in groupedReactions!.Take(5))
                 {
                     <a @onclick="@(() => Like(reactionGroup.Reaction))" @onclick:stopPropagation="true"
-                        class="p-1 me-1 d-flex flex-row align-items-center fs-4 bg-primary-opacity-10-hover">
+                        class="p-2 d-flex flex-row align-items-center fs-4 bg-primary-opacity-10-hover">
                         <span class="text-center" style="min-width: 20px;">@NormalizedReaction(reactionGroup.Reaction)</span>
                         <span class="mt-1 me-1 fs-7 fw-normal text-secondary">@reactionGroup.Count</span>
                     </a>
                 }
             </div>
 
-            <hr class="my-1" />
+            <hr class="my-0" />
 
-            <div class="overflow-y-auto position-realtive" style="max-height: 160px;" tabindex="-1">
-                @if (loading)
-                {
-                    <div style="height: 32px;">
-                        <div class="d-flex flex-column justify-content-center h-100 px-2">
-                            <div class="d-flex flex-row align-items-center placeholder-glow">
-                                <span class="placeholder col-6"></span>
-                                <span class="col-5"></span>
-                                <span class="placeholder col-1"></span>
-                            </div>
-                        </div>
-                    </div>
-                }
-                <Virtualize @ref="reactionList" Context="reaction" ItemsProvider="@GetReactionList" ItemSize="32" OverscanCount="10">
-                    <ItemContent>
-                        <div style="height: 32px">
-                            <div class="d-flex flex-column justify-content-center h-100">
-                                <div class="d-flex flex-row align-items-center">
-                                    <div class="flex-grow-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                        <a href="@($"/account/{reaction.ReactorId}")">
-                                            <AccountName @key="@reaction.ReactorId" Id="@reaction.ReactorId"></AccountName>
-                                        </a>
-                                    </div>
-                                    <div class="fs-4">@NormalizedReaction(reaction.Content)</div>
-                                </div>
-                            </div>
-                        </div>
-                    </ItemContent>
-                    <Placeholder>
+            <div class="overflow-y-auto position-realtive d-flex flex-row" style="max-height: 160px;" tabindex="-1">
+                <div class="flex-grow-1" style="width: 0px; min-width: 380px;">
+                    @if (loading)
+                    {
                         <div style="height: 32px;">
                             <div class="d-flex flex-column justify-content-center h-100 px-2">
                                 <div class="d-flex flex-row align-items-center placeholder-glow">
@@ -74,23 +49,50 @@
                                 </div>
                             </div>
                         </div>
-                    </Placeholder>
-                </Virtualize>
+                    }
+                    <Virtualize @ref="reactionList" Context="reaction" ItemsProvider="@GetReactionList" ItemSize="32" OverscanCount="10">
+                        <ItemContent>
+                            <div style="height: 32px">
+                                <div class="d-flex flex-column justify-content-center h-100 px-2">
+                                    <div class="d-flex flex-row align-items-center">
+                                        <div class="flex-grow-1" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <a href="@($"/account/{reaction.ReactorId}")">
+                                                <AccountName @key="@reaction.ReactorId" Id="@reaction.ReactorId"></AccountName>
+                                            </a>
+                                        </div>
+                                        <div class="fs-4">@NormalizedReaction(reaction.Content)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </ItemContent>
+                        <Placeholder>
+                            <div style="height: 32px;">
+                                <div class="d-flex flex-column justify-content-center h-100 px-2">
+                                    <div class="d-flex flex-row align-items-center placeholder-glow">
+                                        <span class="placeholder col-6"></span>
+                                        <span class="col-5"></span>
+                                        <span class="placeholder col-1"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </Placeholder>
+                    </Virtualize>
+                </div>
             </div>
         }
         @if (groupedReactionsSum > 0 && !likeClicked)
         {
-            <hr class="my-1" />
+            <hr class="my-0" />
         }
     </UpdatabableElement>
     @if (!likeClicked)
     {
-        <div class="fs-3 d-flex flex-row" style="margin: 0 -.5rem -.5rem 0;">
+        <div class="fs-3 d-flex flex-row">
             @{
                 var reactions = new string[] { "+", "-", "🤙", "❤️", "😂", "😭", "😡", "😮", "💯" };
                 foreach (var reaction in reactions)
                 {
-                    <a @onclick="@(() => Like(reaction))" @onclick:stopPropagation="true" class="me-2 mb-2 bg-primary-opacity-10-hover">
+                    <a @onclick="@(() => Like(reaction))" @onclick:stopPropagation="true" class="p-2 bg-primary-opacity-10-hover">
                         @NormalizedReaction(reaction)
                     </a>
                 }
