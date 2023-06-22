@@ -60,7 +60,7 @@ public static class EventExtension
 		return new NostrEvent()
 		{
 			Content = ev.Content,
-			CreatedAt = ev.CreatedAt,
+			CreatedAt = ev.CreatedAt?.ToUniversalTime(),
 			Deleted = ev.Deleted,
 			Id = ev.Id,
 			Kind = ev.Kind,
